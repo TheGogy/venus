@@ -1,3 +1,5 @@
+use crate::impl_from_type;
+
 use super::{piece::Piece, square::Square};
 
 /// Moves (encoded as u16)
@@ -62,13 +64,6 @@ pub enum MoveFlag {
     CPromoQ     = 0b1111,
 }
 
-/// Convert a u8 to a MoveFlag.
-impl From<u8> for MoveFlag {
-    fn from(value: u8) -> Self {
-        unsafe { std::mem::transmute(value) }
-    }
-}
-
 impl MoveFlag {
     /// Whether this MoveFlag denotes a capture.
     #[inline]
@@ -101,6 +96,18 @@ impl MoveFlag {
     pub const fn get_promo(self) -> Piece {
         unsafe { std::mem::transmute(((self as u8) & 0b0011) + 1) }
     }
+}
+
+impl_from_type! {
+    MoveFlag, u8,
+    u8,
+    u16,
+    u32,
+    u64,
+    i16,
+    i32,
+    i64,
+    usize
 }
 
 #[cfg(test)]

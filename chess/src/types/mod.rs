@@ -2,6 +2,7 @@ pub mod bitboard;
 pub mod board;
 pub mod castling;
 pub mod color;
+pub mod direction;
 pub mod moves;
 pub mod piece;
 pub mod rank_file;

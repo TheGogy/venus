@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
+use crate::impl_from_type;
+
 use super::{
+    bitboard::Bitboard,
     color::Color,
     rank_file::{File, Rank},
 };
@@ -23,13 +26,6 @@ pub enum Square {
     Invalid
 }
 
-impl From<u8> for Square {
-    fn from(value: u8) -> Self {
-        debug_assert!((0..64).contains(&value), "Square value must be 0..64");
-        unsafe { std::mem::transmute(value) }
-    }
-}
-
 impl Square {
     pub const NUM: usize = 64;
 
@@ -44,6 +40,13 @@ impl Square {
     pub const fn index(self) -> usize {
         self as usize
     }
+
+    /// Get a bitboard with only this square set.
+    #[inline]
+    pub const fn bb(self) -> Bitboard {
+        Bitboard(1u64 << self as u64)
+    }
+
     /// Get the file the square is on.
     #[inline]
     pub const fn file(self) -> File {
@@ -59,7 +62,7 @@ impl Square {
     /// Gets the square relative to white's side.
     #[inline]
     pub const fn relative(self, c: Color) -> Self {
-        unsafe { std::mem::transmute(self as u8 ^ (c as u8 * 56) as u8) }
+        unsafe { std::mem::transmute(self as u8 ^ (c as u8 * 56)) }
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8)
@@ -72,6 +75,12 @@ impl Square {
     #[inline]
     pub const fn prev(self) -> Self {
         unsafe { std::mem::transmute(self as u8 - 1) }
+    }
+
+    /// Iterate over all squares.
+    #[inline]
+    pub fn iter() -> impl Iterator<Item = Square> {
+        (0..64).map(Square::from)
     }
 }
 
@@ -98,4 +107,16 @@ impl FromStr for Square {
 
         Ok(unsafe { std::mem::transmute::<u8, Square>(square_idx) })
     }
+}
+
+impl_from_type! {
+    Square, u8,
+    u8,
+    u16,
+    u32,
+    u64,
+    i16,
+    i32,
+    i64,
+    usize
 }

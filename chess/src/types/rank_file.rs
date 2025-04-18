@@ -1,3 +1,5 @@
+use crate::impl_from_type;
+
 use super::{bitboard::Bitboard, color::Color};
 
 /// File enum.
@@ -33,12 +35,16 @@ impl TryFrom<char> for File {
     }
 }
 
-/// Get a File from a u8.
-impl From<u8> for File {
-    fn from(value: u8) -> Self {
-        debug_assert!((0..8).contains(&value), "File value must be 0..8");
-        unsafe { std::mem::transmute(value) }
-    }
+impl_from_type! {
+    File, u8,
+    u8,
+    u16,
+    u32,
+    u64,
+    i16,
+    i32,
+    i64,
+    usize
 }
 
 /// Get a Rank from a character.
@@ -54,12 +60,16 @@ impl TryFrom<char> for Rank {
     }
 }
 
-/// Get a Rank from a u8.
-impl From<u8> for Rank {
-    fn from(value: u8) -> Self {
-        debug_assert!((0..8).contains(&value), "Rank value must be 0..8");
-        unsafe { std::mem::transmute(value) }
-    }
+impl_from_type! {
+    Rank, u8,
+    u8,
+    u16,
+    u32,
+    u64,
+    i16,
+    i32,
+    i64,
+    usize
 }
 
 /// File implemenatations.

@@ -167,7 +167,7 @@ impl CastlingRights {
                     (sq, CastlingRights::get_mask(c, true))
                 }
                 'Q' => {
-                    let mut sq = Square::H1.relative(c);
+                    let mut sq = Square::A1.relative(c);
                     while b.pc_at(sq) != rook {
                         sq = sq.next();
                     }
