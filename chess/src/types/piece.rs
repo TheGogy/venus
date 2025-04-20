@@ -6,7 +6,7 @@ use super::color::Color;
 
 /// Piece.
 /// Represents a piece, and is ordered by increasing value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum Piece {
     Pawn,
@@ -15,13 +15,14 @@ pub enum Piece {
     Rook,
     Queen,
     King,
+    #[default]
     None,
 }
 
 /// CPiece.
 /// Represents a piece and a color.
 #[rustfmt::skip]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum CPiece {
     WPawn,   BPawn,
@@ -30,6 +31,7 @@ pub enum CPiece {
     WRook,   BRook,
     WQueen,  BQueen,
     WKing,   BKing,
+    #[default]
     None
 }
 

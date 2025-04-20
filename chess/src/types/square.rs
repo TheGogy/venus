@@ -1,3 +1,4 @@
+use core::fmt;
 use std::str::FromStr;
 
 use crate::impl_from_type;
@@ -12,7 +13,7 @@ use super::{
 ///
 /// A1 ... H8
 #[rustfmt::skip]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
@@ -23,6 +24,7 @@ pub enum Square {
     A6, B6, C6, D6, E6, F6, G6, H6,
     A7, B7, C7, D7, E7, F7, G7, H7,
     A8, B8, C8, D8, E8, F8, G8, H8,
+    #[default]
     Invalid
 }
 
@@ -63,6 +65,12 @@ impl Square {
     #[inline]
     pub const fn relative(self, c: Color) -> Self {
         unsafe { std::mem::transmute(self as u8 ^ (c as u8 * 56)) }
+    }
+
+    /// Moves the square forward by one relative to the side.
+    #[inline]
+    pub const fn forward(self, c: Color) -> Self {
+        unsafe { std::mem::transmute(self as i8 + (8 * -(c.index() as i8))) }
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8)
@@ -106,6 +114,15 @@ impl FromStr for Square {
         let square_idx = rank_idx * 8 + file_idx;
 
         Ok(unsafe { std::mem::transmute::<u8, Square>(square_idx) })
+    }
+}
+
+/// Display a square.
+impl fmt::Display for Square {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let file = (*self as u8) & 7;
+        let rank = (*self as u8) >> 3;
+        write!(f, "{}{}", (b'a' + file) as char, (b'1' + rank) as char)
     }
 }
 

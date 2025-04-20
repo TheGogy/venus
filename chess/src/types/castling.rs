@@ -15,7 +15,7 @@ use super::{
 ///
 /// Represented as:
 /// [wk][bk][wq][bq]
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Default)]
 pub struct CastlingRights(pub u8);
 
 impl CastlingRights {
@@ -40,6 +40,12 @@ impl CastlingRights {
     #[inline]
     pub const fn index(self) -> usize {
         self.0 as usize
+    }
+
+    /// The index into the rooks list for these castling rights.
+    #[inline]
+    pub const fn rook_index(self) -> usize {
+        self.0.trailing_zeros() as usize
     }
 
     /// Whether the given color has kingside castling.
@@ -126,6 +132,7 @@ impl CastlingMask {
     pub fn add_rights(&mut self, ksq: Square, rsq: Square, r: CastlingRights) {
         self.mask[ksq.index()] &= !r;
         self.mask[rsq.index()] &= !r;
+        self.rooks[r.rook_index()] = rsq;
     }
 }
 

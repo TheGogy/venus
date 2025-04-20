@@ -1,4 +1,9 @@
-use crate::impl_from_type;
+use core::fmt;
+
+use crate::{
+    impl_from_type,
+    types::{color::Color, piece::CPiece},
+};
 
 use super::{piece::Piece, square::Square};
 
@@ -33,6 +38,18 @@ impl Move {
     pub fn flag(self) -> MoveFlag {
         const TYPE: u16 = 0xF << 12;
         MoveFlag::from(((self.0 & TYPE) >> 12) as u8)
+    }
+
+    /// Whether the move is null.
+    #[inline]
+    pub const fn is_null(&self) -> bool {
+        self.0 == 0x41
+    }
+
+    /// Whether the move is none.
+    #[inline]
+    pub fn is_none(&self) -> bool {
+        self.0 == 0x00
     }
 }
 
@@ -108,6 +125,19 @@ impl_from_type! {
     i32,
     i64,
     usize
+}
+
+impl fmt::Display for Move {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_none() || self.is_null() {
+            write!(f, "0000")
+        } else {
+            let s = format!("{}{}", self.src(), self.tgt());
+
+            let flag = self.flag();
+            if flag.is_promo() { write!(f, "{}{}", s, CPiece::create(Color::Black, flag.get_promo())) } else { write!(f, "{s}") }
+        }
+    }
 }
 
 #[cfg(test)]
