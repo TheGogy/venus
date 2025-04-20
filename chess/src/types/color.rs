@@ -13,8 +13,15 @@ impl Color {
     pub const NUM: usize = 2;
 
     /// The index of this color.
+    #[inline]
     pub const fn index(self) -> usize {
         self as usize
+    }
+
+    /// Iterate over both colors.
+    #[inline]
+    pub fn iter() -> impl Iterator<Item = Color> {
+        [Color::White, Color::Black].into_iter()
     }
 }
 

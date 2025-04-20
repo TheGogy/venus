@@ -87,6 +87,11 @@ impl File {
     pub const fn index(self) -> usize {
         self as usize
     }
+
+    /// Get the char representing the file.
+    pub fn to_char(self) -> char {
+        char::from(self as u8 + b'A')
+    }
 }
 
 /// Rank implemenatations.
@@ -111,5 +116,10 @@ impl Rank {
     #[inline]
     pub const fn relative(self, c: Color) -> Self {
         unsafe { std::mem::transmute(self as u8 ^ (c as u8 * 7)) }
+    }
+
+    /// Get the char representing the rank.
+    pub fn to_char(self) -> char {
+        char::from(self as u8 + b'1')
     }
 }

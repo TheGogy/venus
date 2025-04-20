@@ -1,8 +1,9 @@
 use std::ops::Not;
 
-use crate::{impl_math_assign_ops, impl_math_ops};
+use crate::{impl_math_assign_ops, impl_math_ops, tables::sliding_piece::between};
 
 use super::{
+    bitboard::Bitboard,
     board::Board,
     color::Color,
     piece::{CPiece, Piece},
@@ -51,19 +52,19 @@ impl CastlingRights {
     /// Whether the given color has kingside castling.
     #[inline]
     pub const fn has_ks(self, c: Color) -> bool {
-        self.0 & (0b0001 + c.index() as u8) != 0
+        self.0 & (0b0001 << c.index() as u8) != 0
     }
 
     /// Whether the given color has queenside castling.
     #[inline]
     pub const fn has_qs(self, c: Color) -> bool {
-        self.0 & (0b0100 + c.index() as u8) != 0
+        self.0 & (0b0100 << c.index() as u8) != 0
     }
 
     /// Gets the mask for a given color and side.
     #[inline]
     pub const fn get_mask(c: Color, is_ks: bool) -> Self {
-        Self::MASKS[c.index() * 2 + is_ks as usize]
+        Self::MASKS[c.index() + !is_ks as usize * 2]
     }
 }
 
@@ -134,6 +135,21 @@ impl CastlingMask {
         self.mask[rsq.index()] &= !r;
         self.rooks[r.rook_index()] = rsq;
     }
+
+    /// Get the occupancy and attack masks that must be empty.
+    #[inline]
+    pub fn occ_atk<const KSIDE: bool>(&self, ksq: Square, c: Color) -> (Bitboard, Bitboard) {
+        let kt = if KSIDE { Square::G1.relative(c) } else { Square::C1.relative(c) };
+        let (rf, rt) = self.rook_from_to(kt);
+
+        // King must not be attacked at any point while moving or at destination.
+        let atk = between(ksq, kt) | kt.bb();
+
+        // Neither king or rook should have any piece in their path (except themselves)
+        let occ = (atk | between(ksq, rf) | rt.bb()) & !(ksq.bb() | rf.bb());
+
+        (occ, atk)
+    }
 }
 
 /// UCI castling parsing methods.
@@ -183,7 +199,7 @@ impl CastlingRights {
 
                 'A'..='H' => {
                     let sq = Square::make(Rank::R1.relative(c), File::from(t as u8 - b'A'));
-                    (sq, CastlingRights::get_mask(c, ksq > sq))
+                    (sq, CastlingRights::get_mask(c, ksq < sq))
                 }
 
                 _ => return Err("Invalid Castling Rights!"),
@@ -195,5 +211,46 @@ impl CastlingRights {
         }
 
         Ok((rights, c_mask))
+    }
+}
+
+/// Get a string representing the castling rights.
+///
+/// This uses the following format:
+///
+/// 1. If the castling squares are the valid square (wk = H1, wq = A1, etc) then use KQkq.
+/// 2. Otherwise, use rook file.
+impl CastlingRights {
+    pub fn to_str(self, b: &Board) -> String {
+        let mut s = String::new();
+
+        if self == Self::NONE {
+            s.push('-');
+            return s;
+        }
+
+        for c in Color::iter() {
+            let mut tmp = String::new();
+            // Kingside.
+            if b.state.castling.has_ks(c) {
+                let rook_sq = b.castlingmask.rooks[c.index()];
+                tmp.push(if rook_sq == Square::H1.relative(c) { 'K' } else { rook_sq.file().to_char() });
+            }
+
+            // Queenside.
+            if b.state.castling.has_qs(c) {
+                let rook_sq = b.castlingmask.rooks[c.index() + 2];
+                tmp.push(if rook_sq == Square::A1.relative(c) { 'Q' } else { rook_sq.file().to_char() });
+            }
+
+            // Black is lowercase.
+            if c == Color::Black {
+                tmp = tmp.to_lowercase();
+            }
+
+            s.push_str(&tmp);
+        }
+
+        s
     }
 }

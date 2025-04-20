@@ -29,7 +29,7 @@ pub struct Hash {
 
 /// Print out the Hash.
 impl fmt::Display for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:016x}", self.key)
     }
 }

@@ -127,15 +127,19 @@ impl_from_type! {
     usize
 }
 
+/// Display a move in UCI format.
 impl fmt::Display for Move {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_none() || self.is_null() {
-            write!(f, "0000")
-        } else {
-            let s = format!("{}{}", self.src(), self.tgt());
+            return write!(f, "0000");
+        }
 
-            let flag = self.flag();
-            if flag.is_promo() { write!(f, "{}{}", s, CPiece::create(Color::Black, flag.get_promo())) } else { write!(f, "{s}") }
+        let flag = self.flag();
+        if flag.is_promo() {
+            let promo_char = CPiece::create(Color::Black, flag.get_promo()).to_char();
+            write!(f, "{}{}{}", self.src(), self.tgt(), promo_char)
+        } else {
+            write!(f, "{}{}", self.src(), self.tgt())
         }
     }
 }

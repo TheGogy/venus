@@ -92,8 +92,8 @@ impl Board {
         self.stm = !self.stm;
         state.key.toggle_color();
 
-        // TODO: Update masks for movegen.
-        // self.update_masks(state);
+        // Update masks for movegen.
+        self.update_masks(&mut state);
 
         // Set current state and push old state to history.
         let old_state = std::mem::replace(&mut self.state, state);

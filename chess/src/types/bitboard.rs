@@ -40,6 +40,26 @@ impl Bitboard {
         Square::from(self.0.trailing_zeros() as u8)
     }
 
+    /// Get the number of bits set.
+    #[inline]
+    pub fn nbits(self) -> u32 {
+        self.0.count_ones()
+    }
+
+    /// Iterates over each set bit in the bitboard, calling the provided closure with the square index
+    #[inline]
+    pub fn bitloop<F>(&self, mut f: F)
+    where
+        F: FnMut(Square),
+    {
+        let mut bb = self.0;
+        while bb != 0 {
+            let square = bb.trailing_zeros();
+            f(Square::from(square));
+            bb &= bb - 1;
+        }
+    }
+
     /// Get the edge mask for a given square.
     #[rustfmt::skip]
     pub const fn edge_mask(square: Square) -> Self {
@@ -77,7 +97,7 @@ impl std::ops::Not for Bitboard {
 
 /// Print out a bitboard in a readable way.
 impl fmt::Display for Bitboard {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = String::new();
         for rank in (0..8).rev() {
             output.push_str(&(rank + 1).to_string()); // Rank label

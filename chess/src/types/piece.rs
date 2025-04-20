@@ -1,5 +1,3 @@
-use core::fmt;
-
 use crate::impl_from_type;
 
 use super::color::Color;
@@ -73,6 +71,11 @@ impl CPiece {
     pub const fn create(c: Color, p: Piece) -> CPiece {
         unsafe { std::mem::transmute((p as u8) * 2 + (c as u8)) }
     }
+
+    /// Get the UCI character for this piece.
+    pub fn to_char(self) -> char {
+        Self::UCI_CHAR.chars().nth(self as usize).expect("Invalid piece!")
+    }
 }
 
 impl TryFrom<char> for CPiece {
@@ -82,13 +85,6 @@ impl TryFrom<char> for CPiece {
     /// Returns an error (`&' static str`) if the provided `char` does not match any piece.
     fn try_from(value: char) -> Result<Self, Self::Error> {
         Ok(Self::from(Self::UCI_CHAR.chars().position(|x| x == value).ok_or("Invalid piece!")?))
-    }
-}
-
-/// Displays the `Piece` using its UCI character.
-impl fmt::Display for CPiece {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Self::UCI_CHAR.chars().nth(*self as usize).expect("Invalid piece!"))
     }
 }
 

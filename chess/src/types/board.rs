@@ -1,3 +1,4 @@
+use core::fmt;
 use std::str::FromStr;
 
 use super::{
@@ -27,8 +28,8 @@ pub struct BoardState {
     // Bitboards for movegen
     pub attacked: Bitboard,
     pub checkers: Bitboard,
-    pub pindiag: Bitboard,
-    pub pinorth: Bitboard,
+    pub pin_diag: Bitboard,
+    pub pin_orth: Bitboard,
     pub checkmask: Bitboard,
 
     // Keys
@@ -143,6 +144,10 @@ impl FromStr for Board {
             _ => return Err("Invalid side to move!"),
         }
 
+        // Update the board state masks for movegen.
+        let mut state = BoardState::default();
+        board.update_masks(&mut state);
+
         // Parse castling rights
         let (c_rights, c_mask) = match CastlingRights::parse(&board, fen[2]) {
             Ok((r, m)) => (r, m),
@@ -151,33 +156,143 @@ impl FromStr for Board {
 
         board.castlingmask = c_mask;
 
-        board.state.castling = c_rights;
+        state.castling = c_rights;
 
         // Parse en passant
         match fen[3] {
-            "-" => board.state.epsq = Square::Invalid,
+            "-" => state.epsq = Square::Invalid,
             s => {
                 let epsq: Square = s.parse()?;
-                board.state.epsq = epsq;
-                board.state.key.toggle_ep(epsq);
+                state.epsq = epsq;
+                state.key.toggle_ep(epsq);
             }
         }
 
         // Parse halfmove count
-        board.state.halfmoves = fen[4].parse().map_err(|_| "Invalid halfmove count!")?;
+        state.halfmoves = fen[4].parse().map_err(|_| "Invalid halfmove count!")?;
 
         // Parse fullmove count
-        board.state.fullmoves = fen[5].parse().map_err(|_| "Invalid fullmove count!")?;
+        state.fullmoves = fen[5].parse().map_err(|_| "Invalid fullmove count!")?;
+
+        // Set board state.
+        board.state = state;
 
         Ok(board)
     }
 }
 
+/// Translate board from internal representation to FEN.
+impl Board {
+    /// Get the piece placement in UCI format.
+    fn piece_placement_str(&self) -> String {
+        let mut fen = String::new();
+
+        for rank in (0..8).rev() {
+            let mut empty = 0;
+
+            for file in 0..8 {
+                let square = Square::from(rank * 8 + file);
+                let piece = self.pc_map[square.index()];
+
+                if piece != CPiece::None {
+                    if empty > 0 {
+                        fen.push_str(&empty.to_string());
+                        empty = 0;
+                    }
+                    fen.push(piece.to_char());
+                } else {
+                    empty += 1;
+                }
+            }
+
+            if empty > 0 {
+                fen.push_str(&empty.to_string());
+            }
+            if rank != 0 {
+                fen.push('/');
+            }
+        }
+
+        fen
+    }
+
+    /// Get the whole FEN in UCI format.
+    pub fn to_fen(&self) -> String {
+        format!(
+            "{} {} {} {} {} {}",
+            self.piece_placement_str(),
+            self.stm,
+            self.state.castling.to_str(self),
+            if self.state.epsq != Square::Invalid { format!("{}", self.state.epsq) } else { "-".to_string() },
+            self.state.halfmoves,
+            self.state.fullmoves
+        )
+    }
+}
+
+/// Display a board.
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut board_str = String::new();
+        for rank in (0..8).rev() {
+            board_str.push_str(format!("\n {} | ", rank + 1).as_str());
+
+            for file in 0..8 {
+                board_str.push(self.pc_map[rank * 8 + file].to_char());
+                board_str.push(' ');
+            }
+        }
+
+        board_str.push_str("\n   +----------------\n     a b c d e f g h");
+
+        write!(
+            f,
+            "{board_str}
+-> FEN : {}
+-> Hash: {}
+",
+            self.to_fen(),
+            self.state.key
+        )
+    }
+}
+
 /// Board implementations.
 impl Board {
+    /// Get the bitboard of a given piece.
+    #[inline]
+    pub fn p_bb(&self, p: Piece) -> Bitboard {
+        self.colors[p.index()]
+    }
+
+    /// Get the bitboard of a given color.
+    #[inline]
+    pub fn c_bb(&self, c: Color) -> Bitboard {
+        self.colors[c.index()]
+    }
+
+    /// Get the bitboard of a given piece + color.
     #[inline]
     pub fn pc_bb(&self, c: Color, p: Piece) -> Bitboard {
         self.pieces[p.index()] & self.colors[c.index()]
+    }
+
+    /// Get all the diagonal sliders on the board (queens + bishops).
+    #[inline]
+    pub fn diag_slider(&self, c: Color) -> Bitboard {
+        (self.pieces[Piece::Bishop.index()] | self.pieces[Piece::Queen.index()]) & self.colors[c.index()]
+    }
+
+    /// Get all the orthogonal sliders on the board (queens + rooks).
+    #[inline]
+    pub fn orth_slider(&self, c: Color) -> Bitboard {
+        (self.pieces[Piece::Rook.index()] | self.pieces[Piece::Queen.index()]) & self.colors[c.index()]
+    }
+
+    /// Get the total occupancy of the position.
+    #[inline]
+    pub fn occ(&self) -> Bitboard {
+        self.colors[0] | self.colors[1]
     }
 
     /// Gets the position of the king of the given color.
@@ -215,5 +330,33 @@ impl Board {
     #[inline]
     pub fn get_piece(&self, s: Square) -> CPiece {
         self.pc_map[s.index()]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::board::Board;
+
+    #[test]
+    fn test_to_fen() {
+        let fens: [&str; 12] = [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 10",
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+            "7B/4PPP1/1n1K2n1/1p6/p1R5/5Pk1/1b2P3/r4b2 w - - 0 1",
+            "8/2Q2pKN/3bBp2/p2N3P/6Pp/k3Pp2/7p/8 w - - 0 1",
+            "2rkr3/1b1pbppp/1p1q1n2/p1pPp1N1/PnP1P3/1QNB4/1P1BKPPP/3RR3 w - - 6 15",
+            "rnbqkbrn/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBRN w GQgq - 0 1",
+            "2r1k1r1/2q1bpp1/3p1nn1/p3pb1p/2pP1P2/1P5P/1BPNPNP1/R1RQKBR1 w GCgc - 0 1",
+        ];
+
+        for fen in fens {
+            let board: Board = fen.parse().unwrap();
+            assert_eq!(board.to_fen(), fen);
+        }
     }
 }
