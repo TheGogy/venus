@@ -1,6 +1,6 @@
 use crate::types::board::Board;
 
-fn perft<const ALL: bool, const PRINT: bool>(b: &mut Board, depth: usize) -> usize {
+pub fn perft<const ALL: bool, const PRINT: bool>(b: &mut Board, depth: usize) -> usize {
     let mut total = 0;
 
     let ml = b.gen_moves::<ALL>();
