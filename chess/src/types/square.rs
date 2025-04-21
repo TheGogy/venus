@@ -70,7 +70,7 @@ impl Square {
     /// Moves the square forward by one relative to the side.
     #[inline]
     pub const fn forward(self, c: Color) -> Self {
-        unsafe { std::mem::transmute(self as i8 + (8 * -(c.index() as i8))) }
+        unsafe { std::mem::transmute(self as i8 + 8 - (16 * c.index() as i8)) }
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8)

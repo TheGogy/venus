@@ -16,6 +16,16 @@ impl Bitboard {
     pub const EMPTY: Self = Self(0);
     pub const FULL: Self = Self(!0);
 
+    pub const PR: [Self; 2] = [Rank::R7.bb(), Rank::R2.bb()]; // Promotion ranks.
+    pub const EP: [Self; 2] = [Rank::R5.bb(), Rank::R4.bb()]; // Enpassant ranks.
+    pub const DP: [Self; 2] = [Rank::R3.bb(), Rank::R6.bb()]; // Double push ranks.
+
+    /// If the bitboard is empty
+    #[inline]
+    pub fn is_empty(self) -> bool {
+        self == Bitboard::EMPTY
+    }
+
     /// Set the bit at the given index.
     #[inline]
     pub const fn set_bit(&mut self, s: Square) {
@@ -25,7 +35,7 @@ impl Bitboard {
     /// Pop the bit at the given index.
     #[inline]
     pub const fn pop_bit(&mut self, s: Square) {
-        self.0 |= !(1u64 << s.index())
+        self.0 &= !(1u64 << s.index())
     }
 
     /// Get the bit at the current index.
@@ -63,10 +73,10 @@ impl Bitboard {
     /// Get the edge mask for a given square.
     #[rustfmt::skip]
     pub const fn edge_mask(square: Square) -> Self {
-        let rank_edges = Rank::R1.to_bb().0 | Rank::R8.to_bb().0;
+        let rank_edges = Rank::R1.bb().0 | Rank::R8.bb().0;
         let file_edges = File::FA.to_bb().0 | File::FH.to_bb().0;
 
-        Self((rank_edges & !square.rank().to_bb().0)
+        Self((rank_edges & !square.rank().bb().0)
            | (file_edges & !square.file().to_bb().0),
         )
     }

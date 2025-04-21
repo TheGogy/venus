@@ -100,7 +100,7 @@ impl Rank {
 
     /// Directly convert a rank to a bitboard.
     #[inline]
-    pub const fn to_bb(self) -> Bitboard {
+    pub const fn bb(self) -> Bitboard {
         Bitboard(0xff << (8 * self as u8))
     }
 

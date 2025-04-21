@@ -3,6 +3,7 @@ pub mod board;
 pub mod castling;
 pub mod color;
 pub mod direction;
+pub mod move_list;
 pub mod moves;
 pub mod piece;
 pub mod rank_file;

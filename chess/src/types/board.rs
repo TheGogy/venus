@@ -146,6 +146,7 @@ impl FromStr for Board {
 
         // Update the board state masks for movegen.
         let mut state = BoardState::default();
+        state.key = board.state.key;
         board.update_masks(&mut state);
 
         // Parse castling rights

@@ -1,4 +1,4 @@
-use super::{bitboard::Bitboard, color::Color, rank_file::File};
+use super::{bitboard::Bitboard, color::Color, rank_file::File, square::Square};
 
 /// Direction enum.
 #[rustfmt::skip]
@@ -18,24 +18,27 @@ pub enum Direction {
 
 /// Relative directions.
 impl Direction {
+    /// Gets the direction up, relative to the color.
     #[inline]
-    pub const fn forward(c: Color) -> Direction {
+    pub const fn up(c: Color) -> Direction {
         match c {
             Color::White => Self::North,
             Color::Black => Self::South,
         }
     }
 
+    /// Gets the direction up + left, relative to the color.
     #[inline]
-    pub const fn up_left(c: Color) -> Direction {
+    pub const fn ul(c: Color) -> Direction {
         match c {
             Color::White => Self::NorthWest,
             Color::Black => Self::SouthEast,
         }
     }
 
+    /// Gets the direction up + right, relative to the color.
     #[inline]
-    pub const fn up_right(c: Color) -> Direction {
+    pub const fn ur(c: Color) -> Direction {
         match c {
             Color::White => Self::NorthEast,
             Color::Black => Self::SouthWest,
@@ -76,4 +79,19 @@ pub const fn sliding_ray(d: Direction, s: usize, occ: u64) -> Bitboard {
     }
 
     attacks
+}
+
+/// Shift a square in the given direction.
+impl Square {
+    /// Add a direction to a square.
+    #[inline]
+    pub fn add_dir(self, dir: Direction) -> Self {
+        Square::from(self as u8 + dir as u8)
+    }
+
+    /// Subtract a direction from a square.
+    #[inline]
+    pub fn sub_dir(self, dir: Direction) -> Self {
+        Square::from((self as u8).wrapping_sub(dir as u8))
+    }
 }

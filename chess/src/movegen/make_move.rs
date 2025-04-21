@@ -17,6 +17,9 @@ impl Board {
         // Clone current state
         let mut state = self.state.clone();
 
+        // Increment fullmove counter
+        state.fullmoves += self.stm.index();
+
         // Unset ep sq
         state.epsq = Square::Invalid;
 
@@ -215,6 +218,16 @@ mod tests {
     }
 
     #[test]
+    fn test_move_double() {
+        let mut b: Board = "rnbqkbnr/ppppppp1/8/8/7p/P7/RPPPPPPP/1NBQKBNR w Kkq - 0 3".parse().unwrap();
+        let m = Move::new(Square::G2, Square::G4, MoveFlag::DoublePush);
+
+        b.make_move(m);
+
+        assert_eq!(b.state.epsq, Square::G3);
+    }
+
+    #[test]
     fn test_move_castle() {
         let mut b: Board = "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4".parse().unwrap();
         let m = Move::new(Square::E1, Square::G1, MoveFlag::Castling);
@@ -293,5 +306,31 @@ mod tests {
 
         assert_eq!(b.get_piece(Square::G7), CPiece::WPawn);
         assert_eq!(b.get_piece(Square::F8), CPiece::BBishop);
+    }
+
+    #[test]
+    fn test_pos_same() {
+        let mut b = Board::default();
+        let m1 = Move::new(Square::E2, Square::E4, MoveFlag::Normal);
+        let m2 = Move::new(Square::E7, Square::E5, MoveFlag::Normal);
+        let m3 = Move::new(Square::G1, Square::F3, MoveFlag::Normal);
+        let m4 = Move::new(Square::D7, Square::D5, MoveFlag::Normal);
+        let m5 = Move::new(Square::E4, Square::D5, MoveFlag::Capture);
+
+        b.make_move(m1);
+        b.make_move(m2);
+        b.make_move(m3);
+        b.make_move(m4);
+        b.make_move(m5);
+
+        assert_eq!(b.to_fen(), "rnbqkbnr/ppp2ppp/8/3Pp3/8/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 3");
+
+        b.undo_move(m5);
+        b.undo_move(m4);
+        b.undo_move(m3);
+        b.undo_move(m2);
+        b.undo_move(m1);
+
+        assert_eq!(b.to_fen(), "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 }
