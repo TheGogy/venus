@@ -25,6 +25,7 @@ impl Board {
 
         // Remove piece from source square.
         self.pop_piece(src);
+        state.hash.toggle_piece(piece, src);
 
         // Do parts of move that do not include moving the piece.
         match flag {
@@ -40,8 +41,11 @@ impl Board {
             // Castle: move rook to castling square.
             MoveFlag::Castling => {
                 let (rf, rt) = self.castlingmask.rook_from_to(tgt);
+                let p = CPiece::create(self.stm, Piece::Rook);
                 self.pop_piece(rf);
-                self.set_piece(CPiece::create(self.stm, Piece::Rook), rt);
+                self.set_piece(p, rt);
+                state.hash.toggle_piece(p, rf);
+                state.hash.toggle_piece(p, rt);
                 state.halfmoves += 1;
             }
 
@@ -49,22 +53,26 @@ impl Board {
             MoveFlag::DoublePush => {
                 let epsq = src.forward(self.stm);
                 state.epsq = epsq;
-                state.key.toggle_ep(epsq);
+                state.hash.toggle_ep(epsq);
                 state.halfmoves += 1;
             }
 
             // Capture: Remove piece at target square.
             MoveFlag::Capture => {
-                state.cap = self.get_piece(tgt);
+                let cap = self.get_piece(tgt);
+                state.cap = cap;
                 self.pop_piece(tgt);
+                state.hash.toggle_piece(cap, tgt);
                 state.halfmoves = 0;
             }
 
             // En passant: Remove ep captured piece.
             MoveFlag::EnPassant => {
                 let epsq = tgt.forward(!self.stm);
-                state.cap = self.get_piece(epsq);
+                let cap = self.get_piece(epsq);
+                state.cap = cap;
                 self.pop_piece(epsq);
+                state.hash.toggle_piece(cap, epsq);
                 state.halfmoves = 0;
             }
 
@@ -76,24 +84,27 @@ impl Board {
 
             // Capture promotion: remove piece from to square and set piece to promoted piece.
             MoveFlag::CPromoN | MoveFlag::CPromoB | MoveFlag::CPromoR | MoveFlag::CPromoQ => {
-                state.cap = self.get_piece(tgt);
+                let cap = self.get_piece(tgt);
+                state.cap = cap;
                 self.pop_piece(tgt);
+                state.hash.toggle_piece(cap, tgt);
                 piece = CPiece::create(self.stm, flag.get_promo());
                 state.halfmoves = 0;
             }
         }
 
         // Zero out bits in castling mask
-        state.key.toggle_castling(state.castling);
+        state.hash.toggle_castling(state.castling);
         state.castling &= self.castlingmask.zero_out(src, tgt);
-        state.key.toggle_castling(state.castling);
+        state.hash.toggle_castling(state.castling);
 
         // Set piece on target square.
         self.set_piece(piece, tgt);
+        state.hash.toggle_piece(piece, tgt);
 
         // Update stm.
         self.stm = !self.stm;
-        state.key.toggle_color();
+        state.hash.toggle_color();
 
         // Update masks for movegen.
         self.update_masks(&mut state);
@@ -111,8 +122,7 @@ impl Board {
         let cap = self.state.cap;
 
         // SAFETY: This will only be called when there is a valid move in the history.
-        let old_state = unsafe { self.history.pop().unwrap_unchecked() };
-        self.state = old_state;
+        let state = unsafe { self.history.pop().unwrap_unchecked() };
 
         // Update stm.
         self.stm = !self.stm;
@@ -139,7 +149,7 @@ impl Board {
 
             // EnPassant: replace the captured piece.
             MoveFlag::EnPassant => {
-                let eptgt = self.state.epsq.forward(!self.stm);
+                let eptgt = state.epsq.forward(!self.stm);
                 self.set_piece(cap, eptgt);
             }
 
@@ -157,6 +167,8 @@ impl Board {
 
         // Add piece back in.
         self.set_piece(piece, src);
+
+        self.state = state;
     }
 
     /// Make a null move on the board.
@@ -166,17 +178,19 @@ impl Board {
         // Update epsq
         if state.epsq != Square::Invalid {
             state.epsq = Square::Invalid;
-            state.key.toggle_ep(state.epsq);
+            state.hash.toggle_ep(state.epsq);
         }
 
         // Update stm
         self.stm = !self.stm;
-        state.key.toggle_color();
+        state.hash.toggle_color();
 
+        // Update masks for movegen.
+        self.update_masks(&mut state);
+
+        // Set current state and push old state to history.
         let old_state = std::mem::replace(&mut self.state, state);
         self.history.push(old_state);
-
-        // TODO: Update masks for movegen
     }
 
     /// Undo a null move from the board.
@@ -210,11 +224,19 @@ mod tests {
         assert_eq!(b.get_piece(Square::E4), CPiece::WPawn);
         assert_eq!(b.history.len(), 1);
 
+        let x: Board = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1".parse().unwrap();
+        assert_eq!(b.to_fen(), x.to_fen());
+        assert_eq!(b.state.hash, x.state.hash);
+
         b.undo_move(m);
 
         assert_eq!(b.get_piece(Square::E4), CPiece::None);
         assert_eq!(b.get_piece(Square::E2), CPiece::WPawn);
         assert_eq!(b.history.len(), 0);
+
+        let x = Board::default();
+        assert_eq!(b.to_fen(), x.to_fen());
+        assert_eq!(b.state.hash, x.state.hash);
     }
 
     #[test]
@@ -323,7 +345,9 @@ mod tests {
         b.make_move(m4);
         b.make_move(m5);
 
-        assert_eq!(b.to_fen(), "rnbqkbnr/ppp2ppp/8/3Pp3/8/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 3");
+        let x: Board = "rnbqkbnr/ppp2ppp/8/3Pp3/8/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 3".parse().unwrap();
+        assert_eq!(b.to_fen(), x.to_fen());
+        assert_eq!(b.state.hash, x.state.hash);
 
         b.undo_move(m5);
         b.undo_move(m4);
@@ -331,6 +355,8 @@ mod tests {
         b.undo_move(m2);
         b.undo_move(m1);
 
-        assert_eq!(b.to_fen(), "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let x = Board::default();
+        assert_eq!(b.to_fen(), x.to_fen());
+        assert_eq!(b.state.hash, x.state.hash);
     }
 }

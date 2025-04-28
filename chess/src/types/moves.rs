@@ -15,6 +15,14 @@ use super::{piece::Piece, square::Square};
 pub struct Move(pub u16);
 
 impl Move {
+    /// None.
+    /// This represents a move that is yet to be populated.
+    pub const NONE: Self = Self(0x00);
+
+    /// Null.
+    /// This represents a move that will not be populated.
+    pub const NULL: Self = Self(0x41);
+
     /// Construct a move.
     #[inline]
     pub const fn new(src: Square, tgt: Square, flag: MoveFlag) -> Self {
@@ -23,21 +31,21 @@ impl Move {
 
     /// Gets the source square of this move.
     #[inline]
-    pub fn src(self) -> Square {
-        Square::from(((self.0 >> 6) & 63) as u8)
+    pub const fn src(self) -> Square {
+        Square::from_raw(((self.0 >> 6) & 63) as u8)
     }
 
     /// Gets the target square of this move.
     #[inline]
-    pub fn tgt(self) -> Square {
-        Square::from((self.0 & 63) as u8)
+    pub const fn tgt(self) -> Square {
+        Square::from_raw((self.0 & 63) as u8)
     }
 
     /// Gets the flag of this move.
     #[inline]
-    pub fn flag(self) -> MoveFlag {
+    pub const fn flag(self) -> MoveFlag {
         const TYPE: u16 = 0xF << 12;
-        MoveFlag::from(((self.0 & TYPE) >> 12) as u8)
+        MoveFlag::from_raw(((self.0 & TYPE) >> 12) as u8)
     }
 
     /// Whether the move is null.
@@ -48,7 +56,7 @@ impl Move {
 
     /// Whether the move is none.
     #[inline]
-    pub fn is_none(&self) -> bool {
+    pub const fn is_none(&self) -> bool {
         self.0 == 0x00
     }
 }
@@ -117,14 +125,7 @@ impl MoveFlag {
 
 impl_from_type! {
     MoveFlag, u8,
-    u8,
-    u16,
-    u32,
-    u64,
-    i16,
-    i32,
-    i64,
-    usize
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
 /// Display a move in UCI format.

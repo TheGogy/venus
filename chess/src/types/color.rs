@@ -1,5 +1,7 @@
 use std::{fmt, ops::Not};
 
+use crate::impl_from_type;
+
 /// Color. This represents the two sides, White and Black.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
@@ -32,6 +34,11 @@ impl Not for Color {
     fn not(self) -> Self {
         unsafe { std::mem::transmute(1 ^ (self as u8)) }
     }
+}
+
+impl_from_type! {
+    Color, u8,
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize, bool]
 }
 
 /// Get a color from a character.

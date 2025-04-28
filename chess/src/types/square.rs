@@ -34,7 +34,7 @@ impl Square {
     /// Make a square from a rank and file
     #[inline]
     pub const fn make(r: Rank, f: File) -> Self {
-        unsafe { std::mem::transmute(((r as u8) << 3) + f as u8) }
+        Self::from_raw(((r as u8) << 3) + f as u8)
     }
 
     /// Get the index of the square.
@@ -52,43 +52,43 @@ impl Square {
     /// Get the file the square is on.
     #[inline]
     pub const fn file(self) -> File {
-        unsafe { std::mem::transmute(self as u8 & 0x7) }
+        File::from_raw(self as u8 & 0x7)
     }
 
     /// Get the rank the square is on.
     #[inline]
     pub const fn rank(self) -> Rank {
-        unsafe { std::mem::transmute(self as u8 >> 3) }
+        Rank::from_raw(self as u8 >> 3)
     }
 
     /// Gets the square relative to white's side.
     #[inline]
     pub const fn relative(self, c: Color) -> Self {
-        unsafe { std::mem::transmute(self as u8 ^ (c as u8 * 56)) }
+        Self::from_raw(self as u8 ^ (c as u8 * 56))
     }
 
     /// Moves the square forward by one relative to the side.
     #[inline]
     pub const fn forward(self, c: Color) -> Self {
-        unsafe { std::mem::transmute(self as i8 + 8 - (16 * c.index() as i8)) }
+        Self::from_raw(self as u8 + 8 - (16 * c.index() as u8))
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8)
     #[inline]
     pub const fn next(self) -> Self {
-        unsafe { std::mem::transmute(self as u8 + 1) }
+        Self::from_raw(self as u8 + 1)
     }
 
     /// Gets the previous square. (H8 -> A8 -> H1 -> A1)
     #[inline]
     pub const fn prev(self) -> Self {
-        unsafe { std::mem::transmute(self as u8 - 1) }
+        Self::from_raw(self as u8 - 1)
     }
 
     /// Iterate over all squares.
     #[inline]
     pub fn iter() -> impl Iterator<Item = Square> {
-        (0..64).map(Square::from)
+        (0..64).map(Square::from_raw)
     }
 }
 
@@ -113,7 +113,7 @@ impl FromStr for Square {
         let rank_idx = (rank as u8) - b'1';
         let square_idx = rank_idx * 8 + file_idx;
 
-        Ok(unsafe { std::mem::transmute::<u8, Square>(square_idx) })
+        Ok(Self::from_raw(square_idx))
     }
 }
 
@@ -128,12 +128,16 @@ impl fmt::Display for Square {
 
 impl_from_type! {
     Square, u8,
-    u8,
-    u16,
-    u32,
-    u64,
-    i16,
-    i32,
-    i64,
-    usize
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_next_prev() {
+        assert_eq!(Square::A1.next(), Square::B1);
+        assert_eq!(Square::B3.prev(), Square::A3);
+    }
 }

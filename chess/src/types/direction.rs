@@ -85,13 +85,34 @@ pub const fn sliding_ray(d: Direction, s: usize, occ: u64) -> Bitboard {
 impl Square {
     /// Add a direction to a square.
     #[inline]
-    pub fn add_dir(self, dir: Direction) -> Self {
-        Square::from(self as u8 + dir as u8)
+    pub const fn add_dir(self, dir: Direction) -> Self {
+        Square::from_raw((self as u8).wrapping_add(dir as u8))
     }
 
     /// Subtract a direction from a square.
     #[inline]
-    pub fn sub_dir(self, dir: Direction) -> Self {
-        Square::from((self as u8).wrapping_sub(dir as u8))
+    pub const fn sub_dir(self, dir: Direction) -> Self {
+        Square::from_raw((self as u8).wrapping_sub(dir as u8))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_dir() {
+        assert_eq!(Square::E4.add_dir(Direction::North), Square::E5);
+        assert_eq!(Square::E4.add_dir(Direction::South), Square::E3);
+        assert_eq!(Square::E4.add_dir(Direction::East), Square::F4);
+        assert_eq!(Square::E4.add_dir(Direction::West), Square::D4);
+    }
+
+    #[test]
+    fn test_sub_dir() {
+        assert_eq!(Square::E4.sub_dir(Direction::North), Square::E3);
+        assert_eq!(Square::E4.sub_dir(Direction::South), Square::E5);
+        assert_eq!(Square::E4.sub_dir(Direction::East), Square::D4);
+        assert_eq!(Square::E4.sub_dir(Direction::West), Square::F4);
     }
 }

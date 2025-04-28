@@ -198,7 +198,7 @@ impl CastlingRights {
                 }
 
                 'A'..='H' => {
-                    let sq = Square::make(Rank::R1.relative(c), File::from(t as u8 - b'A'));
+                    let sq = Square::make(Rank::R1.relative(c), File::from_raw(t as u8 - b'A'));
                     (sq, CastlingRights::get_mask(c, ksq < sq))
                 }
 

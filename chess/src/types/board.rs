@@ -1,6 +1,8 @@
 use core::fmt;
 use std::str::FromStr;
 
+use crate::movegen::ALL_MOVE;
+
 use super::{
     bitboard::Bitboard,
     castling::{CastlingMask, CastlingRights},
@@ -33,7 +35,7 @@ pub struct BoardState {
     pub checkmask: Bitboard,
 
     // Keys
-    pub key: Hash,
+    pub hash: Hash,
 }
 
 /// Contains the current board state.
@@ -103,6 +105,8 @@ impl FromStr for Board {
         let fen = s.split_whitespace().take(6).collect::<Vec<&str>>();
         let mut board = Self::empty();
 
+        let mut state = BoardState::default();
+
         // Parse piece placement
         let mut file: u8 = 0;
         let mut rank: u8 = 7;
@@ -123,8 +127,10 @@ impl FromStr for Board {
                     if file >= 8 {
                         return Err("Too many pieces in rank!");
                     }
-                    let piece = CPiece::try_from(token)?;
-                    board.set_piece(piece, Square::from(rank * 8 + file));
+                    let p = CPiece::try_from(token)?;
+                    let s = Square::from_raw(rank * 8 + file);
+                    board.set_piece(p, s);
+                    state.hash.toggle_piece(p, s);
                     file += 1;
                 }
             }
@@ -134,19 +140,21 @@ impl FromStr for Board {
             return Err("Invalid piece placement!");
         }
 
+        if board.pc_bb(Color::White, Piece::King).nbits() != 1 || board.pc_bb(Color::Black, Piece::King).nbits() != 1 {
+            return Err("Incorrect number of kings!");
+        }
+
         // Parse side to move
         match fen[1] {
             "w" => {
                 board.stm = Color::White;
-                board.state.key.toggle_color();
+                state.hash.toggle_color();
             }
             "b" => board.stm = Color::Black,
             _ => return Err("Invalid side to move!"),
         }
 
         // Update the board state masks for movegen.
-        let mut state = BoardState::default();
-        state.key = board.state.key;
         board.update_masks(&mut state);
 
         // Parse castling rights
@@ -158,6 +166,7 @@ impl FromStr for Board {
         board.castlingmask = c_mask;
 
         state.castling = c_rights;
+        state.hash.toggle_castling(c_rights);
 
         // Parse en passant
         match fen[3] {
@@ -165,7 +174,7 @@ impl FromStr for Board {
             s => {
                 let epsq: Square = s.parse()?;
                 state.epsq = epsq;
-                state.key.toggle_ep(epsq);
+                state.hash.toggle_ep(epsq);
             }
         }
 
@@ -192,7 +201,7 @@ impl Board {
             let mut empty = 0;
 
             for file in 0..8 {
-                let square = Square::from(rank * 8 + file);
+                let square = Square::from_raw(rank * 8 + file);
                 let piece = self.pc_map[square.index()];
 
                 if piece != CPiece::None {
@@ -253,7 +262,7 @@ impl fmt::Display for Board {
 -> Hash: {}
 ",
             self.to_fen(),
-            self.state.key
+            self.state.hash
         )
     }
 }
@@ -263,7 +272,7 @@ impl Board {
     /// Get the bitboard of a given piece.
     #[inline]
     pub fn p_bb(&self, p: Piece) -> Bitboard {
-        self.colors[p.index()]
+        self.pieces[p.index()]
     }
 
     /// Get the bitboard of a given color.
@@ -314,7 +323,6 @@ impl Board {
         self.pieces[p.pt().index()].set_bit(s);
         self.colors[p.color().index()].set_bit(s);
         self.pc_map[s.index()] = p;
-        self.state.key.toggle_piece(p, s);
     }
 
     /// Remove the piece on the given square.
@@ -324,13 +332,24 @@ impl Board {
         self.pieces[p.pt().index()].pop_bit(s);
         self.colors[p.color().index()].pop_bit(s);
         self.pc_map[s.index()] = CPiece::None;
-        self.state.key.toggle_piece(p, s);
     }
 
     /// Gets the piece at the given square.
     #[inline]
     pub fn get_piece(&self, s: Square) -> CPiece {
         self.pc_map[s.index()]
+    }
+
+    /// Find a move given a UCI move string.
+    #[inline]
+    pub fn find_move(&self, s: &str) -> Option<Move> {
+        self.gen_moves::<ALL_MOVE>().iter().find(|&m| m.to_string() == s).copied()
+    }
+
+    /// Get the history at `i` steps back.
+    #[inline]
+    pub fn hist_sub(&self, i: usize) -> &BoardState {
+        &self.history[self.history.len() - i]
     }
 }
 

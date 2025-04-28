@@ -41,6 +41,12 @@ impl Piece {
     pub const fn index(self) -> usize {
         self as usize
     }
+
+    /// Iterate over all Pieces.
+    #[inline]
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (0..6).map(Self::from_raw)
+    }
 }
 
 impl CPiece {
@@ -57,19 +63,25 @@ impl CPiece {
     /// The color of this CPiece.
     #[inline]
     pub const fn color(self) -> Color {
-        unsafe { std::mem::transmute(self as u8 & 1) }
+        Color::from_raw(self as u8 & 1)
     }
 
     /// The type of this CPiece.
     #[inline]
     pub const fn pt(self) -> Piece {
-        unsafe { std::mem::transmute(self as u8 >> 1) }
+        Piece::from_raw(self as u8 >> 1)
     }
 
     /// Create a CPiece from a Color and a Piece.
     #[inline]
-    pub const fn create(c: Color, p: Piece) -> CPiece {
-        unsafe { std::mem::transmute((p as u8) * 2 + (c as u8)) }
+    pub const fn create(c: Color, p: Piece) -> Self {
+        Self::from_raw(((p as u8) << 1) + c as u8)
+    }
+
+    /// Iterate over all CPieces.
+    #[inline]
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (0..12).map(Self::from_raw)
     }
 
     /// Get the UCI character for this piece.
@@ -90,26 +102,12 @@ impl TryFrom<char> for CPiece {
 
 impl_from_type! {
     Piece, u8,
-    u8,
-    u16,
-    u32,
-    u64,
-    i16,
-    i32,
-    i64,
-    usize
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
 impl_from_type! {
     CPiece, u8,
-    u8,
-    u16,
-    u32,
-    u64,
-    i16,
-    i32,
-    i64,
-    usize
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
 #[cfg(test)]

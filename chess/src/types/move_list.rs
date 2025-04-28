@@ -25,20 +25,28 @@ impl MoveList {
     #[cfg(any(target_pointer_width = "16", target_pointer_width = "8",))]
     pub const SIZE: usize = 255;
 
-    pub fn is_empty(&self) -> bool {
+    /// Whether the movelist is empty.
+    #[inline]
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    pub fn len(&self) -> usize {
+    /// The length of the move list.
+    #[inline]
+    pub const fn len(&self) -> usize {
         self.len
     }
 
-    pub fn push(&mut self, m: Move) {
+    /// Push a move to the move list.
+    #[inline]
+    pub const fn push(&mut self, m: Move) {
         debug_assert!(self.len < Self::SIZE);
         self.moves[self.len] = m;
         self.len += 1;
     }
 
+    /// Iterate through the move list.
+    #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &Move> {
         self.moves[..self.len].iter()
     }

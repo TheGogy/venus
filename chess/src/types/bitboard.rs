@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::{impl_math_assign_ops, impl_math_ops};
+use crate::{impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
 
 use super::{
     rank_file::{File, Rank},
@@ -82,19 +82,9 @@ impl Bitboard {
     }
 }
 
-// Implement math operations and assignment operations on Bitboard.
-impl_math_ops! {
-    Bitboard,
-    BitAnd::bitand,
-    BitOr::bitor,
-    BitXor::bitxor
-}
-
-impl_math_assign_ops! {
-    Bitboard,
-    BitAndAssign::bitand_assign,
-    BitOrAssign::bitor_assign,
-    BitXorAssign::bitxor_assign
+impl_all_math_ops! {
+    Bitboard: u64,
+    [u64, usize]
 }
 
 impl std::ops::Not for Bitboard {
@@ -125,7 +115,7 @@ impl fmt::Display for Bitboard {
         }
         output.push_str("  a b c d e f g h\n"); // Column labels
 
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 

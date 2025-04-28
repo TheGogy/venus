@@ -37,14 +37,7 @@ impl TryFrom<char> for File {
 
 impl_from_type! {
     File, u8,
-    u8,
-    u16,
-    u32,
-    u64,
-    i16,
-    i32,
-    i64,
-    usize
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
 /// Get a Rank from a character.
@@ -62,14 +55,7 @@ impl TryFrom<char> for Rank {
 
 impl_from_type! {
     Rank, u8,
-    u8,
-    u16,
-    u32,
-    u64,
-    i16,
-    i32,
-    i64,
-    usize
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
 /// File implemenatations.
@@ -111,7 +97,7 @@ impl Rank {
     /// File::A.relative(Color::Black) == File::H
     #[inline]
     pub const fn relative(self, c: Color) -> Self {
-        unsafe { std::mem::transmute(self as u8 ^ (c as u8 * 7)) }
+        Self::from_raw(self as u8 ^ (c as u8 * 7))
     }
 
     /// Get the char representing the rank.

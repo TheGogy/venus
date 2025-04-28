@@ -1,13 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["chess", "cli"]
+members = ["chess"]
 
 [profile.release]
 opt-level = 3
 target-cpu = "native"
 lto = "fat"
 codegen-units = 1
-incremental = false
 panic = "abort"
 overflow-checks = false
 debug = false
