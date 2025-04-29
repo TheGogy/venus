@@ -5,6 +5,7 @@ use std::{
         Arc,
         atomic::{AtomicBool, AtomicU64, Ordering},
     },
+    thread,
 };
 
 use chess::types::moves::Move;
@@ -49,7 +50,7 @@ impl ThreadPool {
     /// Starts searching the given position.
     pub fn go(&mut self, pos: &mut Pos, tc: TimeControl) -> Move {
         self.setup_threads(pos, tc);
-        self.deploy_threads(pos, tc);
+        self.deploy_threads(pos);
 
         self.select_move()
     }
@@ -71,8 +72,18 @@ impl ThreadPool {
     }
 
     /// Deploys all threads searching in the given position.
-    fn deploy_threads(&mut self, pos: &mut Pos, tc: TimeControl) {
-        todo!()
+    fn deploy_threads(&mut self, pos: &mut Pos) {
+        thread::scope(|scope| {
+            for worker in &mut self.workers {
+                let mut worker_pos = pos.clone();
+                scope.spawn(move || {
+                    worker_pos.iterative_deepening::<false>(worker);
+                });
+            }
+
+            pos.iterative_deepening::<true>(&mut self.main);
+            self.global_stop.store(true, Ordering::Relaxed);
+        });
     }
 
     /// Selects the best move from all the threads after they have searched.

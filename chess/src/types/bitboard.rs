@@ -22,8 +22,8 @@ impl Bitboard {
 
     /// If the bitboard is empty
     #[inline]
-    pub fn is_empty(self) -> bool {
-        self == Bitboard::EMPTY
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
     }
 
     /// Set the bit at the given index.

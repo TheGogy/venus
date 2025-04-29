@@ -1,7 +1,6 @@
 use core::fmt;
 
 use chess::{MAX_DEPTH, types::moves::Move};
-use const_default::ConstDefault;
 
 /// PVLine.
 /// This allows us to keep track of the current PV.
@@ -11,12 +10,14 @@ pub struct PVLine {
     length: usize,
 }
 
-impl ConstDefault for PVLine {
-    const DEFAULT: Self = Self { moves: [Move::NULL; MAX_DEPTH], length: 0 };
+impl Default for PVLine {
+    fn default() -> Self {
+        Self { moves: [Move::NULL; MAX_DEPTH], length: 0 }
+    }
 }
 
-impl std::fmt::Display for PVLine {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl fmt::Display for PVLine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut s = String::from("pv");
 
         for m in &self.moves[0..self.length] {

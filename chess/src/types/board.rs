@@ -352,6 +352,12 @@ impl Board {
     pub fn hist_sub(&self, i: usize) -> &BoardState {
         &self.history[self.history.len() - i]
     }
+
+    /// Whether we are in check.
+    #[inline]
+    pub const fn in_check(&self) -> bool {
+        !self.state.checkers.is_empty()
+    }
 }
 
 #[cfg(test)]

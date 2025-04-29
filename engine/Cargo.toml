@@ -6,4 +6,6 @@ authors = ["George Rawlinson"]
 
 [dependencies]
 chess = { path = "../chess" }
-const-default = "1.0.0"
+
+[features]
+tune = []
