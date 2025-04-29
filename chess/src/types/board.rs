@@ -39,6 +39,7 @@ pub struct BoardState {
 }
 
 /// Contains the current board state.
+#[derive(Clone, Debug)]
 pub struct Board {
     // Piece placement
     pub pieces: [Bitboard; Piece::NUM],

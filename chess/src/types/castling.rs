@@ -95,6 +95,7 @@ impl Not for CastlingRights {
 ///
 /// mask:  The castling mask map that we can use to swap out our castling rights.
 /// rooks: The rook starting squares. [ wk , bk , wq , bq ]
+#[derive(Clone, Debug)]
 pub struct CastlingMask {
     pub mask: [CastlingRights; Square::NUM],
     pub rooks: [Square; 4],
