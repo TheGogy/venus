@@ -87,7 +87,7 @@ impl fmt::Display for Eval {
                 write!(f, "mate -{moves_to_mate}")
             }
         } else {
-            write!(f, "cp {}", self.normalized())
+            write!(f, "cp {}", self.normalized().0)
         }
     }
 }

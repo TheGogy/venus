@@ -1,5 +1,6 @@
 use crate::types::board::Board;
 
+/// Counts all the legal positions up to a given depth.
 pub fn perft<const ALL: bool, const PRINT: bool>(b: &mut Board, depth: usize) -> usize {
     let mut total = 0;
 

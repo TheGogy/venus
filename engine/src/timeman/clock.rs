@@ -76,6 +76,11 @@ impl Clock {
         Self::new(global_stop, global_nodes, TimeControl::Infinite, Color::White)
     }
 
+    /// Spawn a clock that searches up to a fixed depth.
+    pub fn fixed_depth(depth: usize) -> Self {
+        Self::new(Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)), TimeControl::FixedDepth(depth), Color::White)
+    }
+
     /// Prepare clock for a search.
     pub fn prepare_search(&mut self) {
         self.start_time = Instant::now();
@@ -142,7 +147,7 @@ impl Clock {
             self.global_nodes.fetch_add(delta, Ordering::Relaxed);
             self.last_node_check = nodes;
             if self.is_stopped() {
-                return false;
+                return true;
             }
         }
 

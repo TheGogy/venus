@@ -1,0 +1,11 @@
+[package]
+name = "cli"
+version = "0.0.0"
+edition = "2024"
+authors = ["George Rawlinson"]
+
+[dependencies]
+engine = { path = "../engine" }
+
+[features]
+tune = ["engine/tune"]

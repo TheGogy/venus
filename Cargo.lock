@@ -10,6 +10,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "cli"
+version = "0.0.0"
+dependencies = [
+ "engine",
+]
+
+[[package]]
 name = "ctor"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

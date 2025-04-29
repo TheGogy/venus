@@ -2,7 +2,7 @@ use chess::types::eval::Eval;
 
 use crate::{position::pos::Pos, threading::thread::Thread, tunables::params::tunables::*};
 
-use super::pv::PVLine;
+use super::{Root, pv::PVLine};
 
 impl Pos {
     /// Iterative deepening loop.
@@ -35,13 +35,13 @@ impl Pos {
         // Setup aspiration window once we are over the min depth.
         if search_depth >= asp_window_d_min() {
             alpha = (t.eval - delta).max(-Eval::INFINITY);
-            beta = (t.eval + delta).min(-Eval::INFINITY);
+            beta = (t.eval + delta).min(Eval::INFINITY);
         }
 
         loop {
             // Search within the window
 
-            let v = self.negamax(t, &mut pv, alpha, beta, search_depth);
+            let v = self.negamax::<Root>(t, &mut pv, alpha, beta, search_depth);
 
             if t.stop {
                 return -Eval::INFINITY;

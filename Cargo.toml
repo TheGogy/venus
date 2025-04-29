@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["chess", "engine"]
+members = ["chess", "cli", "engine"]
 
 [profile.release]
 opt-level = 3

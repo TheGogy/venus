@@ -27,3 +27,25 @@ impl Pos {
         Eval(total)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chess::types::eval::Eval;
+
+    use crate::{
+        position::pos::Pos,
+        tunables::params::tunables::{val_queen, val_rook},
+    };
+
+    #[test]
+    fn test_eval() {
+        let b = Pos::default();
+        assert_eq!(b.evaluate(), Eval::DRAW);
+
+        let b: Pos = "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 w Qkq - 0 1".parse().unwrap();
+        assert_eq!(b.evaluate(), Eval(-val_rook()));
+
+        let b: Pos = "fen rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 w Qkq - 0 1".parse().unwrap();
+        assert_eq!(b.evaluate(), Eval(-val_rook() + val_queen()));
+    }
+}

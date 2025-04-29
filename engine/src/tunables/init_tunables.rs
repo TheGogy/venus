@@ -115,11 +115,11 @@ macro_rules! init_tunables {
 #[macro_export]
 macro_rules! maybe_const {
     ($name:ident: $ty:ty = $value:expr;) => {
-        #[allow(non_snake_case)]
+        #[allow(non_upper_case_globals)]
         #[cfg(not(feature = "tune"))]
         const $name: $ty = $value;
 
-        #[allow(non_snake_case)]
+        #[allow(non_upper_case_globals)]
         #[cfg(feature = "tune")]
         let $name: $ty = $value;
     };

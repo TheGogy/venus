@@ -31,7 +31,7 @@ impl std::str::FromStr for Pos {
 
                 fen.parse()?
             }
-            _ => return Err("Invalid position"),
+            _ => return Err("Invalid position!"),
         };
 
         if let Some("moves") = tokens.next() {
@@ -40,7 +40,7 @@ impl std::str::FromStr for Pos {
 
                 match m {
                     Some(m) => board.make_move(m),
-                    None => eprintln!("Move is not legal!"),
+                    None => return Err("Invalid move!"),
                 };
             }
         };

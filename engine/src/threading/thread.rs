@@ -60,6 +60,8 @@ impl Thread {
         self.seldepth = 0;
         self.ply_from_null = halfmoves;
         self.nodes = 0;
+        self.pv = PVLine::default();
+        self.stop = false;
     }
 
     /// Tell the thread that a move has been made.
