@@ -5,7 +5,7 @@ use std::sync::{
 
 use chess::types::{eval::Eval, moves::Move};
 
-use crate::{search::pv::PVLine, timeman::clock::Clock};
+use crate::{history::History, search::pv::PVLine, timeman::clock::Clock};
 
 #[derive(Clone, Debug)]
 pub struct Thread {
@@ -21,12 +21,25 @@ pub struct Thread {
 
     pub pv: PVLine,
     pub stop: bool,
+
+    pub history: History,
 }
 
 impl Thread {
     /// Creates a new thread.
     pub fn new(clock: Clock) -> Self {
-        Self { clock, eval: Eval::DRAW, ply: 0, depth: 0, seldepth: 0, ply_from_null: 0, nodes: 0, pv: PVLine::default(), stop: false }
+        Self {
+            clock,
+            eval: Eval::DRAW,
+            ply: 0,
+            depth: 0,
+            seldepth: 0,
+            ply_from_null: 0,
+            nodes: 0,
+            pv: PVLine::default(),
+            stop: false,
+            history: History::default(),
+        }
     }
 
     /// Creates a new idle thread.

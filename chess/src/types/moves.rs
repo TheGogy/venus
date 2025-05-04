@@ -59,6 +59,12 @@ impl Move {
     pub const fn is_none(&self) -> bool {
         self.0 == 0x00
     }
+
+    /// Whether the move is valid (not null or none).
+    #[inline]
+    pub const fn is_valid(&self) -> bool {
+        !(self.is_none() || self.is_null())
+    }
 }
 
 /// MoveFlag. Shows the type of move.
@@ -107,6 +113,12 @@ impl MoveFlag {
     #[inline]
     pub const fn is_quiet(self) -> bool {
         self as u16 & 0b1100 == 0
+    }
+
+    /// Whether this MoveFlag denotes a noisy move.
+    #[inline]
+    pub const fn is_noisy(self) -> bool {
+        self as u16 & 0b1100 != 0
     }
 
     /// Whether this MoveFlag denotes a promotion that is not a queen.

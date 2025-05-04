@@ -1,13 +1,16 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::movegen::ALL_MOVE;
+use crate::{
+    movegen::MGAllmv,
+    tables::{atk_by_type, leaping_piece::all_pawn_atk},
+};
 
 use super::{
     bitboard::Bitboard,
     castling::{CastlingMask, CastlingRights},
     color::Color,
-    moves::Move,
+    moves::{Move, MoveFlag},
     piece::{CPiece, Piece},
     square::Square,
     zobrist::Hash,
@@ -320,7 +323,7 @@ impl Board {
 
     /// Set the given piece on the given square.
     #[inline]
-    pub fn set_piece(&mut self, p: CPiece, s: Square) {
+    pub const fn set_piece(&mut self, p: CPiece, s: Square) {
         self.pieces[p.pt().index()].set_bit(s);
         self.colors[p.color().index()].set_bit(s);
         self.pc_map[s.index()] = p;
@@ -328,7 +331,7 @@ impl Board {
 
     /// Remove the piece on the given square.
     #[inline]
-    pub fn pop_piece(&mut self, s: Square) {
+    pub const fn pop_piece(&mut self, s: Square) {
         let p = self.pc_at(s);
         self.pieces[p.pt().index()].pop_bit(s);
         self.colors[p.color().index()].pop_bit(s);
@@ -337,14 +340,14 @@ impl Board {
 
     /// Gets the piece at the given square.
     #[inline]
-    pub fn get_piece(&self, s: Square) -> CPiece {
+    pub const fn get_piece(&self, s: Square) -> CPiece {
         self.pc_map[s.index()]
     }
 
     /// Find a move given a UCI move string.
     #[inline]
     pub fn find_move(&self, s: &str) -> Option<Move> {
-        self.gen_moves::<ALL_MOVE>().iter().find(|&m| m.to_string() == s).copied()
+        self.gen_moves::<MGAllmv>().iter().find(|&m| m.to_string() == s).copied()
     }
 
     /// Get the history at `i` steps back.
@@ -357,6 +360,33 @@ impl Board {
     #[inline]
     pub const fn in_check(&self) -> bool {
         !self.state.checkers.is_empty()
+    }
+
+    /// Get the piece that is captured by a move.
+    #[inline]
+    pub fn captured(&self, m: Move) -> CPiece {
+        if m.flag() == MoveFlag::EnPassant {
+            CPiece::create(!self.stm, Piece::Pawn)
+        } else {
+            self.pc_at(m.tgt())
+        }
+    }
+
+    /// All attacks from a given piece type.
+    #[inline]
+    pub fn atk_from(&self, p: Piece, c: Color) -> Bitboard {
+        match p {
+            Piece::Pawn => all_pawn_atk(self.pc_bb(c, p), c),
+            _ => {
+                let mut atk = Bitboard::EMPTY;
+                let pcs = self.pc_bb(c, p);
+                let occ = self.occ();
+
+                pcs.bitloop(|s| atk |= atk_by_type(p, s, occ));
+
+                atk
+            }
+        }
     }
 }
 

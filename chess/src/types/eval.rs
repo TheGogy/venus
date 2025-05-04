@@ -2,7 +2,15 @@ use std::fmt;
 
 use crate::{MAX_DEPTH, impl_all_math_ops, impl_from_type, impl_math_assign_ops, impl_math_ops};
 
+/// Represents the evaluation within a game.
+///
+/// All valid evaluations are between [-32000, 32000].
+///
+/// 0     => draw
+/// 32000 => checkmate now
+/// 30000 => checkmate according to tablebase
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct Eval(pub i32);
 
 impl Eval {

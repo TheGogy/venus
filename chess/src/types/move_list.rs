@@ -45,18 +45,21 @@ impl MoveList {
         self.len += 1;
     }
 
-    /// Iterate through the move list.
+    /// Swap two moves in the move list by index.
+    #[inline]
+    pub const fn swap(&mut self, x: usize, y: usize) {
+        self.moves.swap(x, y);
+    }
+
+    /// Iterate over all moves in the move list.
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &Move> {
         self.moves[..self.len].iter()
     }
-}
 
-impl<'a> IntoIterator for &'a MoveList {
-    type Item = &'a Move;
-    type IntoIter = std::slice::Iter<'a, Move>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.moves[..self.len].iter()
+    /// Get the move at the given index.
+    #[inline]
+    pub const fn at(&self, i: usize) -> Move {
+        self.moves[i]
     }
 }

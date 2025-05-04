@@ -10,6 +10,8 @@ use crate::types::{
 impl Board {
     /// Make a move in the current position.
     pub fn make_move(&mut self, m: Move) {
+        assert!(m.is_valid());
+
         let flag = m.flag();
         let (src, tgt) = (m.src(), m.tgt());
         let mut piece = self.get_piece(src);

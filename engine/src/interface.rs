@@ -106,7 +106,7 @@ impl Engine {
     /// Handle perft command.
     fn handle_perft(&mut self, d: usize) {
         let start = Instant::now();
-        let total = perft::<true, true>(&mut self.pos.board.clone(), d);
+        let total = perft::<true>(&mut self.pos.board.clone(), d);
         let duration = start.elapsed();
 
         let perf = total as u128 / duration.as_micros();

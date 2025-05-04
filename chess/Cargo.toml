@@ -2,7 +2,7 @@
 name = "chess"
 version = "0.1.0"
 edition = "2024"
-authors = ["George Rawlinson"]
+authors = ["TheGogy"]
 
 [dependencies]
 ctor = "0.4.1"

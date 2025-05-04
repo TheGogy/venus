@@ -32,7 +32,7 @@ impl Not for Color {
     type Output = Color;
 
     fn not(self) -> Self {
-        unsafe { std::mem::transmute(1 ^ (self as u8)) }
+        Self::from_raw(1 ^ (self as u8))
     }
 }
 

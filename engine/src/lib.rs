@@ -1,8 +1,9 @@
-pub mod position;
-pub mod search;
-pub mod threading;
-pub mod timeman;
-pub mod tunables;
+mod history;
+mod position;
+mod search;
+mod threading;
+mod timeman;
 
 pub mod bench;
 pub mod interface;
+pub mod tunables;

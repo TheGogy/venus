@@ -27,4 +27,14 @@ init_tunables! {
     // Aspiration window.
     asp_window_default: i32 = 26, 10, 30, 1;
     asp_window_d_min: usize = 3, 2, 7, 1;
+
+    // History bonuses.
+    hist_bonus_max:  i16 = 1626, 800, 3200, 100;
+    hist_bonus_base: i16 = 354, 100, 600, 25;
+    hist_bonus_mult: i16 = 372, 100, 600, 25;
+
+    // History maluses.
+    hist_malus_max:  i16 = 1608, 800, 3200, 100;
+    hist_malus_base: i16 = 372, 100, 600, 25;
+    hist_malus_mult: i16 = 359, 100, 600, 25;
 }

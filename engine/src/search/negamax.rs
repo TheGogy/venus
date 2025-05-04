@@ -1,6 +1,6 @@
 use chess::types::{eval::Eval, moves::Move};
 
-use crate::{position::pos::Pos, threading::thread::Thread};
+use crate::{history::movebuffer::MoveBuffer, position::pos::Pos, threading::thread::Thread};
 
 use super::{NodeType, pv::PVLine};
 
@@ -37,12 +37,27 @@ impl Pos {
 
         let mut best_eval = -Eval::INFINITY;
         let mut best_move = Move::NULL;
+
+        let mut noisy = MoveBuffer::default();
+        let mut quiet = MoveBuffer::default();
+
         let child_pv = &mut PVLine::default();
 
-        // TODO: Movepicking
-        let moves = self.board.gen_moves::<true>();
+        let in_check = self.board.in_check();
 
-        for &m in moves.iter() {
+        let mut mp = match self.init_movepicker::<true>() {
+            Some(mp) => mp,
+            None => {
+                return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };
+            }
+        };
+
+        while let Some(m) = mp.next(&self.board, t) {
+            assert!(m.is_valid());
+
+            let start_nodes = t.nodes;
+            let is_quiet = m.flag().is_quiet();
+
             self.board.make_move(m);
             t.move_made();
 
@@ -53,6 +68,10 @@ impl Pos {
 
             if t.stop {
                 return Eval::DRAW;
+            }
+
+            if NT::RT {
+                t.clock.update_node_count(m, t.nodes - start_nodes);
             }
 
             if v > best_eval {
@@ -69,8 +88,16 @@ impl Pos {
 
                 if v >= beta {
                     alpha = beta;
+                    t.history.update(&self.board, m, depth, &quiet, &noisy);
                     break;
                 }
+            }
+
+            // Add move to history
+            if is_quiet {
+                quiet.push(m);
+            } else if m.flag().is_cap() {
+                noisy.push(m);
             }
         }
 

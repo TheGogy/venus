@@ -46,13 +46,13 @@ impl Bitboard {
 
     /// Get the least significant bit.
     #[inline]
-    pub fn lsb(self) -> Square {
-        Square::from(self.0.trailing_zeros() as u8)
+    pub const fn lsb(self) -> Square {
+        Square::from_raw(self.0.trailing_zeros() as u8)
     }
 
     /// Get the number of bits set.
     #[inline]
-    pub fn nbits(self) -> u32 {
+    pub const fn nbits(self) -> u32 {
         self.0.count_ones()
     }
 
@@ -64,8 +64,8 @@ impl Bitboard {
     {
         let mut bb = self.0;
         while bb != 0 {
-            let square = bb.trailing_zeros();
-            f(Square::from(square));
+            let square = bb.trailing_zeros() as u8;
+            f(Square::from_raw(square));
             bb &= bb - 1;
         }
     }
