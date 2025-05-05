@@ -1,6 +1,6 @@
 use chess::types::{eval::Eval, moves::Move};
 
-use crate::{history::movebuffer::MoveBuffer, position::pos::Pos, threading::thread::Thread};
+use crate::{position::pos::Pos, threading::thread::Thread};
 
 use super::{NodeType, pv::PVLine};
 
@@ -38,33 +38,31 @@ impl Pos {
         let mut best_eval = -Eval::INFINITY;
         let mut best_move = Move::NULL;
 
-        let mut noisy = MoveBuffer::default();
-        let mut quiet = MoveBuffer::default();
+        let mut caps_tried = Vec::with_capacity(24);
+        let mut quiets_tried = Vec::with_capacity(24);
 
         let child_pv = &mut PVLine::default();
 
         let in_check = self.board.in_check();
 
-        let mut mp = match self.init_movepicker::<true>() {
+        let mut mp = match self.init_movepicker::<true>(None) {
             Some(mp) => mp,
             None => {
                 return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };
             }
         };
 
-        while let Some(m) = mp.next(&self.board, t) {
+        while let Some((m, _)) = mp.next(&self.board, t) {
             assert!(m.is_valid());
 
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
 
-            self.board.make_move(m);
-            t.move_made();
+            self.make_move(m, t);
 
             let v = -self.negamax::<NT::Next>(t, child_pv, -beta, -alpha, depth - 1);
 
-            self.board.undo_move(m);
-            t.move_undo();
+            self.undo_move(m, t);
 
             if t.stop {
                 return Eval::DRAW;
@@ -88,21 +86,17 @@ impl Pos {
 
                 if v >= beta {
                     alpha = beta;
-                    t.history.update(&self.board, m, depth, &quiet, &noisy);
+                    t.update_tables(m, depth, &self.board, quiets_tried, caps_tried);
                     break;
                 }
             }
 
             // Add move to history
             if is_quiet {
-                quiet.push(m);
+                quiets_tried.push(m);
             } else if m.flag().is_cap() {
-                noisy.push(m);
+                caps_tried.push(m);
             }
-        }
-
-        if best_move.is_null() {
-            return if self.board.in_check() { Eval::mate_in(t.ply) } else { Eval::DRAW };
         }
 
         alpha

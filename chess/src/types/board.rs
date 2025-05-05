@@ -1,10 +1,7 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::{
-    movegen::MGAllmv,
-    tables::{atk_by_type, leaping_piece::all_pawn_atk},
-};
+use crate::tables::{atk_by_type, leaping_piece::all_pawn_atk};
 
 use super::{
     bitboard::Bitboard,
@@ -29,6 +26,7 @@ pub struct BoardState {
     // Used to unmake moves
     pub mov: Move,
     pub cap: CPiece,
+    pub mvp: CPiece,
 
     // Bitboards for movegen
     pub attacked: Bitboard,
@@ -275,32 +273,32 @@ impl fmt::Display for Board {
 impl Board {
     /// Get the bitboard of a given piece.
     #[inline]
-    pub fn p_bb(&self, p: Piece) -> Bitboard {
+    pub const fn p_bb(&self, p: Piece) -> Bitboard {
         self.pieces[p.index()]
     }
 
     /// Get the bitboard of a given color.
     #[inline]
-    pub fn c_bb(&self, c: Color) -> Bitboard {
+    pub const fn c_bb(&self, c: Color) -> Bitboard {
         self.colors[c.index()]
     }
 
     /// Get the bitboard of a given piece + color.
     #[inline]
     pub fn pc_bb(&self, c: Color, p: Piece) -> Bitboard {
-        self.pieces[p.index()] & self.colors[c.index()]
+        self.p_bb(p) & self.c_bb(c)
     }
 
     /// Get all the diagonal sliders on the board (queens + bishops).
     #[inline]
     pub fn diag_slider(&self, c: Color) -> Bitboard {
-        (self.pieces[Piece::Bishop.index()] | self.pieces[Piece::Queen.index()]) & self.colors[c.index()]
+        (self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)) & self.c_bb(c)
     }
 
     /// Get all the orthogonal sliders on the board (queens + rooks).
     #[inline]
     pub fn orth_slider(&self, c: Color) -> Bitboard {
-        (self.pieces[Piece::Rook.index()] | self.pieces[Piece::Queen.index()]) & self.colors[c.index()]
+        (self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)) & self.c_bb(c)
     }
 
     /// Get the total occupancy of the position.
@@ -347,13 +345,19 @@ impl Board {
     /// Find a move given a UCI move string.
     #[inline]
     pub fn find_move(&self, s: &str) -> Option<Move> {
-        self.gen_moves::<MGAllmv>().iter().find(|&m| m.to_string() == s).copied()
+        self.gen_moves::<true>().iter().find(|&m| m.to_string() == s).copied()
     }
 
     /// Get the history at `i` steps back.
     #[inline]
     pub fn hist_sub(&self, i: usize) -> &BoardState {
         &self.history[self.history.len() - i]
+    }
+
+    /// Get the current ply of the board.
+    #[inline]
+    pub fn ply(&self) -> usize {
+        self.history.len()
     }
 
     /// Whether we are in check.

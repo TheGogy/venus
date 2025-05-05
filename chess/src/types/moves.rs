@@ -109,6 +109,13 @@ impl MoveFlag {
         self as u16 & 0b1000 != 0
     }
 
+    /// Whether this MoveFlag denotes a quiet promotion.
+    /// This includes underpromotions.
+    #[inline]
+    pub const fn is_qpromo(self) -> bool {
+        self.is_promo() && !self.is_cap()
+    }
+
     /// Whether this MoveFlag denotes a quiet move.
     #[inline]
     pub const fn is_quiet(self) -> bool {
@@ -124,7 +131,7 @@ impl MoveFlag {
     /// Whether this MoveFlag denotes a promotion that is not a queen.
     #[inline]
     pub const fn is_underpromo(self) -> bool {
-        self as u16 & 0b1011 != 0b1011
+        self.is_promo() && self as u16 & 0b1011 != 0b1011
     }
 
     /// Get the piece this MoveFlag denotes a promotion to.
@@ -176,5 +183,10 @@ mod tests {
         assert!(MoveFlag::Castling.is_quiet());
         assert!(MoveFlag::PromoQ.is_promo());
         assert!(MoveFlag::PromoR.is_underpromo());
+        assert!(MoveFlag::PromoN.is_underpromo());
+        assert!(MoveFlag::PromoB.is_underpromo());
+        assert!(MoveFlag::PromoR.is_underpromo());
+        assert!(!MoveFlag::PromoQ.is_underpromo());
+        assert!(!MoveFlag::Normal.is_underpromo());
     }
 }

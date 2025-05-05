@@ -6,6 +6,7 @@ authors = ["TheGogy"]
 
 [dependencies]
 chess = { path = "../chess" }
+utils = { path = "../utils" }
 
 [features]
 tune = []

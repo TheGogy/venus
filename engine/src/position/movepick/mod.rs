@@ -1,55 +1,65 @@
-use super::pos::Pos;
-use chess::{movegen::MGAllmv, types::move_list::MoveList};
+use chess::types::{move_list::MoveList, moves::Move};
 
 mod pick_move;
 mod score_move;
 mod utils;
 
+use super::pos::Pos;
+
 impl Pos {
-    /// Initializes a movepicker from the current position.
-    /// If there are no moves, returns None.
-    pub fn init_movepicker<const QUIET: bool>(&self) -> Option<MovePicker<QUIET>> {
-        let moves = self.board.gen_moves::<MGAllmv>();
-        if moves.is_empty() { None } else { Some(MovePicker::new(moves)) }
+    pub fn init_movepicker<const QUIETS: bool>(&self, tt_move: Option<Move>) -> Option<MovePicker<QUIETS>> {
+        let move_list = self.board.gen_moves::<QUIETS>();
+        if move_list.is_empty() { None } else { Some(MovePicker::<QUIETS>::new(move_list, tt_move)) }
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
-pub enum MPStage {
-    NoisyScore,
-    NoisyGood,
-    QuietScore,
-    QuietGood,
-    NoisyBad,
-
-    Finished,
+pub enum Stage {
+    TTMove,
+    ScoreTacticals,
+    GoodTacticals,
+    ScoreQuiets,
+    Quiets,
+    BadTacticals,
+    NoMoves,
 }
 
 #[derive(Clone, Debug)]
-pub struct MovePicker<const QUIET: bool> {
+pub struct MovePicker<const QUIETS: bool> {
     moves: MoveList,
     scores: [i32; MoveList::SIZE],
+    tt_move: Option<Move>,
 
-    stage: MPStage,
+    idx_cur: usize,
+    idx_quiets: usize,
+    idx_noisy_bad: usize,
 
-    idx_cur: usize,        // Current move.
-    idx_good_quiet: usize, // Start of good quiets.
-    idx_bad_noisy: usize,  // Start of bad noisies.
-    idx_end: usize,        // End of move list.
+    pub stage: Stage,
+    pub skip_quiets: bool,
 }
 
-impl<const QUIET: bool> MovePicker<QUIET> {
-    /// Create a new move picker.
-    pub const fn new(moves: MoveList) -> MovePicker<QUIET> {
-        let end = moves.len();
-        Self {
-            moves,
+impl<const QUIETS: bool> MovePicker<QUIETS> {
+    /// Initialize a new MovePicker for the given move list.
+    pub fn new(move_list: MoveList, tt_move: Option<Move>) -> MovePicker<QUIETS> {
+        let end = move_list.len();
+
+        let stage = match tt_move {
+            Some(m) if !QUIETS && m.flag().is_quiet() => Stage::ScoreTacticals,
+            None => Stage::ScoreTacticals,
+            _ => Stage::TTMove,
+        };
+
+        MovePicker {
+            moves: move_list,
             scores: [0; MoveList::SIZE],
-            stage: MPStage::NoisyScore,
+            tt_move,
+
             idx_cur: 0,
-            idx_good_quiet: 0,
-            idx_bad_noisy: end,
-            idx_end: end,
+            idx_quiets: 0,
+            idx_noisy_bad: end,
+
+            stage,
+            skip_quiets: false,
         }
     }
 }

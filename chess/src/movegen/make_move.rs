@@ -25,6 +25,9 @@ impl Board {
         // Unset ep sq
         state.epsq = Square::Invalid;
 
+        // Set moved piece.
+        state.mvp = self.pc_at(src);
+
         // Remove piece from source square.
         self.pop_piece(src);
         state.hash.toggle_piece(piece, src);
@@ -182,6 +185,9 @@ impl Board {
             state.epsq = Square::Invalid;
             state.hash.toggle_ep(state.epsq);
         }
+
+        // Add null move
+        state.mov = Move::NULL;
 
         // Update stm
         self.stm = !self.stm;
@@ -360,5 +366,20 @@ mod tests {
         let x = Board::default();
         assert_eq!(b.to_fen(), x.to_fen());
         assert_eq!(b.state.hash, x.state.hash);
+    }
+
+    #[test]
+    fn test_moved_piece() {
+        let mut b = Board::default();
+        b.make_move(Move::new(Square::E2, Square::E4, MoveFlag::Normal));
+        assert_eq!(b.state.mvp, CPiece::WPawn);
+    }
+
+    #[test]
+    fn test_null_move() {
+        let mut b = Board::default();
+        b.make_null();
+        assert_eq!(b.state.mov, Move::NULL);
+        assert_eq!(b.state.mvp, CPiece::None);
     }
 }

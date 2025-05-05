@@ -9,7 +9,7 @@ impl Board {
 
     /// Whether the 50 move rule has been passed.
     #[inline]
-    fn is_fifty_move(&self) -> bool {
+    const fn is_fifty_move(&self) -> bool {
         self.state.halfmoves >= 100
     }
 

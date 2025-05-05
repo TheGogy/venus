@@ -9,7 +9,7 @@ use crate::{MAX_DEPTH, impl_all_math_ops, impl_from_type, impl_math_assign_ops, 
 /// 0     => draw
 /// 32000 => checkmate now
 /// 30000 => checkmate according to tablebase
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct Eval(pub i32);
 
