@@ -80,7 +80,6 @@ mod tests {
     fn test_color_from() {
         assert_eq!(Color::try_from('w').unwrap(), Color::White);
         assert_eq!(Color::try_from('b').unwrap(), Color::Black);
-        assert_eq!(Color::try_from('b').unwrap(), Color::Black);
     }
 
     #[test]

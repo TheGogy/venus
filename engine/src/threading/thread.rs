@@ -52,7 +52,6 @@ pub struct SearchStackEntry {
     pub eval: Eval,
     pub excluded: Option<Move>,
     pub ttpv: bool,
-    // TODO: Double Extensions
 }
 
 impl Thread {

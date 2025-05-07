@@ -162,8 +162,9 @@ impl Board {
 
                 // Prune orth pins
                 if (eprank & self.pc_bb(self.stm, Piece::King)).is_empty() && (eprank & self.orth_slider(!self.stm)).is_empty()
-                    || (rook_attacks(self.ksq(self.stm), self.occ() ^ src.bb() ^ epcap) & self.orth_slider(!self.stm)).is_empty()
+                    || (eprank & rook_attacks(self.ksq(self.stm), self.occ() ^ src.bb() ^ epcap) & self.orth_slider(!self.stm)).is_empty()
                 {
+                    println!("{src}");
                     ml.push(Move::new(src, self.state.epsq, MoveFlag::EnPassant));
                 }
             });
@@ -220,9 +221,11 @@ impl Board {
             // Generate castling moves.
             let occ = self.occ();
             let atk = self.state.attacked;
+            let ks_pin = Square::G1.relative(self.stm).bb() & self.state.pin_orth;
+            let qs_pin = (Square::C1.relative(self.stm).bb() | Square::B1.relative(self.stm).bb()) & self.state.pin_orth;
 
             // Kingside
-            if self.state.castling.has_ks(self.stm) {
+            if self.state.castling.has_ks(self.stm) && ks_pin.is_empty() {
                 let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<true>(ksq, self.stm);
                 if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
                     ml.push(Move::new(ksq, Square::G1.relative(self.stm), MoveFlag::Castling));
@@ -230,7 +233,7 @@ impl Board {
             }
 
             // Queenside
-            if self.state.castling.has_qs(self.stm) {
+            if self.state.castling.has_qs(self.stm) && qs_pin.is_empty() {
                 let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<false>(ksq, self.stm);
                 if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
                     ml.push(Move::new(ksq, Square::C1.relative(self.stm), MoveFlag::Castling));

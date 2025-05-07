@@ -71,6 +71,30 @@ impl Eval {
         self.0.abs() >= Self::LONGEST_MATE.0
     }
 
+    /// Gets the corrected eval score, forcing between LONGEST_TB_MATE.
+    #[inline]
+    pub const fn from_corrected(self, ply: usize) -> Self {
+        if self.0 >= Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 - ply as i32)
+        } else if self.0 <= -Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 + ply as i32)
+        } else {
+            self
+        }
+    }
+
+    /// Gets the corrected eval score, incorporating mate scores.
+    #[inline]
+    pub const fn to_corrected(self, ply: usize) -> Self {
+        if self.0 >= Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 + ply as i32)
+        } else if self.0 <= -Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 - ply as i32)
+        } else {
+            self
+        }
+    }
+
     /// Whether this score implies checkmate has been found in the tb.
     #[inline]
     pub const fn is_tb_mate_score(&self) -> bool {

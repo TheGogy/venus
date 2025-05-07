@@ -48,17 +48,18 @@ impl UCIReader {
 
         match tokens.next() {
             Some(cmd) => match cmd {
-                "isready"    => println!("readyok"),
-                "uci"        => self.cmd_uci(),
-                "ucinewgame" => self.interface.handle_command(EngineCommand::NewGame),
-                "stop"       => self.interface.handle_command(EngineCommand::Stop),
-                "eval"       => self.interface.handle_command(EngineCommand::Eval),
-                "perft"      => return self.cmd_perft(&mut tokens),
-                "go"         => return self.cmd_go(&mut tokens),
-                "position"   => return self.cmd_position(&mut tokens),
-                "setoption"  => return self.cmd_setoption(&mut tokens),
+                "isready"     => println!("readyok"),
+                "uci"         => self.cmd_uci(),
+                "ucinewgame"  => self.interface.handle_command(EngineCommand::NewGame),
+                "stop"        => self.interface.handle_command(EngineCommand::Stop),
+                "eval"        => self.interface.handle_command(EngineCommand::Eval),
+                "print" | "p" => self.interface.handle_command(EngineCommand::Print),
+                "perft"       => return self.cmd_perft(&mut tokens),
+                "go"          => return self.cmd_go(&mut tokens),
+                "position"    => return self.cmd_position(&mut tokens),
+                "setoption"   => return self.cmd_setoption(&mut tokens),
 
-                "quit"       => std::process::exit(0),
+                "quit"        => std::process::exit(0),
                 _ => return Err("Unknown command!")
             },
             None => return Err("Empty command!"),

@@ -37,4 +37,7 @@ init_tunables! {
     hist_malus_max:  i16 = 1608, 800, 3200, 100;
     hist_malus_base: i16 = 372, 100, 600, 25;
     hist_malus_mult: i16 = 359, 100, 600, 25;
+
+    // transposition table.
+    tt_replace_d_min: usize = 4, 2, 6, 1;
 }

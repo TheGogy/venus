@@ -38,7 +38,7 @@ mod tests {
     #[test]
     fn test_perft() {
         #[rustfmt::skip]
-        const PERFT_TESTS: [(&str, usize, usize); 20] = [
+        const PERFT_TESTS: &[(&str, usize, usize)] = &[
             // Standard chess
             ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 119060324, 6),
             ("4k3/8/8/8/8/8/8/4K2R w K - 0 1 ", 764643, 6),
@@ -55,7 +55,7 @@ mod tests {
             ("8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1", 1440467, 6),
             ("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1", 1134888, 6),
 
-            // FRC
+            // FRC starting positions
             // See: http://www.open-aurec.com/wbforum/viewtopic.php?t=1404
             ("rbbknnqr/pppppppp/8/8/8/8/PPPPPPPP/RBBKNNQR w KQkq - 0 1", 124381396, 6),
             ("bnrkrnqb/pppppppp/8/8/8/8/PPPPPPPP/BNRKRNQB w KQkq - 0 1", 146858295, 6),
@@ -63,13 +63,24 @@ mod tests {
             ("bnrbnkrq/pppppppp/8/8/8/8/PPPPPPPP/BNRBNKRQ w KQkq - 0 1", 145999259, 6),
             ("rbknqnbr/pppppppp/8/8/8/8/PPPPPPPP/RBKNQNBR w KQkq - 0 1", 126480040, 6),
             ("qbrnnkbr/pppppppp/8/8/8/8/PPPPPPPP/QBRNNKBR w KQkq - 0 1", 121613156, 6),
+
+            // FRC test positions
+            ("8/3k4/8/8/8/8/8/rR2K3 w Q - 0 1", 7137508, 6),
+            ("Rr2k3/8/8/8/8/8/8/rR2K3 w Qq - 0 1", 46081241, 6),
+            ("2k5/8/8/8/b7/8/8/2K3R1 w - - 0 1", 6578528, 6),
+            ("3k4/8/8/8/8/8/8/rRK5 w - - 0 1", 3191684, 6),
+            ("1rkr4/8/8/8/8/8/8/1RKR4 w KQkq - 0 1", 66969143, 6),
+            ("3k4/3q1q2/8/8/8/4Q3/3P4/1R1K2R1 w KQ - 0 1", 2938241633, 6),
+            ("1b1qbkrn/1prp1pp1/pn5p/2p1pB2/Q1PP4/1N6/PP2PPPP/2R1BKRN w KQk - 2 9", 1648762553, 6),
+            ("1rkb1qr1/pppp2pp/1n2p1n1/3b1p2/3N3P/P2P1P2/1PP1P1P1/1RKBBQRN w KQkq - 3 9", 1042669941, 6),
+            ("1b1r1krb/ppp1np2/qn1p2pp/3Bp3/2P1P1PP/1N1P4/PP3P2/1BNRQKR1 w KQkq - 0 9", 1169912833, 6),
         ];
 
         for (fen, correct_count, depth) in PERFT_TESTS {
             let mut board: Board = fen.parse().unwrap();
             println!("{fen}");
-            let nodes = perft::<true>(&mut board, depth);
-            assert_eq!(nodes, correct_count);
+            let nodes = perft::<true>(&mut board, *depth);
+            assert_eq!(nodes, *correct_count);
         }
     }
 }

@@ -48,13 +48,13 @@ impl Hash {
 
     /// Toggle castling rights on or off.
     #[inline]
-    pub fn toggle_castling(&mut self, cr: CastlingRights) {
+    pub const fn toggle_castling(&mut self, cr: CastlingRights) {
         self.key ^= CASTLING_KEYS[cr.index()]
     }
 
     /// Toggle en passant for a given square.
     #[inline]
-    pub fn toggle_ep(&mut self, epsq: Square) {
+    pub const fn toggle_ep(&mut self, epsq: Square) {
         self.key ^= EN_PASSANT_KEYS[epsq.file().index()]
     }
 }

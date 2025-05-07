@@ -38,6 +38,7 @@ pub enum EngineCommand {
     Position(Box<Pos>),
     Go(TimeControl),
     Perft(usize),
+    Print,
     Stop,
     Eval,
 }
@@ -84,6 +85,7 @@ impl Engine {
             EngineCommand::Go(tc)        => self.handle_go(tc),
             EngineCommand::Perft(d)      => self.handle_perft(d),
             EngineCommand::Eval          => self.handle_eval(),
+            EngineCommand::Print         => println!("{}", self.pos.board),
             _ => eprintln!("Unknown command!")
         }
     }
