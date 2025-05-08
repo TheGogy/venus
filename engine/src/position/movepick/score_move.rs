@@ -34,7 +34,7 @@ impl<const QUIET: bool> MovePicker<QUIET> {
             MoveFlag::CPromoQ      => return TAC_GOOD + PROMO,
             MoveFlag::PromoQ       => PROMO,
             t if t.is_underpromo() => return TAC_BAD,
-            _                      => MVV[board.captured(m).pt().index()] + thread.score_cap_hist(m, board),
+            _                      => MVV[board.captured(m).pt().index()] + thread.hist_noisy.get_bonus(board, m),
         };
 
         if board.see(m, Eval::DRAW) { score + TAC_GOOD } else { score + TAC_BAD }

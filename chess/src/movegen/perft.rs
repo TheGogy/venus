@@ -54,6 +54,7 @@ mod tests {
             ("K1k5/8/P7/8/8/8/8/8 w - - 0 1", 2217, 6),
             ("8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1", 1440467, 6),
             ("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1", 1134888, 6),
+            ("5k2/8/8/8/4pP2/8/8/5RK1 b Q f3 0 9", 1050689, 6),
 
             // FRC starting positions
             // See: http://www.open-aurec.com/wbforum/viewtopic.php?t=1404

@@ -50,7 +50,7 @@ impl TT {
             use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
             let index = self.index(hash);
             let entry = self.entries.get_unchecked(index);
-            _mm_prefetch((entry as *const CompressedEntry).cast::<i8>(), _MM_HINT_T0);
+            _mm_prefetch::<_MM_HINT_T0>((entry as *const CompressedEntry).cast());
         }
     }
 
@@ -78,12 +78,18 @@ impl TT {
         let should_replace = self.age != old.age ||   // Always replace older entries
             !same_position ||                               // Always replace different positions
             bound == Bound::Exact ||                        // Always replace with exact scores
-            depth + tt_replace_d_min() + 2 * usize::from(pv) > old.depth as usize; // Replace if deeper
+            depth + tt_replace_d_min() + 2 * pv as usize > old.depth as usize; // Replace if deeper
 
         if should_replace {
             let new_move = if mov.is_null() && same_position { old.mov } else { mov };
             slot.write(TTEntry::new(hash.key, self.age, depth as u8, bound, new_move, eval, value.to_corrected(ply)));
         }
+    }
+
+    /// Clear the transposition table.
+    pub fn clear(&mut self) {
+        self.age = 0;
+        self.entries.iter_mut().for_each(|e| *e = CompressedEntry::default());
     }
 }
 

@@ -5,6 +5,7 @@ use super::HistEntry;
 #[derive(Clone, Debug)]
 pub struct ContHist(Box<[[[[HistEntry; Square::NUM]; Square::NUM]; Square::NUM]; CPiece::NUM]>);
 
+// TODO: add tunable history defaults.
 impl Default for ContHist {
     fn default() -> Self {
         Self(utils::box_array())

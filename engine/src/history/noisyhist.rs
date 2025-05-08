@@ -11,6 +11,7 @@ use super::HistEntry;
 #[derive(Clone, Debug)]
 pub struct NoisyHist([[[HistEntry; Piece::NUM - 1]; CPiece::NUM]; Square::NUM]);
 
+// TODO: add tunable history defaults.
 impl Default for NoisyHist {
     fn default() -> Self {
         Self([[[HistEntry::default(); Piece::NUM - 1]; CPiece::NUM]; Square::NUM])

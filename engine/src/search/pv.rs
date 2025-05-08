@@ -4,7 +4,7 @@ use chess::{MAX_DEPTH, types::moves::Move};
 
 /// PVLine.
 /// This allows us to keep track of the current PV.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct PVLine {
     pub moves: [Move; MAX_DEPTH],
     length: usize,

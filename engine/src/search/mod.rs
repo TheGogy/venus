@@ -1,6 +1,8 @@
+pub mod helpers;
 pub mod iterative_deepening;
 pub mod negamax;
 pub mod pv;
+pub mod stack;
 
 /// Node Type trait.
 /// PV:   Whether this node is on the principal variation.

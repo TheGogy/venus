@@ -6,6 +6,7 @@ use super::HistEntry;
 #[derive(Clone, Debug)]
 pub struct QuietHist([[[HistEntry; Square::NUM]; Square::NUM]; Color::NUM]);
 
+// TODO: add tunable history defaults.
 impl Default for QuietHist {
     fn default() -> Self {
         Self([[[HistEntry::default(); Square::NUM]; Square::NUM]; Color::NUM])

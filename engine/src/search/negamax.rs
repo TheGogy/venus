@@ -1,40 +1,106 @@
 use chess::types::{eval::Eval, moves::Move};
 
-use crate::{position::pos::Pos, threading::thread::Thread};
+use crate::{
+    position::pos::Pos,
+    threading::thread::Thread,
+    tt::{entry::Bound, table::TT},
+    tunables::params::tunables::*,
+};
 
 use super::{NodeType, pv::PVLine};
 
 impl Pos {
     /// Negamax search function.
     /// This performs the majority of the searching, then drops into qsearch at the end.
-    pub fn negamax<NT: NodeType>(&mut self, t: &mut Thread, pv: &mut PVLine, mut alpha: Eval, mut beta: Eval, mut depth: usize) -> Eval {
+    pub fn negamax<NT: NodeType>(
+        &mut self,
+        t: &mut Thread,
+        tt: &TT,
+        pv: &mut PVLine,
+        mut alpha: Eval,
+        mut beta: Eval,
+        mut depth: usize,
+    ) -> Eval {
         if t.should_stop() {
             t.stop = true;
             return Eval::DRAW;
         }
 
         // Base case: depth = 0
+        // TODO: qsearch
         if depth == 0 {
             return self.evaluate();
         }
+
+        let in_check = self.board.in_check();
 
         pv.clear();
 
         t.seldepth = if NT::RT { 0 } else { t.seldepth.max(t.ply) };
 
         if !NT::RT {
+            // Check for immediate draw.
+            if self.board.is_draw(t.ply_from_null) {
+                return Eval::DRAW;
+            }
+
+            // Mate distance pruning. If we have already found a faster mate,
+            // then we don't need to search this node.
             alpha = alpha.max(Eval::mated_in(t.ply));
             beta = beta.min(Eval::mate_in(t.ply + 1));
 
             if alpha >= beta {
                 return alpha;
             }
-
-            if self.board.is_draw(t.ply_from_null) {
-                return Eval::DRAW;
-            }
         }
 
+        let excluded = t.ss().excluded;
+        let singular = !excluded.is_null();
+        let mut se_possible = false;
+
+        // -----------------------------------
+        //             TT lookup
+        // -----------------------------------
+        let tt_entry = tt.probe(self.board.state.hash);
+        let mut tt_move = Move::NULL;
+
+        if let Some(tte) = tt_entry {
+            let tt_depth = tte.depth();
+            let tt_bound = tte.bound();
+            let tt_value = tte.value(t.ply);
+
+            tt_move = tte.mov();
+
+            // TT cutoff.
+            if !NT::PV
+                && !singular
+                && tt_depth >= depth
+                && match tt_bound {
+                    Bound::Lower => tt_value >= beta,
+                    Bound::Upper => tt_value <= alpha,
+                    Bound::Exact => true,
+                    _ => false,
+                }
+            {
+                return tt_value;
+            }
+
+            se_possible =
+                !NT::RT && depth >= se_d_min() && !tt_value.is_tb_mate_score() && tt_bound != Bound::Upper && tt_depth >= depth - 3;
+        }
+
+        // TODO: proper ttpv.
+        if !singular {
+            t.ss_mut().ttpv = NT::PV
+        }
+
+        // TODO: Tablebases probe.
+
+        // TODO: static eval.
+
+        // -----------------------------------
+        //             Moves loop
+        // -----------------------------------
         let mut best_eval = -Eval::INFINITY;
         let mut best_move = Move::NULL;
 
@@ -43,7 +109,7 @@ impl Pos {
 
         let child_pv = &mut PVLine::default();
 
-        let in_check = self.board.in_check();
+        let old_alpha = alpha;
 
         let mut mp = match self.init_movepicker::<true>(None) {
             Some(mp) => mp,
@@ -55,12 +121,32 @@ impl Pos {
         while let Some((m, _)) = mp.next(&self.board, t) {
             assert!(m.is_valid());
 
+            // Ignore excluded move.
+            if m == excluded {
+                continue;
+            }
+
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
 
+            let mut new_depth = depth - 1;
+
+            // Singular extensions.
+            // If all moves look bad except one, extend that move.
+            if se_possible && m == tt_move {
+                let tt_value = tt_entry.unwrap().value(t.ply);
+                let se_beta = (tt_value - Eval::from(depth * se_mult())).max(-Eval::INFINITY);
+
+                t.ss_mut().excluded = m;
+                let v = self.null_window_search(t, tt, pv, se_beta, new_depth / 2);
+                t.ss_mut().excluded = Move::NULL;
+
+                new_depth += (v < se_beta) as usize;
+            }
+
             self.make_move(m, t);
 
-            let v = -self.negamax::<NT::Next>(t, child_pv, -beta, -alpha, depth - 1);
+            let v = -self.negamax::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth);
 
             self.undo_move(m, t);
 
@@ -98,6 +184,8 @@ impl Pos {
                 caps_tried.push(m);
             }
         }
+
+        self.store_search_result(t, tt, best_eval, alpha, beta, old_alpha, best_move, depth, NT::PV);
 
         alpha
     }

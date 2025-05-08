@@ -1,7 +1,7 @@
 use crate::{
     tables::{
-        leaping_piece::{king_attacks, knight_attacks, pawn_attacks},
-        sliding_piece::{bishop_attacks, rook_attacks},
+        leaping_piece::{king_atk, knight_atk, pawn_atk},
+        sliding_piece::{bishop_atk, rook_atk},
     },
     types::{
         bitboard::Bitboard,
@@ -89,10 +89,10 @@ impl Board {
 
             let pt = p.pt();
             if pt == Piece::Queen || pt == Piece::Bishop || pt == Piece::Pawn {
-                atk |= bishop_attacks(tgt, occ) & diag_sliders;
+                atk |= bishop_atk(tgt, occ) & diag_sliders;
             }
             if pt == Piece::Queen || pt == Piece::Rook {
-                atk |= rook_attacks(tgt, occ) & orth_sliders;
+                atk |= rook_atk(tgt, occ) & orth_sliders;
             }
 
             atk &= occ;
@@ -117,12 +117,12 @@ impl Board {
     #[inline]
     #[rustfmt::skip]
     fn attackers_to(&self, s: Square, occ: Bitboard) -> Bitboard {
-          self.pc_bb(Color::White, Piece::Pawn) & pawn_attacks(Color::Black, s)
-        | self.pc_bb(Color::Black, Piece::Pawn) & pawn_attacks(Color::White, s)
-        | (self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)) & bishop_attacks(s, occ)
-        | (self.p_bb(Piece::Rook)   | self.p_bb(Piece::Queen)) & rook_attacks(s, occ)
-        | self.p_bb(Piece::Knight) & knight_attacks(s)
-        | self.p_bb(Piece::King) & king_attacks(s)
+          self.pc_bb(Color::White, Piece::Pawn) & pawn_atk(Color::Black, s)
+        | self.pc_bb(Color::Black, Piece::Pawn) & pawn_atk(Color::White, s)
+        | (self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)) & bishop_atk(s, occ)
+        | (self.p_bb(Piece::Rook)   | self.p_bb(Piece::Queen)) & rook_atk(s, occ)
+        | self.p_bb(Piece::Knight) & knight_atk(s)
+        | self.p_bb(Piece::King) & king_atk(s)
     }
 
     /// Gets the least valuable attacker to a position.

@@ -4,8 +4,8 @@ pub mod update;
 
 use crate::{
     tables::{
-        leaping_piece::{king_attacks, knight_attacks, pawn_attacks},
-        sliding_piece::{bishop_attacks, rook_attacks},
+        leaping_piece::{king_atk, knight_atk, pawn_atk},
+        sliding_piece::{bishop_atk, rook_atk},
     },
     types::{
         bitboard::Bitboard,
@@ -146,7 +146,7 @@ impl Board {
         if self.state.epsq != Square::Invalid {
             let eprank = Bitboard::EP[self.stm.index()];
             let epcap = self.state.epsq.sub_dir(up).bb();
-            let mut epbb = pawn_attacks(!self.stm, self.state.epsq) & pawns & !orth;
+            let mut epbb = pawn_atk(!self.stm, self.state.epsq) & pawns & !orth;
 
             // If we are in check, only add checkmask if it is not the ep piece putting us in
             // check.
@@ -161,10 +161,13 @@ impl Board {
                 }
 
                 // Prune orth pins
+                // 1. Do a quick first check to make sure that our king and opponent's orthogonal
+                //    sliders are not on ep rank
+                // 2. If this first check passes, then make sure that our king is not in danger
+                //    after the move happens and both pieces are removed from the rank.
                 if (eprank & self.pc_bb(self.stm, Piece::King)).is_empty() && (eprank & self.orth_slider(!self.stm)).is_empty()
-                    || (eprank & rook_attacks(self.ksq(self.stm), self.occ() ^ src.bb() ^ epcap) & self.orth_slider(!self.stm)).is_empty()
+                    || (eprank & rook_atk(self.ksq(self.stm), self.occ() ^ src.bb() ^ epcap) & self.orth_slider(!self.stm)).is_empty()
                 {
-                    println!("{src}");
                     ml.push(Move::new(src, self.state.epsq, MoveFlag::EnPassant));
                 }
             });
@@ -215,7 +218,7 @@ impl Board {
         let ksq = self.ksq(self.stm);
 
         // Generate regular king moves (assume not in check: we want to stay out of the checkmask!)
-        self.add_moves::<ALL, false>(ksq, king_attacks(ksq) & !self.state.attacked, ml);
+        self.add_moves::<ALL, false>(ksq, king_atk(ksq) & !self.state.attacked, ml);
 
         if !CHECK {
             // Generate castling moves.
@@ -249,7 +252,7 @@ impl Board {
         let knights = self.pc_bb(self.stm, Piece::Knight) & !(self.state.pin_diag | self.state.pin_orth);
 
         knights.bitloop(|s| {
-            self.add_moves::<ALL, CHECK>(s, knight_attacks(s) & !self.c_bb(self.stm), ml);
+            self.add_moves::<ALL, CHECK>(s, knight_atk(s) & !self.c_bb(self.stm), ml);
         });
     }
 
@@ -262,12 +265,12 @@ impl Board {
 
         // Non pinned bishop + queen.
         (diag & !self.state.pin_diag).bitloop(|s| {
-            self.add_moves::<ALL, CHECK>(s, bishop_attacks(s, occ) & ok, ml);
+            self.add_moves::<ALL, CHECK>(s, bishop_atk(s, occ) & ok, ml);
         });
 
         // Pinned bishop + queen.
         (diag & self.state.pin_diag).bitloop(|s| {
-            self.add_moves::<ALL, CHECK>(s, bishop_attacks(s, occ) & ok & self.state.pin_diag, ml);
+            self.add_moves::<ALL, CHECK>(s, bishop_atk(s, occ) & ok & self.state.pin_diag, ml);
         });
     }
 
@@ -280,12 +283,12 @@ impl Board {
 
         // Non pinned rook + queen.
         (orth & !self.state.pin_orth).bitloop(|s| {
-            self.add_moves::<ALL, CHECK>(s, rook_attacks(s, occ) & ok, ml);
+            self.add_moves::<ALL, CHECK>(s, rook_atk(s, occ) & ok, ml);
         });
 
         // Pinned rook + queen.
         (orth & self.state.pin_orth).bitloop(|s| {
-            self.add_moves::<ALL, CHECK>(s, rook_attacks(s, occ) & ok & self.state.pin_orth, ml);
+            self.add_moves::<ALL, CHECK>(s, rook_atk(s, occ) & ok & self.state.pin_orth, ml);
         });
     }
 }

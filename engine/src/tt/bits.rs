@@ -39,11 +39,11 @@ pub const fn pack_move(mv: Move) -> u64 {
     (mv.0 as u64) << SHIFT_MOVE
 }
 
+// Helper functions for unpacking data
 pub const fn unpack_age(data: u64) -> u8 {
     (data & MASK_AGE) as u8
 }
 
-// Helper functions for unpacking data
 pub const fn unpack_bound(data: u64) -> Bound {
     unsafe { std::mem::transmute(((data & MASK_BOUND) >> SHIFT_BOUND) as u8) }
 }

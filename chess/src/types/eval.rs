@@ -4,7 +4,8 @@ use crate::{MAX_DEPTH, impl_all_math_ops, impl_from_type, impl_math_assign_ops, 
 
 /// Represents the evaluation within a game.
 ///
-/// All valid evaluations are between [-32000, 32000].
+/// All valid evaluations are between        [-32000, 32000].
+/// All non-terminal evaluations are between [-30000, 30000].
 ///
 /// 0     => draw
 /// 32000 => checkmate now
@@ -71,6 +72,12 @@ impl Eval {
         self.0.abs() >= Self::LONGEST_MATE.0
     }
 
+    /// Whether this score implies checkmate has been found in the tb.
+    #[inline]
+    pub const fn is_tb_mate_score(&self) -> bool {
+        self.0.abs() >= Self::LONGEST_TB_MATE.0
+    }
+
     /// Gets the corrected eval score, forcing between LONGEST_TB_MATE.
     #[inline]
     pub const fn from_corrected(self, ply: usize) -> Self {
@@ -93,12 +100,6 @@ impl Eval {
         } else {
             self
         }
-    }
-
-    /// Whether this score implies checkmate has been found in the tb.
-    #[inline]
-    pub const fn is_tb_mate_score(&self) -> bool {
-        self.0.abs() >= Self::LONGEST_TB_MATE.0 && !self.is_mate_score()
     }
 
     #[inline]

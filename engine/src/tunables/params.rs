@@ -40,4 +40,9 @@ init_tunables! {
 
     // transposition table.
     tt_replace_d_min: usize = 4, 2, 6, 1;
+
+    // Singular extensions.
+    se_d_min: usize = 9, 6, 11, 1;
+    se_mult: usize = 2, 0, 5, 1;
+
 }

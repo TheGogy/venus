@@ -38,10 +38,10 @@ impl<const QUIET: bool> MovePicker<QUIET> {
             }
         }
 
-        self.moves.moves.swap(self.idx_cur, best_index);
+        self.moves.swap(self.idx_cur, best_index);
         self.scores.swap(self.idx_cur, best_index);
         self.idx_cur += 1;
 
-        Some((self.moves.moves[self.idx_cur - 1], best_score))
+        Some((self.moves.at(self.idx_cur - 1), best_score))
     }
 }

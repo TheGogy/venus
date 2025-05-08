@@ -1,15 +1,15 @@
 use chess::types::eval::Eval;
 
-use crate::{position::pos::Pos, threading::thread::Thread, tunables::params::tunables::*};
+use crate::{position::pos::Pos, threading::thread::Thread, tt::table::TT, tunables::params::tunables::*};
 
 use super::{Root, pv::PVLine};
 
 impl Pos {
     /// Iterative deepening loop.
     /// Search at increasing depth until we should stop.
-    pub fn iterative_deepening<const MAIN: bool>(&mut self, t: &mut Thread) {
+    pub fn iterative_deepening<const MAIN: bool>(&mut self, t: &mut Thread, tt: &TT) {
         while t.should_start_iter() {
-            let eval = self.asp_window(t);
+            let eval = self.asp_window(t, tt);
 
             if t.stop {
                 break;
@@ -19,18 +19,20 @@ impl Pos {
             t.depth += 1;
 
             if MAIN {
-                println!("info depth {} seldepth {} score {} {} {}", t.depth, t.seldepth, t.eval, t.clock, t.pv);
+                println!("info depth {} seldepth {} score {} hashfull {} {} {}", t.depth, t.seldepth, t.eval, tt.hashfull(), t.clock, t.pv);
             }
         }
     }
 
     /// Aspiration window. Keep searching until we find something within the window.
-    fn asp_window(&mut self, t: &mut Thread) -> Eval {
+    fn asp_window(&mut self, t: &mut Thread, tt: &TT) -> Eval {
         let mut pv = PVLine::default();
-        let mut search_depth = t.depth + 1;
         let mut alpha = -Eval::INFINITY;
         let mut beta = Eval::INFINITY;
         let mut delta = asp_window_default();
+
+        let search_depth = t.depth + 1;
+        let mut failed_high = 0;
 
         // Setup aspiration window once we are over the min depth.
         if search_depth >= asp_window_d_min() {
@@ -41,7 +43,7 @@ impl Pos {
         loop {
             // Search within the window
 
-            let v = self.negamax::<Root>(t, &mut pv, alpha, beta, search_depth);
+            let v = self.negamax::<Root>(t, tt, &mut pv, alpha, beta, search_depth - failed_high);
 
             if t.stop {
                 return -Eval::INFINITY;
@@ -51,20 +53,15 @@ impl Pos {
             if v <= alpha {
                 alpha = (alpha - delta).max(-Eval::INFINITY);
                 beta = (alpha + beta) / 2;
-                search_depth = t.depth + 1;
+                failed_high = 0;
             }
             // Search failed high: reduce depth, open window.
             else if v >= beta {
                 beta = (beta + delta).min(Eval::INFINITY);
-                t.pv = pv.clone();
-
-                if v.abs() < Eval::LONGEST_TB_MATE && search_depth > 1 {
-                    search_depth -= 1;
-                }
+                failed_high += 1;
             }
             // Found result within the window: return.
             else {
-                t.pv = pv;
                 return v;
             }
 

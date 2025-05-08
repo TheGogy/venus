@@ -22,6 +22,7 @@ pub enum Bound {
 }
 
 /// Entry in the transposition table
+/// TODO: Add is_pv?
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash, Default)]
 pub struct TTEntry {
     pub key: u64,     // 64 bits - Position hash.
@@ -88,8 +89,8 @@ impl TTEntry {
 
     /// Get the move.
     #[inline]
-    pub const fn mov(self) -> Option<Move> {
-        if !self.mov.is_null() { Some(self.mov) } else { None }
+    pub const fn mov(self) -> Move {
+        self.mov
     }
 
     /// Get static evaluation.

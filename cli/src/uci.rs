@@ -18,7 +18,10 @@ fn authors() -> String {
 }
 
 pub const OPTS: &str = "
+option name UCI_Chess960 type check default false
 option name Threads type spin default 1 min 1 max 128
+option name Hash type spin default 16 min 1 max 65536
+option name Clear Hash type button
 ";
 
 #[derive(Default)]
@@ -31,6 +34,8 @@ impl UCIReader {
     /// Start UCI reader.
     pub fn run(&self) {
         println!("{NAME} v{VER} by {}", authors());
+        #[cfg(feature = "tune")]
+        println!("Tuning enabled.");
 
         let stdin = io::stdin().lock();
         for line in stdin.lines().map(Result::unwrap) {
