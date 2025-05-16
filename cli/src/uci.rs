@@ -3,13 +3,15 @@ use std::{
     str::SplitWhitespace,
 };
 
-use engine::interface::{EngineCommand, EngineInterface};
+use engine::{
+    VERSION,
+    interface::{EngineCommand, EngineInterface},
+};
 
 #[cfg(feature = "tune")]
 use engine::tunables::params::tunables;
 
 pub const NAME: &str = "Venus";
-pub const VER: &str = env!("CARGO_PKG_VERSION");
 pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 
 /// Get authors formatted with commas.
@@ -33,7 +35,7 @@ pub struct UCIReader {
 impl UCIReader {
     /// Start UCI reader.
     pub fn run(&self) {
-        println!("{NAME} v{VER} by {}", authors());
+        println!("{NAME} v{VERSION} by {}", authors());
         #[cfg(feature = "tune")]
         println!("Tuning enabled.");
 
