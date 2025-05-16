@@ -19,12 +19,12 @@ macro_rules! impl_from_type {
         impl $t {
             #[inline]
             pub const fn from_index(i: usize) -> Self {
-                unsafe { core::mem::transmute(i as $inner) }
+                unsafe { std::mem::transmute(i as $inner) }
             }
 
             #[inline]
             pub const fn from_raw(i: $inner) -> Self {
-                unsafe { core::mem::transmute(i as $inner) }
+                unsafe { std::mem::transmute(i as $inner) }
             }
         }
     };

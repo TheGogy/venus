@@ -1,4 +1,6 @@
-use chess::types::board::Board;
+use chess::types::{board::Board, moves::Move};
+
+use crate::threading::thread::Thread;
 
 /// Position.
 /// This provides a wrapper around the Board struct for full engine use, to clean up
@@ -22,6 +24,12 @@ impl std::str::FromStr for Pos {
         let mut tokens = s.split_whitespace();
         let mut board: Board = match tokens.next() {
             Some("startpos") => Board::default(),
+            Some("kiwipete") => "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1".parse().unwrap(),
+            Some("killer") => "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1".parse().unwrap(),
+            Some("nolot3") => "r2qk2r/ppp1b1pp/2n1p3/3pP1n1/3P2b1/2PB1NN1/PP4PP/R1BQK2R w KQkq - 0 1".parse().unwrap(),
+            Some("nolot9") => "r4r1k/4bppb/2n1p2p/p1n1P3/1p1p1BNP/3P1NP1/qP2QPB1/2RR2K1 w - - 0 1".parse().unwrap(),
+            Some("tricky") => "3qk1b1/1p4r1/1n4r1/2P1b2B/p3N2p/P2Q3P/8/1R3R1K w - - 2 39".parse().unwrap(),
+
             Some("fen") => {
                 let fen = &tokens.clone().take(6).collect::<Vec<&str>>().join(" ")[..];
 
@@ -46,5 +54,23 @@ impl std::str::FromStr for Pos {
         };
 
         Ok(Self { board })
+    }
+}
+
+impl Pos {
+    pub fn make_move(&mut self, m: Move, t: &mut Thread) {
+        let p = self.board.pc_at(m.src());
+        t.move_made(p, m);
+        self.board.make_move(m);
+    }
+
+    pub fn make_null(&mut self, t: &mut Thread) {
+        t.null_made();
+        self.board.make_null();
+    }
+
+    pub fn undo_move(&mut self, m: Move, t: &mut Thread) {
+        t.move_undo();
+        self.board.undo_move(m);
     }
 }

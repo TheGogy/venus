@@ -4,12 +4,13 @@ use crate::{MAX_DEPTH, impl_all_math_ops, impl_from_type, impl_math_assign_ops, 
 
 /// Represents the evaluation within a game.
 ///
-/// All valid evaluations are between [-32000, 32000].
+/// All valid evaluations are between        [-32000, 32000].
+/// All non-terminal evaluations are between [-30000, 30000].
 ///
 /// 0     => draw
 /// 32000 => checkmate now
 /// 30000 => checkmate according to tablebase
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct Eval(pub i32);
 
@@ -39,6 +40,13 @@ impl Eval {
     #[inline]
     pub fn min(self, other: Self) -> Self {
         Eval(self.0.min(other.0))
+    }
+
+    /// The value of a draw with a bit of randomness to de-incentivise repetitions
+    #[inline]
+    pub const fn dithered_draw(rand: i32) -> Self {
+        let dither_mask = 0x2;
+        Eval(Self::DRAW.0 + (rand & dither_mask))
     }
 
     /// Gets the internal eval representation for checkmate in `ply`.
@@ -74,7 +82,31 @@ impl Eval {
     /// Whether this score implies checkmate has been found in the tb.
     #[inline]
     pub const fn is_tb_mate_score(&self) -> bool {
-        self.0.abs() >= Self::LONGEST_TB_MATE.0 && !self.is_mate_score()
+        self.0.abs() >= Self::LONGEST_TB_MATE.0
+    }
+
+    /// Gets the corrected eval score, forcing between LONGEST_TB_MATE.
+    #[inline]
+    pub const fn from_corrected(self, ply: usize) -> Self {
+        if self.0 >= Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 - ply as i32)
+        } else if self.0 <= -Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 + ply as i32)
+        } else {
+            self
+        }
+    }
+
+    /// Gets the corrected eval score, incorporating mate scores.
+    #[inline]
+    pub const fn to_corrected(self, ply: usize) -> Self {
+        if self.0 >= Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 + ply as i32)
+        } else if self.0 <= -Eval::LONGEST_TB_MATE.0 {
+            Eval(self.0 - ply as i32)
+        } else {
+            self
+        }
     }
 
     #[inline]

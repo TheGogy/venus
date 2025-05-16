@@ -1,6 +1,7 @@
-use core::fmt;
-
-use chess::{MAX_DEPTH, types::moves::Move};
+use chess::{
+    MAX_DEPTH,
+    types::{castling::CastlingMask, moves::Move},
+};
 
 /// PVLine.
 /// This allows us to keep track of the current PV.
@@ -16,18 +17,6 @@ impl Default for PVLine {
     }
 }
 
-impl fmt::Display for PVLine {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut s = String::from("pv");
-
-        for m in &self.moves[0..self.length] {
-            s.push_str(&format!(" {m}"));
-        }
-
-        write!(f, "{s}")
-    }
-}
-
 impl PVLine {
     /// Update the PV line with a child line.
     #[inline]
@@ -40,5 +29,16 @@ impl PVLine {
     /// Clear the PV line.
     pub const fn clear(&mut self) {
         self.length = 0;
+    }
+
+    /// Print out the PV according to UCI format.
+    pub fn to_uci(&self, cm: &CastlingMask) -> String {
+        let mut s = String::from("pv");
+
+        for m in &self.moves[0..self.length] {
+            s.push_str(&format!(" {}", m.to_uci(cm)));
+        }
+
+        s
     }
 }

@@ -62,7 +62,7 @@ impl_from_type! {
 impl File {
     /// Directly convert a file to a bitboard.
     #[inline]
-    pub const fn to_bb(self) -> Bitboard {
+    pub const fn bb(self) -> Bitboard {
         Bitboard(0x0101010101010101 << (self as u8))
     }
 

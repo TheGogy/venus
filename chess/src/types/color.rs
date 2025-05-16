@@ -32,7 +32,7 @@ impl Not for Color {
     type Output = Color;
 
     fn not(self) -> Self {
-        Self::from_raw(1 ^ (self as u8))
+        Self::from_raw(1 ^ self as u8)
     }
 }
 
@@ -79,7 +79,6 @@ mod tests {
     #[test]
     fn test_color_from() {
         assert_eq!(Color::try_from('w').unwrap(), Color::White);
-        assert_eq!(Color::try_from('b').unwrap(), Color::Black);
         assert_eq!(Color::try_from('b').unwrap(), Color::Black);
     }
 

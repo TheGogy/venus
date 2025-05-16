@@ -1,15 +1,31 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, AtomicU64},
+use std::{
+    array,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicU64},
+    },
 };
 
-use chess::types::{eval::Eval, moves::Move};
+use chess::{
+    MAX_DEPTH,
+    types::{board::Board, color::Color, eval::Eval, moves::Move, piece::CPiece, square::Square},
+};
 
-use crate::{history::History, search::pv::PVLine, timeman::clock::Clock};
+use crate::{
+    history::{
+        conthist::{CONT_NUM, ContHist},
+        hist_delta,
+        noisyhist::NoisyHist,
+        quiethist::QuietHist,
+    },
+    search::{pv::PVLine, stack::SearchStackEntry},
+    timeman::clock::Clock,
+};
 
 #[derive(Clone, Debug)]
 pub struct Thread {
     pub clock: Clock,
+    pub stop: bool,
 
     pub eval: Eval,
 
@@ -19,10 +35,12 @@ pub struct Thread {
     pub ply_from_null: usize,
     pub nodes: u64,
 
-    pub pv: PVLine,
-    pub stop: bool,
+    pub hist_quiet: QuietHist,
+    pub hist_noisy: NoisyHist,
+    pub hist_cont: [ContHist; CONT_NUM],
 
-    pub history: History,
+    pub pv: PVLine,
+    pub stack: [SearchStackEntry; MAX_DEPTH],
 }
 
 impl Thread {
@@ -36,9 +54,12 @@ impl Thread {
             seldepth: 0,
             ply_from_null: 0,
             nodes: 0,
-            pv: PVLine::default(),
             stop: false,
-            history: History::default(),
+            hist_quiet: QuietHist::default(),
+            hist_noisy: NoisyHist::default(),
+            hist_cont: array::from_fn(|_| ContHist::default()),
+            pv: PVLine::default(),
+            stack: [SearchStackEntry::default(); MAX_DEPTH],
         }
     }
 
@@ -73,15 +94,30 @@ impl Thread {
         self.seldepth = 0;
         self.ply_from_null = halfmoves;
         self.nodes = 0;
-        self.pv = PVLine::default();
         self.stop = false;
     }
 
     /// Tell the thread that a move has been made.
     #[inline]
-    pub const fn move_made(&mut self) {
+    pub const fn move_made(&mut self, p: CPiece, m: Move) {
+        self.ss_mut().mvp = p;
+        self.ss_mut().mov = m;
+        self.ss_mut().ply_from_null = self.ply_from_null;
+
         self.ply += 1;
         self.ply_from_null += 1;
+        self.nodes += 1;
+    }
+
+    /// Tell the thread that a null move has been made.
+    #[inline]
+    pub const fn null_made(&mut self) {
+        self.ss_mut().mvp = CPiece::None;
+        self.ss_mut().mov = Move::NULL;
+        self.ss_mut().ply_from_null = self.ply_from_null;
+
+        self.ply += 1;
+        self.ply_from_null = 0;
         self.nodes += 1;
     }
 
@@ -89,6 +125,62 @@ impl Thread {
     #[inline]
     pub const fn move_undo(&mut self) {
         self.ply -= 1;
-        self.ply_from_null -= 1;
+        self.ply_from_null = self.ss().ply_from_null;
+    }
+
+    /// Whether the current position is improving.
+    #[inline]
+    pub fn is_improving(&self, in_check: bool) -> bool {
+        if in_check {
+            false
+        } else if self.ply >= 2 && self.ss_at(2).eval != -Eval::INFINITY {
+            self.ss().eval > self.ss_at(2).eval
+        } else if self.ply >= 4 && self.ss_at(4).eval != -Eval::INFINITY {
+            self.ss().eval > self.ss_at(4).eval
+        } else {
+            true
+        }
+    }
+}
+
+impl Thread {
+    /// Get the piece and square of the previous move, if it exists.
+    fn prev_move(&self, offset: usize) -> Option<(CPiece, Square)> {
+        if self.ply >= offset && !self.ss_at(offset).mov.is_null() {
+            let se = self.ss_at(offset);
+            Some((se.mvp, se.mov.tgt()))
+        } else {
+            None
+        }
+    }
+
+    /// Update the history tables given some quiet and noisy moves.
+    pub fn update_tables(&mut self, best: Move, depth: usize, board: &Board, quiets: Vec<Move>, noisies: Vec<Move>) {
+        let (bonus, malus) = hist_delta(depth);
+        self.hist_noisy.update(board, best, &noisies, bonus, malus);
+
+        if best.flag().is_quiet() {
+            self.hist_quiet.update(board.stm, best, &quiets, bonus, malus);
+
+            for i in 0..CONT_NUM {
+                if let Some((p, tgt)) = self.prev_move(1 + i) {
+                    self.hist_cont[i].update(best, p, tgt, &quiets, bonus, malus);
+                }
+            }
+        }
+    }
+
+    pub fn assign_history_scores(&self, c: Color, moves: &[Move], scores: &mut [i32]) {
+        for i in 0..moves.len() {
+            scores[i] = self.hist_quiet.get_bonus(c, moves[i]);
+        }
+
+        for i in 0..CONT_NUM {
+            if let Some((piece, tgt)) = self.prev_move(1 + i) {
+                for j in 0..moves.len() {
+                    scores[j] += self.hist_cont[i].get_bonus(moves[j], piece, tgt);
+                }
+            }
+        }
     }
 }

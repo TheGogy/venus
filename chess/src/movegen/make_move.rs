@@ -25,6 +25,9 @@ impl Board {
         // Unset ep sq
         state.epsq = Square::Invalid;
 
+        // Set moved piece.
+        state.mvp = self.pc_at(src);
+
         // Remove piece from source square.
         self.pop_piece(src);
         state.hash.toggle_piece(piece, src);
@@ -124,7 +127,7 @@ impl Board {
         let cap = self.state.cap;
 
         // SAFETY: This will only be called when there is a valid move in the history.
-        let state = unsafe { self.history.pop().unwrap_unchecked() };
+        let state = self.history.pop().unwrap();
 
         // Update stm.
         self.stm = !self.stm;
@@ -183,6 +186,9 @@ impl Board {
             state.hash.toggle_ep(state.epsq);
         }
 
+        // Add null move
+        state.mov = Move::NULL;
+
         // Update stm
         self.stm = !self.stm;
         state.hash.toggle_color();
@@ -198,7 +204,7 @@ impl Board {
     /// Undo a null move from the board.
     pub fn undo_null(&mut self) {
         // SAFETY: This will only be called when there is a valid move in the history.
-        let old_state = unsafe { self.history.pop().unwrap_unchecked() };
+        let old_state = self.history.pop().unwrap();
         self.state = old_state;
 
         // Update stm
@@ -360,5 +366,20 @@ mod tests {
         let x = Board::default();
         assert_eq!(b.to_fen(), x.to_fen());
         assert_eq!(b.state.hash, x.state.hash);
+    }
+
+    #[test]
+    fn test_moved_piece() {
+        let mut b = Board::default();
+        b.make_move(Move::new(Square::E2, Square::E4, MoveFlag::Normal));
+        assert_eq!(b.state.mvp, CPiece::WPawn);
+    }
+
+    #[test]
+    fn test_null_move() {
+        let mut b = Board::default();
+        b.make_null();
+        assert_eq!(b.state.mov, Move::NULL);
+        assert_eq!(b.state.mvp, CPiece::None);
     }
 }

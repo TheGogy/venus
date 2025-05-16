@@ -21,7 +21,7 @@ impl Pos {
         let mut total = 0;
 
         for p in Piece::iter() {
-            total += (self.board.pc_bb(stm, p).nbits() - self.board.pc_bb(ntm, p).nbits()) as i32 * piece_vals[p.index()];
+            total += (self.board.pc_bb(stm, p).nbits() as i32 - self.board.pc_bb(ntm, p).nbits() as i32) * piece_vals[p.index()];
         }
 
         Eval(total)

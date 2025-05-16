@@ -3,28 +3,45 @@ use chess::types::moves::Move;
 use super::MovePicker;
 
 impl<const QUIET: bool> MovePicker<QUIET> {
-    /// Sort between current index and end.
-    pub fn partial_sort(&mut self, end: usize) -> Option<Move> {
-        let cur = self.idx_cur;
-
-        if cur == end {
+    /// Yield the first move satisfying the given predicate.
+    #[inline]
+    pub fn find_pred(&mut self, start: usize, end: usize, pred: impl Fn(Move) -> bool) -> Option<Move> {
+        if start >= end {
             return None;
         }
 
-        let mut best_idx = cur;
-        let mut best_scr = self.scores[cur];
+        for i in start..end {
+            let m = self.moves.moves[i];
 
-        for i in (cur + 1)..end {
-            if self.scores[i] > best_scr {
-                best_idx = i;
-                best_scr = self.scores[i];
+            if pred(m) {
+                self.moves.moves.swap(i, start);
+                return Some(m);
             }
         }
 
-        self.moves.swap(cur, best_idx);
-        self.scores.swap(cur, best_idx);
+        None
+    }
 
+    /// Single iteration of insertion sort
+    #[inline]
+    pub fn partial_sort(&mut self, end: usize) -> Option<(Move, i32)> {
+        if self.idx_cur == end {
+            return None;
+        }
+
+        let mut best_score = self.scores[self.idx_cur];
+        let mut best_index = self.idx_cur;
+        for i in (self.idx_cur + 1)..end {
+            if self.scores[i] > best_score {
+                best_score = self.scores[i];
+                best_index = i;
+            }
+        }
+
+        self.moves.swap(self.idx_cur, best_index);
+        self.scores.swap(self.idx_cur, best_index);
         self.idx_cur += 1;
-        Some(self.moves.at(cur))
+
+        Some((self.moves.at(self.idx_cur - 1), best_score))
     }
 }

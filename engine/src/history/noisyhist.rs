@@ -5,12 +5,13 @@ use chess::types::{
     square::Square,
 };
 
-use super::{HistEntry, movebuffer::MoveBuffer};
+use super::HistEntry;
 
 /// [piecetype][captured][to]
 #[derive(Clone, Debug)]
 pub struct NoisyHist([[[HistEntry; Piece::NUM - 1]; CPiece::NUM]; Square::NUM]);
 
+// TODO: add tunable history defaults.
 impl Default for NoisyHist {
     fn default() -> Self {
         Self([[[HistEntry::default(); Piece::NUM - 1]; CPiece::NUM]; Square::NUM])
@@ -28,9 +29,6 @@ impl NoisyHist {
     #[inline]
     fn add_bonus(&mut self, b: &Board, m: Move, bonus: i16) {
         let i = Self::index(b, m);
-        assert!(i.0 < Square::NUM);
-        assert!(i.1 < CPiece::NUM);
-        assert!(i.2 < Piece::NUM, "{} {:?} {:?}", m, m.flag(), b.captured(m).pt());
         self.0[i.0][i.1][i.2].gravity::<NOISY_MAX>(bonus);
     }
 
@@ -40,7 +38,7 @@ impl NoisyHist {
         self.0[i.0][i.1][i.2].0 as i32
     }
 
-    pub fn update(&mut self, b: &Board, best: Move, noisies: &MoveBuffer, bonus: i16, malus: i16) {
+    pub fn update(&mut self, b: &Board, best: Move, noisies: &Vec<Move>, bonus: i16, malus: i16) {
         if best.flag().is_cap() {
             self.add_bonus(b, best, bonus);
         }

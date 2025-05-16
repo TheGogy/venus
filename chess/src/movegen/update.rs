@@ -1,7 +1,7 @@
 use crate::{
     tables::{
-        leaping_piece::{all_pawn_atk, king_attacks, knight_attacks, pawn_attacks},
-        sliding_piece::{between, bishop_attacks, rook_attacks},
+        leaping_piece::{all_pawn_atk, king_atk, knight_atk, pawn_atk},
+        sliding_piece::{between, bishop_atk, rook_atk},
     },
     types::{
         bitboard::Bitboard,
@@ -30,21 +30,21 @@ impl Board {
 
         // Knights.
         self.pc_bb(opp, Piece::Knight).bitloop(|s| {
-            state.attacked |= knight_attacks(s);
+            state.attacked |= knight_atk(s);
         });
 
         // Bishops + Queens.
         self.diag_slider(opp).bitloop(|s| {
-            state.attacked |= bishop_attacks(s, occ);
+            state.attacked |= bishop_atk(s, occ);
         });
 
         // Rooks + Queens.
         self.orth_slider(opp).bitloop(|s| {
-            state.attacked |= rook_attacks(s, occ);
+            state.attacked |= rook_atk(s, occ);
         });
 
         // King.
-        state.attacked |= king_attacks(self.ksq(opp));
+        state.attacked |= king_atk(self.ksq(opp));
     }
 
     /// Update pieces checking the king.
@@ -56,10 +56,10 @@ impl Board {
         let occ = self.occ();
 
         state.checkers =
-            self.pc_bb(opp, Piece::Pawn)   & pawn_attacks(self.stm, ksq)
-          | self.pc_bb(opp, Piece::Knight) & knight_attacks(ksq)
-          | self.diag_slider(opp)          & bishop_attacks(ksq, occ)
-          | self.orth_slider(opp)          & rook_attacks(ksq, occ)
+            self.pc_bb(opp, Piece::Pawn)   & pawn_atk(self.stm, ksq)
+          | self.pc_bb(opp, Piece::Knight) & knight_atk(ksq)
+          | self.diag_slider(opp)          & bishop_atk(ksq, occ)
+          | self.orth_slider(opp)          & rook_atk(ksq, occ)
     }
 
     /// Update the pins on the board.
@@ -78,12 +78,12 @@ impl Board {
         // We have already determined if we are in check with update_checkers; don't do these
         // lookups unless absolutely necessary.
         if !state.checkers.is_empty() {
-            state.checkmask = self.pc_bb(opp, Piece::Pawn) & pawn_attacks(self.stm, ksq)
-                            | self.pc_bb(opp, Piece::Knight) & knight_attacks(ksq)
+            state.checkmask = self.pc_bb(opp, Piece::Pawn) & pawn_atk(self.stm, ksq)
+                            | self.pc_bb(opp, Piece::Knight) & knight_atk(ksq)
         }
 
         // Bishops and queens
-        (self.diag_slider(opp) & bishop_attacks(ksq, opp_occ)).bitloop(|s| {
+        (self.diag_slider(opp) & bishop_atk(ksq, opp_occ)).bitloop(|s| {
             let between = between(ksq, s);
             match (between & stm_occ).nbits() {
                 0 => state.checkmask |= between | s.bb(), // No pieces: add to checkmask
@@ -93,7 +93,7 @@ impl Board {
         });
 
         // Rooks and queens
-        (self.orth_slider(opp) & rook_attacks(ksq, opp_occ)).bitloop(|s| {
+        (self.orth_slider(opp) & rook_atk(ksq, opp_occ)).bitloop(|s| {
             let between = between(ksq, s);
             match (between & stm_occ).nbits() {
                 0 => state.checkmask |= between | s.bb(), // No pieces: add to checkmask

@@ -1,17 +1,13 @@
-use core::fmt;
+use crate::impl_from_type;
 
-use crate::{
-    impl_from_type,
-    types::{color::Color, piece::CPiece},
-};
-
-use super::{piece::Piece, square::Square};
+use super::{castling::CastlingMask, piece::Piece, square::Square};
 
 /// Moves (encoded as u16)
 /// bits  0 - 5  : from square
 /// bits  6 - 11 : to square
 /// bits 12 - 15 : Move flag
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Default, Hash)]
+#[repr(transparent)]
 pub struct Move(pub u16);
 
 impl Move {
@@ -65,6 +61,32 @@ impl Move {
     pub const fn is_valid(&self) -> bool {
         !(self.is_none() || self.is_null())
     }
+
+    /// Display the move according to UCI format.
+    pub fn to_uci(self, cm: &CastlingMask) -> String {
+        // Invalid moves.
+        if !self.is_valid() {
+            return "0000".to_owned();
+        }
+
+        let flag = self.flag();
+
+        // Promotions.
+        if flag.is_promo() {
+            return format!("{}{}{}", self.src(), self.tgt(), flag.get_promo().to_char());
+        }
+
+        // Castling.
+        // In regular -> Denoted by (king from, king to) - and so handled same as other moves.
+        // In FRC     -> Denoted by the king moving onto the rook square.
+        if cm.frc && flag == MoveFlag::Castling {
+            let (rf, _) = cm.rook_from_to(self.tgt());
+            return format!("{}{}", self.src(), rf);
+        }
+
+        // All other moves are just <from, to>.
+        format!("{}{}", self.src(), self.tgt())
+    }
 }
 
 /// MoveFlag. Shows the type of move.
@@ -82,7 +104,7 @@ pub enum MoveFlag {
     EnPassant  = 0b0101,
 
     // Promotions have fourth bit set.
-    // The promoting piece is the last 2 bits - Knight.
+    // The promoting piece is the last 2 bits + Knight.
     PromoN     = 0b1000,
     PromoB     = 0b1001,
     PromoR     = 0b1010,
@@ -109,6 +131,13 @@ impl MoveFlag {
         self as u16 & 0b1000 != 0
     }
 
+    /// Whether this MoveFlag denotes a quiet promotion.
+    /// This includes underpromotions.
+    #[inline]
+    pub const fn is_qpromo(self) -> bool {
+        self.is_promo() && !self.is_cap()
+    }
+
     /// Whether this MoveFlag denotes a quiet move.
     #[inline]
     pub const fn is_quiet(self) -> bool {
@@ -124,7 +153,7 @@ impl MoveFlag {
     /// Whether this MoveFlag denotes a promotion that is not a queen.
     #[inline]
     pub const fn is_underpromo(self) -> bool {
-        self as u16 & 0b1011 != 0b1011
+        self.is_promo() && self as u16 & 0b1011 != 0b1011
     }
 
     /// Get the piece this MoveFlag denotes a promotion to.
@@ -138,23 +167,6 @@ impl MoveFlag {
 impl_from_type! {
     MoveFlag, u8,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
-}
-
-/// Display a move in UCI format.
-impl fmt::Display for Move {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_none() || self.is_null() {
-            return write!(f, "0000");
-        }
-
-        let flag = self.flag();
-        if flag.is_promo() {
-            let promo_char = CPiece::create(Color::Black, flag.get_promo()).to_char();
-            write!(f, "{}{}{}", self.src(), self.tgt(), promo_char)
-        } else {
-            write!(f, "{}{}", self.src(), self.tgt())
-        }
-    }
 }
 
 #[cfg(test)]
@@ -176,5 +188,10 @@ mod tests {
         assert!(MoveFlag::Castling.is_quiet());
         assert!(MoveFlag::PromoQ.is_promo());
         assert!(MoveFlag::PromoR.is_underpromo());
+        assert!(MoveFlag::PromoN.is_underpromo());
+        assert!(MoveFlag::PromoB.is_underpromo());
+        assert!(MoveFlag::PromoR.is_underpromo());
+        assert!(!MoveFlag::PromoQ.is_underpromo());
+        assert!(!MoveFlag::Normal.is_underpromo());
     }
 }

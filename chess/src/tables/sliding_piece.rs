@@ -15,13 +15,13 @@ fn init() {
 
 /// Get all bishop attacks from a square given some occupancy.
 #[inline]
-pub fn bishop_attacks(s: Square, occ: Bitboard) -> Bitboard {
+pub fn bishop_atk(s: Square, occ: Bitboard) -> Bitboard {
     unsafe { BISHOP_PEXT_TABLE[s.index()].attacks(occ) }
 }
 
 /// Get all rook attacks from a square given some occupancy.
 #[inline]
-pub fn rook_attacks(s: Square, occ: Bitboard) -> Bitboard {
+pub fn rook_atk(s: Square, occ: Bitboard) -> Bitboard {
     unsafe { ROOK_PEXT_TABLE[s.index()].attacks(occ) }
 }
 
@@ -41,7 +41,7 @@ const fn bishop_atk_init(s: usize, occ: u64) -> u64 {
 }
 
 /// Raw bishop attacks table. This does not take blockers into account.
-pub const BISHOP_ATTACKS: [Bitboard; 64] = {
+pub static BISHOP_ATTACKS: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 
@@ -63,7 +63,7 @@ const fn rook_atk_init(s: usize, occ: u64) -> u64 {
 }
 
 /// Raw rook attacks table. This does not take blockers into account.
-pub const ROOK_ATTACKS: [Bitboard; 64] = {
+pub static ROOK_ATTACKS: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 
@@ -77,7 +77,7 @@ pub const ROOK_ATTACKS: [Bitboard; 64] = {
 
 /// Table of the line between two squares.
 #[allow(clippy::large_const_arrays)]
-pub const BETWEEN_TABLE: [[Bitboard; 64]; 64] = {
+pub static BETWEEN_TABLE: [[Bitboard; 64]; 64] = {
     let mut between = [[Bitboard(0); 64]; 64];
 
     let mut s1 = 0;
@@ -213,7 +213,7 @@ mod tests {
     fn test_rook_basic_movements() {
         // Test rook in the center
         let pos = Square::E4;
-        let attacks = rook_attacks(pos, Bitboard::EMPTY);
+        let attacks = rook_atk(pos, Bitboard::EMPTY);
 
         assert_bitboard_eq!(attacks, Bitboard(1157442769150545936));
     }
@@ -222,7 +222,7 @@ mod tests {
     fn test_rook_edge_cases() {
         // Test rook on corner
         let corner = Square::A1;
-        let attacks = rook_attacks(corner, Bitboard::EMPTY);
+        let attacks = rook_atk(corner, Bitboard::EMPTY);
         assert_bitboard_eq!(attacks, Bitboard(72340172838076926));
     }
 
@@ -233,7 +233,7 @@ mod tests {
         blockers.set_bit(Square::E6); // Blocker two squares up
         blockers.set_bit(Square::G4); // Blocker two squares right
 
-        let attacks = rook_attacks(pos, blockers);
+        let attacks = rook_atk(pos, blockers);
 
         assert_bitboard_eq!(attacks, Bitboard(17662768844816));
     }
@@ -245,7 +245,7 @@ mod tests {
         blockers.set_bit(Square::B6); // Random square
         blockers.set_bit(Square::G7); // Random square
 
-        let attacks = rook_attacks(pos, blockers);
+        let attacks = rook_atk(pos, blockers);
 
         assert_bitboard_eq!(attacks, Bitboard(1157442769150545936));
     }
@@ -253,7 +253,7 @@ mod tests {
     #[test]
     fn test_bishop_basic_movements() {
         let pos = Square::E4;
-        let attacks = bishop_attacks(pos, Bitboard::EMPTY);
+        let attacks = bishop_atk(pos, Bitboard::EMPTY);
 
         assert_bitboard_eq!(attacks, Bitboard(108724279602332802));
     }
@@ -262,7 +262,7 @@ mod tests {
     fn test_bishop_edge_cases() {
         // Test bishop on corner
         let corner = Square::H1;
-        let attacks = bishop_attacks(corner, Bitboard::EMPTY);
+        let attacks = bishop_atk(corner, Bitboard::EMPTY);
 
         assert_bitboard_eq!(attacks, Bitboard(72624976668147712));
     }
@@ -274,7 +274,7 @@ mod tests {
         blockers.set_bit(Square::G6); // Blocker two squares up-right
         blockers.set_bit(Square::C2); // Blocker two squares down-left
 
-        let attacks = bishop_attacks(pos, blockers);
+        let attacks = bishop_atk(pos, blockers);
 
         assert_bitboard_eq!(attacks, Bitboard(72695482583368832));
     }
@@ -286,7 +286,7 @@ mod tests {
         blockers.set_bit(Square::B6); // Random square
         blockers.set_bit(Square::G7); // Random square
 
-        let attacks = bishop_attacks(pos, blockers);
+        let attacks = bishop_atk(pos, blockers);
 
         assert_bitboard_eq!(attacks, Bitboard(108724279602332802));
     }

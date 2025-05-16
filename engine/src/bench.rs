@@ -1,9 +1,9 @@
 use std::time::Instant;
 
-use crate::{interface::Engine, position::pos::Pos, threading::thread::Thread, timeman::clock::Clock};
+use crate::{interface::Engine, position::pos::Pos, threading::thread::Thread, timeman::clock::Clock, tt::table::TT};
 
 // TODO: Increase this when we have pruning
-const BENCH_DEPTH: usize = 4;
+const BENCH_DEPTH: usize = 6;
 
 impl Engine {
     /// Runs a benchmark of the engine on a number of positions.
@@ -12,11 +12,13 @@ impl Engine {
         let mut total_time = 0;
 
         for fen in FENS {
+            println!("{fen}");
+            let tt = TT::default();
             let mut pos: Pos = format!("fen {fen}").parse().unwrap();
             let mut thread = Thread::new(Clock::fixed_depth(BENCH_DEPTH));
 
             let start = Instant::now();
-            pos.iterative_deepening::<false>(&mut thread);
+            pos.iterative_deepening::<false>(&mut thread, &tt);
 
             total_time += start.elapsed().as_micros();
             total_nodes += thread.nodes;

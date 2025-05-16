@@ -3,13 +3,15 @@ use std::{
     str::SplitWhitespace,
 };
 
-use engine::interface::{EngineCommand, EngineInterface};
+use engine::{
+    VERSION,
+    interface::{EngineCommand, EngineInterface},
+};
 
 #[cfg(feature = "tune")]
 use engine::tunables::params::tunables;
 
 pub const NAME: &str = "Venus";
-pub const VER: &str = env!("CARGO_PKG_VERSION");
 pub const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 
 /// Get authors formatted with commas.
@@ -18,7 +20,10 @@ fn authors() -> String {
 }
 
 pub const OPTS: &str = "
+option name UCI_Chess960 type check default false
 option name Threads type spin default 1 min 1 max 128
+option name Hash type spin default 16 min 1 max 65536
+option name Clear Hash type button
 ";
 
 #[derive(Default)]
@@ -30,7 +35,9 @@ pub struct UCIReader {
 impl UCIReader {
     /// Start UCI reader.
     pub fn run(&self) {
-        println!("{NAME} v{VER} by {}", authors());
+        println!("{NAME} v{VERSION} by {}", authors());
+        #[cfg(feature = "tune")]
+        println!("Tuning enabled.");
 
         let stdin = io::stdin().lock();
         for line in stdin.lines().map(Result::unwrap) {
@@ -48,17 +55,18 @@ impl UCIReader {
 
         match tokens.next() {
             Some(cmd) => match cmd {
-                "isready"    => println!("readyok"),
-                "uci"        => self.cmd_uci(),
-                "ucinewgame" => self.interface.handle_command(EngineCommand::NewGame),
-                "stop"       => self.interface.handle_command(EngineCommand::Stop),
-                "eval"       => self.interface.handle_command(EngineCommand::Eval),
-                "perft"      => return self.cmd_perft(&mut tokens),
-                "go"         => return self.cmd_go(&mut tokens),
-                "position"   => return self.cmd_position(&mut tokens),
-                "setoption"  => return self.cmd_setoption(&mut tokens),
+                "isready"     => println!("readyok"),
+                "uci"         => self.cmd_uci(),
+                "ucinewgame"  => self.interface.handle_command(EngineCommand::NewGame),
+                "stop"        => self.interface.handle_command(EngineCommand::Stop),
+                "eval"        => self.interface.handle_command(EngineCommand::Eval),
+                "print" | "p" => self.interface.handle_command(EngineCommand::Print),
+                "perft"       => return self.cmd_perft(&mut tokens),
+                "go"          => return self.cmd_go(&mut tokens),
+                "position"    => return self.cmd_position(&mut tokens),
+                "setoption"   => return self.cmd_setoption(&mut tokens),
 
-                "quit"       => std::process::exit(0),
+                "quit"        => std::process::exit(0),
                 _ => return Err("Unknown command!")
             },
             None => return Err("Empty command!"),

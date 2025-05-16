@@ -2,6 +2,8 @@ use crate::init_tunables;
 
 // See [init_tunables].
 //
+// https://github.com/AndyGrant/OpenBench/wiki/SPSA-Tuning-Workloads
+//
 // Use the following naming convention:
 //
 // High level -> low level:
@@ -37,4 +39,16 @@ init_tunables! {
     hist_malus_max:  i16 = 1608, 800, 3200, 100;
     hist_malus_base: i16 = 372, 100, 600, 25;
     hist_malus_mult: i16 = 359, 100, 600, 25;
+
+    // transposition table.
+    tt_replace_d_min: usize = 4, 2, 6, 1;
+
+    // Singular extensions.
+    se_d_min: usize = 9, 6, 11, 1;
+    se_mult: usize = 2, 0, 5, 1;
+
+    // Reverse futility pruning.
+    rfp_d_min:          usize = 9, 5, 12, 1;
+    rfp_mult:             i32 = 76, 40, 120, 5;
+    rfp_improving_margin: i32 = 55, 25, 85, 5;
 }

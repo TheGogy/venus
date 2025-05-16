@@ -1,10 +1,8 @@
+pub mod conthist;
 pub mod noisyhist;
 pub mod quiethist;
 
-pub mod movebuffer;
-
-pub mod hist;
-pub use hist::*;
+use crate::tunables::params::tunables::*;
 
 /// Entry within a history table.
 #[derive(Clone, Copy, Debug, Default)]
@@ -12,7 +10,7 @@ pub use hist::*;
 pub struct HistEntry(i16);
 
 impl HistEntry {
-    /// History gravity
+    /// History gravity.
     /// https://www.chessprogramming.org/History_Heuristic
     pub const fn gravity<const MAX: i32>(&mut self, bonus: i16) {
         // Do calculations as i32
@@ -20,4 +18,11 @@ impl HistEntry {
         let b = bonus as i32;
         self.0 = (x + b - (x * b.abs()) / MAX) as i16
     }
+}
+// Get the bonus and malus for history at a given depth.
+pub fn hist_delta(depth: usize) -> (i16, i16) {
+    let bonus = hist_bonus_max().min(hist_bonus_mult() * depth as i16 - hist_bonus_base());
+    let malus = hist_malus_max().min(hist_malus_mult() * depth as i16 - hist_malus_base());
+
+    (bonus, malus)
 }

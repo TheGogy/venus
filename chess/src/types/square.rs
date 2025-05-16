@@ -120,8 +120,8 @@ impl FromStr for Square {
 /// Display a square.
 impl fmt::Display for Square {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let file = (*self as u8) & 7;
-        let rank = (*self as u8) >> 3;
+        let file = self.file() as u8;
+        let rank = self.rank() as u8;
         write!(f, "{}{}", (b'a' + file) as char, (b'1' + rank) as char)
     }
 }

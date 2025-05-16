@@ -10,6 +10,7 @@ use super::{
 /// Bitboard.
 /// This is a 64 bit integer that represents an occupancy grid of the chess board.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(transparent)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
@@ -74,10 +75,10 @@ impl Bitboard {
     #[rustfmt::skip]
     pub const fn edge_mask(square: Square) -> Self {
         let rank_edges = Rank::R1.bb().0 | Rank::R8.bb().0;
-        let file_edges = File::FA.to_bb().0 | File::FH.to_bb().0;
+        let file_edges = File::FA.bb().0 | File::FH.bb().0;
 
         Self((rank_edges & !square.rank().bb().0)
-           | (file_edges & !square.file().to_bb().0),
+           | (file_edges & !square.file().bb().0),
         )
     }
 }

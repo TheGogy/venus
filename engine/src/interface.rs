@@ -10,7 +10,7 @@ use std::{
 
 use chess::movegen::perft::perft;
 
-use crate::{position::pos::Pos, threading::threadpool::ThreadPool, timeman::time_control::TimeControl};
+use crate::{position::pos::Pos, threading::threadpool::ThreadPool, timeman::time_control::TimeControl, tt::table::TT};
 
 #[cfg(feature = "tune")]
 use crate::tunables::params::tunables;
@@ -21,6 +21,7 @@ use crate::tunables::params::tunables;
 pub struct Engine {
     pub pos: Pos,
     pub pool: ThreadPool,
+    pub tt: TT,
 }
 
 /// Engine interface.
@@ -38,6 +39,7 @@ pub enum EngineCommand {
     Position(Box<Pos>),
     Go(TimeControl),
     Perft(usize),
+    Print,
     Stop,
     Eval,
 }
@@ -67,7 +69,7 @@ impl EngineInterface {
 impl Engine {
     /// Run the engine.
     fn run(rx: mpsc::Receiver<EngineCommand>, stop: Arc<AtomicBool>) {
-        let mut controller = Self { pos: Pos::default(), pool: ThreadPool::new(stop) };
+        let mut controller = Self { pos: Pos::default(), pool: ThreadPool::new(stop), tt: TT::default() };
 
         for c in rx {
             controller.handle_command(c);
@@ -84,6 +86,7 @@ impl Engine {
             EngineCommand::Go(tc)        => self.handle_go(tc),
             EngineCommand::Perft(d)      => self.handle_perft(d),
             EngineCommand::Eval          => self.handle_eval(),
+            EngineCommand::Print         => println!("{}", self.pos.board),
             _ => eprintln!("Unknown command!")
         }
     }
@@ -95,12 +98,13 @@ impl Engine {
     fn handle_newgame(&mut self) {
         self.pos = Pos::default();
         self.pool.reset();
+        self.tt.clear();
     }
 
     /// Handle go command.
     fn handle_go(&mut self, tc: TimeControl) {
-        let bestmove = self.pool.go(&mut self.pos, tc);
-        println!("bestmove {bestmove}");
+        let bestmove = self.pool.go(&mut self.pos, tc, &self.tt);
+        println!("bestmove {}", bestmove.to_uci(&self.pos.board.castlingmask));
     }
 
     /// Handle perft command.
@@ -130,6 +134,26 @@ impl Engine {
                     if size > 0 {
                         self.pool.resize(size);
                     }
+                }
+            }
+
+            "Hash" => {
+                if let Ok(size) = v.parse::<usize>() {
+                    if size > 0 {
+                        self.tt.resize(size);
+                    }
+                }
+            }
+
+            "UCI_Chess960" => {
+                if let Ok(val) = v.parse::<bool>() {
+                    self.pos.board.castlingmask.frc = val;
+                }
+            }
+
+            "Clear" => {
+                if v == "Hash" {
+                    self.tt.clear();
                 }
             }
 

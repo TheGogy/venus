@@ -13,6 +13,7 @@ use chess::types::moves::Move;
 use crate::{
     position::pos::Pos,
     timeman::{clock::Clock, time_control::TimeControl},
+    tt::table::TT,
 };
 
 use super::thread::Thread;
@@ -43,14 +44,19 @@ impl ThreadPool {
     pub fn reset(&mut self) {
         self.resize(self.workers.len());
     }
+
+    /// The total number of thread workers.
+    pub const fn nb_workers(&self) -> usize {
+        self.workers.len()
+    }
 }
 
 /// Searching.
 impl ThreadPool {
     /// Starts searching the given position.
-    pub fn go(&mut self, pos: &mut Pos, tc: TimeControl) -> Move {
+    pub fn go(&mut self, pos: &mut Pos, tc: TimeControl, tt: &TT) -> Move {
         self.setup_threads(pos, tc);
-        self.deploy_threads(pos);
+        self.deploy_threads(pos, tt);
 
         self.select_move()
     }
@@ -59,8 +65,9 @@ impl ThreadPool {
     fn setup_threads(&mut self, pos: &mut Pos, tc: TimeControl) {
         let halfmoves = pos.board.state.halfmoves;
 
-        // Prepare main thread
         self.main.clock = Clock::new(self.global_stop.clone(), self.global_nodes.clone(), tc, pos.board.stm);
+
+        // Prepare main thread
         self.main.prepare_search(halfmoves);
 
         // Prepare workers
@@ -72,16 +79,16 @@ impl ThreadPool {
     }
 
     /// Deploys all threads searching in the given position.
-    fn deploy_threads(&mut self, pos: &mut Pos) {
+    fn deploy_threads(&mut self, pos: &mut Pos, tt: &TT) {
         thread::scope(|scope| {
             for worker in &mut self.workers {
                 let mut worker_pos = pos.clone();
                 scope.spawn(move || {
-                    worker_pos.iterative_deepening::<false>(worker);
+                    worker_pos.iterative_deepening::<false>(worker, tt);
                 });
             }
 
-            pos.iterative_deepening::<true>(&mut self.main);
+            pos.iterative_deepening::<true>(&mut self.main, tt);
             self.global_stop.store(true, Ordering::Relaxed);
         });
     }
