@@ -2,6 +2,8 @@ pub mod conthist;
 pub mod noisyhist;
 pub mod quiethist;
 
+use crate::tunables::params::tunables::*;
+
 /// Entry within a history table.
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(transparent)]
@@ -17,8 +19,6 @@ impl HistEntry {
         self.0 = (x + b - (x * b.abs()) / MAX) as i16
     }
 }
-use crate::tunables::params::tunables::*;
-
 // Get the bonus and malus for history at a given depth.
 pub fn hist_delta(depth: usize) -> (i16, i16) {
     let bonus = hist_bonus_max().min(hist_bonus_mult() * depth as i16 - hist_bonus_base());

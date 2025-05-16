@@ -60,11 +60,11 @@ impl Hash {
 }
 
 /// The bits to toggle on or off for a different color.
-pub(crate) const COLOR_KEY: u64 = 0x83690DB1CD7C6C5;
+pub(crate) static COLOR_KEY: u64 = 0x83690DB1CD7C6C5;
 
 /// The bits to toggle on or off if a given piece is on a given square.
 /// Also used in cuckoo tables.
-pub(crate) const PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
+pub(crate) static PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
     let mut piece_sq = [[0; Square::NUM]; CPiece::NUM];
     let mut state = 0xDE0D71DD0844AD02;
 
@@ -83,7 +83,7 @@ pub(crate) const PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
 };
 
 /// The bits to toggle on or off when we have some castling rights.
-const CASTLING_KEYS: [u64; CastlingRights::NUM] = {
+static CASTLING_KEYS: [u64; CastlingRights::NUM] = {
     let mut castling = [0; CastlingRights::NUM];
     let mut state = 0xAC3B55E231CE6ABB;
     let mut i = 0;
@@ -97,7 +97,7 @@ const CASTLING_KEYS: [u64; CastlingRights::NUM] = {
 };
 
 /// The bits to toggle on or off when we have an en passant square on a given file.
-const EN_PASSANT_KEYS: [u64; 8] = {
+static EN_PASSANT_KEYS: [u64; 8] = {
     let mut en_passant = [0; 8];
     let mut state = 0x38550AD083D94048;
 

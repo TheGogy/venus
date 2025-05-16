@@ -1,4 +1,8 @@
-use chess::types::{eval::Eval, moves::Move};
+use chess::{
+    MAX_DEPTH,
+    movegen::ALL_MOVE,
+    types::{eval::Eval, moves::Move},
+};
 
 use crate::{
     position::pos::Pos,
@@ -26,13 +30,18 @@ impl Pos {
             return Eval::DRAW;
         }
 
+        let in_check = self.board.in_check();
+
         // Base case: depth = 0
-        // TODO: qsearch
-        if depth == 0 {
-            return self.evaluate();
+        if depth == 0 && !in_check {
+            // return self.evaluate();
+            return self.qsearch::<NT::Next>(t, tt, pv, alpha, beta);
         }
 
-        let in_check = self.board.in_check();
+        // Check extensions
+        if in_check && depth < MAX_DEPTH {
+            depth += 1;
+        }
 
         pv.clear();
 
@@ -41,7 +50,7 @@ impl Pos {
         if !NT::RT {
             // Check for immediate draw.
             if self.board.is_draw(t.ply_from_null) {
-                return Eval::DRAW;
+                return Eval::dithered_draw(t.nodes as i32);
             }
 
             // Mate distance pruning. If we have already found a faster mate,
@@ -89,29 +98,45 @@ impl Pos {
                 !NT::RT && depth >= se_d_min() && !tt_value.is_tb_mate_score() && tt_bound != Bound::Upper && tt_depth >= depth - 3;
         }
 
-        // TODO: proper ttpv.
         if !singular {
             t.ss_mut().ttpv = NT::PV
         }
 
         // TODO: Tablebases probe.
 
-        // TODO: static eval.
+        // -----------------------------------
+        //            Static Eval
+        // -----------------------------------
+
+        let eval = if singular { t.ss().eval } else { self.static_eval(t, tt_entry, in_check) };
+        let improving = t.is_improving(in_check);
+
+        // Pruning
+        if !NT::PV && !in_check && !singular {
+            // Reverse futility pruning (static null move pruning).
+            if self.can_apply_rfp(t, depth, improving, eval, beta) {
+                return beta + (eval - beta) / 3;
+            }
+
+            // Null move pruning.
+        }
+
+        // TODO: Probcut?
 
         // -----------------------------------
         //             Moves loop
         // -----------------------------------
         let mut best_eval = -Eval::INFINITY;
-        let mut best_move = Move::NULL;
+        let mut best_move = Move::NONE;
 
-        let mut caps_tried = Vec::with_capacity(24);
-        let mut quiets_tried = Vec::with_capacity(24);
+        let mut caps_tried = Vec::with_capacity(32);
+        let mut quiets_tried = Vec::with_capacity(32);
 
         let child_pv = &mut PVLine::default();
 
         let old_alpha = alpha;
 
-        let mut mp = match self.init_movepicker::<true>(None) {
+        let mut mp = match self.init_movepicker::<ALL_MOVE>(tt_move) {
             Some(mp) => mp,
             None => {
                 return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };

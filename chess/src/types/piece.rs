@@ -35,6 +35,7 @@ pub enum CPiece {
 
 impl Piece {
     pub const NUM: usize = 6;
+    const UCI_CHAR: &str = "pnbrqk ";
 
     /// The index of this piece.
     #[inline]
@@ -47,11 +48,15 @@ impl Piece {
     pub fn iter() -> impl Iterator<Item = Self> {
         (0..6).map(Self::from_raw)
     }
+
+    /// Get the UCI character for this Piece.
+    pub fn to_char(self) -> char {
+        Self::UCI_CHAR.chars().nth(self as usize).expect("Invalid piece!")
+    }
 }
 
 impl CPiece {
     pub const NUM: usize = 12;
-
     const UCI_CHAR: &str = "PpNnBbRrQqKk ";
 
     /// The index of this CPiece.
@@ -84,9 +89,9 @@ impl CPiece {
         (0..12).map(Self::from_raw)
     }
 
-    /// Get the UCI character for this piece.
+    /// Get the UCI character for this CPiece.
     pub fn to_char(self) -> char {
-        Self::UCI_CHAR.chars().nth(self as usize).expect("Invalid piece!")
+        Self::UCI_CHAR.chars().nth(self as usize).expect("Invalid CPiece!")
     }
 }
 
@@ -96,7 +101,7 @@ impl TryFrom<char> for CPiece {
     /// Constructs a piece from a given character according to UCI specification.
     /// Returns an error (`&' static str`) if the provided `char` does not match any piece.
     fn try_from(value: char) -> Result<Self, Self::Error> {
-        Ok(Self::from(Self::UCI_CHAR.chars().position(|x| x == value).ok_or("Invalid piece!")?))
+        Ok(Self::from(Self::UCI_CHAR.chars().position(|x| x == value).ok_or("Invalid CPiece!")?))
     }
 }
 

@@ -88,10 +88,10 @@ impl Board {
             occ.pop_bit(s);
 
             let pt = p.pt();
-            if pt == Piece::Queen || pt == Piece::Bishop || pt == Piece::Pawn {
+            if [Piece::Queen, Piece::Bishop, Piece::Pawn].contains(&pt) {
                 atk |= bishop_atk(tgt, occ) & diag_sliders;
             }
-            if pt == Piece::Queen || pt == Piece::Rook {
+            if [Piece::Queen, Piece::Rook].contains(&pt) {
                 atk |= rook_atk(tgt, occ) & orth_sliders;
             }
 

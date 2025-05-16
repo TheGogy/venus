@@ -21,28 +21,19 @@ impl Direction {
     /// Gets the direction up, relative to the color.
     #[inline]
     pub const fn up(c: Color) -> Direction {
-        match c {
-            Color::White => Self::North,
-            Color::Black => Self::South,
-        }
+        unsafe { std::mem::transmute(8 + (-16 * c as i8)) }
     }
 
     /// Gets the direction up + left, relative to the color.
     #[inline]
     pub const fn ul(c: Color) -> Direction {
-        match c {
-            Color::White => Self::NorthWest,
-            Color::Black => Self::SouthEast,
-        }
+        unsafe { std::mem::transmute(9 + (-18 * c as i8)) }
     }
 
     /// Gets the direction up + right, relative to the color.
     #[inline]
     pub const fn ur(c: Color) -> Direction {
-        match c {
-            Color::White => Self::NorthEast,
-            Color::Black => Self::SouthWest,
-        }
+        unsafe { std::mem::transmute(7 + (-14 * c as i8)) }
     }
 }
 
@@ -53,12 +44,12 @@ impl Bitboard {
         match direction {
             Direction::North     => Self(self.0 << 8),
             Direction::South     => Self(self.0 >> 8),
-            Direction::East      => Self((self.0 & !File::FH.to_bb().0) << 1),
-            Direction::West      => Self((self.0 & !File::FA.to_bb().0) >> 1),
-            Direction::NorthEast => Self((self.0 & !File::FH.to_bb().0) << 9),
-            Direction::NorthWest => Self((self.0 & !File::FA.to_bb().0) << 7),
-            Direction::SouthEast => Self((self.0 & !File::FH.to_bb().0) >> 7),
-            Direction::SouthWest => Self((self.0 & !File::FA.to_bb().0) >> 9),
+            Direction::East      => Self((self.0 & !File::FH.bb().0) << 1),
+            Direction::West      => Self((self.0 & !File::FA.bb().0) >> 1),
+            Direction::NorthEast => Self((self.0 & !File::FH.bb().0) << 9),
+            Direction::NorthWest => Self((self.0 & !File::FA.bb().0) << 7),
+            Direction::SouthEast => Self((self.0 & !File::FH.bb().0) >> 7),
+            Direction::SouthWest => Self((self.0 & !File::FA.bb().0) >> 9),
         }
     }
 }

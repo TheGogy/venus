@@ -41,7 +41,7 @@ const fn bishop_atk_init(s: usize, occ: u64) -> u64 {
 }
 
 /// Raw bishop attacks table. This does not take blockers into account.
-pub const BISHOP_ATTACKS: [Bitboard; 64] = {
+pub static BISHOP_ATTACKS: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 
@@ -63,7 +63,7 @@ const fn rook_atk_init(s: usize, occ: u64) -> u64 {
 }
 
 /// Raw rook attacks table. This does not take blockers into account.
-pub const ROOK_ATTACKS: [Bitboard; 64] = {
+pub static ROOK_ATTACKS: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 
@@ -77,7 +77,7 @@ pub const ROOK_ATTACKS: [Bitboard; 64] = {
 
 /// Table of the line between two squares.
 #[allow(clippy::large_const_arrays)]
-pub const BETWEEN_TABLE: [[Bitboard; 64]; 64] = {
+pub static BETWEEN_TABLE: [[Bitboard; 64]; 64] = {
     let mut between = [[Bitboard(0); 64]; 64];
 
     let mut s1 = 0;

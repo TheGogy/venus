@@ -42,6 +42,13 @@ impl Eval {
         Eval(self.0.min(other.0))
     }
 
+    /// The value of a draw with a bit of randomness to de-incentivise repetitions
+    #[inline]
+    pub const fn dithered_draw(rand: i32) -> Self {
+        let dither_mask = 0x2;
+        Eval(Self::DRAW.0 + (rand & dither_mask))
+    }
+
     /// Gets the internal eval representation for checkmate in `ply`.
     #[inline]
     pub const fn mate_in(ply: usize) -> Self {

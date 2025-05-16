@@ -104,7 +104,7 @@ impl Engine {
     /// Handle go command.
     fn handle_go(&mut self, tc: TimeControl) {
         let bestmove = self.pool.go(&mut self.pos, tc, &self.tt);
-        println!("bestmove {bestmove}");
+        println!("bestmove {}", bestmove.to_uci(&self.pos.board.castlingmask));
     }
 
     /// Handle perft command.
@@ -142,6 +142,12 @@ impl Engine {
                     if size > 0 {
                         self.tt.resize(size);
                     }
+                }
+            }
+
+            "UCI_Chess960" => {
+                if let Ok(val) = v.parse::<bool>() {
+                    self.pos.board.castlingmask.frc = val;
                 }
             }
 

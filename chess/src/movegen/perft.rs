@@ -1,30 +1,29 @@
 use crate::types::board::Board;
 
+use super::ALL_MOVE;
+
 /// Counts all the legal positions up to a given depth.
 pub fn perft<const PRINT: bool>(b: &mut Board, depth: usize) -> usize {
     let mut total = 0;
 
-    let ml = b.gen_moves::<true>();
+    let ml = b.gen_moves::<ALL_MOVE>();
 
     // Base case: just count leaf nodes.
     if !PRINT && depth <= 1 {
         return ml.len();
     }
 
+    let is_leaf = depth == 2;
+
     for m in ml.iter() {
-        let n = if depth == 1 {
-            1
-        } else {
-            b.make_move(*m);
-            let n = perft::<false>(b, depth - 1);
-            b.undo_move(*m);
-            n
-        };
+        b.make_move(*m);
+        let n = if is_leaf { b.gen_moves::<ALL_MOVE>().len() } else { perft::<false>(b, depth - 1) };
+        b.undo_move(*m);
 
         total += n;
 
         if PRINT && n > 0 {
-            println!("{m} | {n}");
+            println!("{} | {n}", m.to_uci(&b.castlingmask));
         }
     }
 

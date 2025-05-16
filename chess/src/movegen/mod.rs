@@ -34,6 +34,10 @@ impl Board {
                 self.enumerate_diag::<ALL, false>(&mut ml);
                 self.enumerate_orth::<ALL, false>(&mut ml);
                 self.enumerate_king::<ALL, false>(&mut ml);
+
+                if ALL {
+                    self.enumerate_castling(&mut ml);
+                }
             }
 
             // 1 checker: enumerate all moves in the checkmask.
@@ -212,37 +216,36 @@ impl Board {
         });
     }
 
+    #[inline]
+    fn enumerate_castling(&self, ml: &mut MoveList) {
+        let ksq = self.ksq(self.stm);
+        let occ = self.occ();
+        let atk = self.state.attacked;
+        let ks_pin = Square::G1.relative(self.stm).bb() & self.state.pin_orth;
+        let qs_pin = (Square::C1.relative(self.stm).bb() | Square::B1.relative(self.stm).bb()) & self.state.pin_orth;
+
+        // Kingside
+        if self.state.castling.has_ks(self.stm) && ks_pin.is_empty() {
+            let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<true>(ksq, self.stm);
+            if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
+                ml.push(Move::new(ksq, Square::G1.relative(self.stm), MoveFlag::Castling));
+            }
+        }
+
+        // Queenside
+        if self.state.castling.has_qs(self.stm) && qs_pin.is_empty() {
+            let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<false>(ksq, self.stm);
+            if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
+                ml.push(Move::new(ksq, Square::C1.relative(self.stm), MoveFlag::Castling));
+            }
+        }
+    }
+
     /// Add all king moves.
     #[inline]
     fn enumerate_king<const ALL: bool, const CHECK: bool>(&self, ml: &mut MoveList) {
         let ksq = self.ksq(self.stm);
-
-        // Generate regular king moves (assume not in check: we want to stay out of the checkmask!)
         self.add_moves::<ALL, false>(ksq, king_atk(ksq) & !self.state.attacked, ml);
-
-        if !CHECK {
-            // Generate castling moves.
-            let occ = self.occ();
-            let atk = self.state.attacked;
-            let ks_pin = Square::G1.relative(self.stm).bb() & self.state.pin_orth;
-            let qs_pin = (Square::C1.relative(self.stm).bb() | Square::B1.relative(self.stm).bb()) & self.state.pin_orth;
-
-            // Kingside
-            if self.state.castling.has_ks(self.stm) && ks_pin.is_empty() {
-                let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<true>(ksq, self.stm);
-                if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
-                    ml.push(Move::new(ksq, Square::G1.relative(self.stm), MoveFlag::Castling));
-                }
-            }
-
-            // Queenside
-            if self.state.castling.has_qs(self.stm) && qs_pin.is_empty() {
-                let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<false>(ksq, self.stm);
-                if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
-                    ml.push(Move::new(ksq, Square::C1.relative(self.stm), MoveFlag::Castling));
-                }
-            }
-        }
     }
 
     /// Add all knight moves.

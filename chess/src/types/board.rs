@@ -1,7 +1,10 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::tables::{atk_by_type, leaping_piece::all_pawn_atk};
+use crate::{
+    movegen::ALL_MOVE,
+    tables::{atk_by_type, leaping_piece::all_pawn_atk},
+};
 
 use super::{
     bitboard::Bitboard,
@@ -345,7 +348,7 @@ impl Board {
     /// Find a move given a UCI move string.
     #[inline]
     pub fn find_move(&self, s: &str) -> Option<Move> {
-        self.gen_moves::<true>().iter().find(|&m| m.to_string() == s).copied()
+        self.gen_moves::<ALL_MOVE>().iter().find(|&m| m.to_uci(&self.castlingmask) == s).copied()
     }
 
     /// Get the history at `i` steps back.

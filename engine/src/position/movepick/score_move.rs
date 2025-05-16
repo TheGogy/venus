@@ -25,7 +25,7 @@ impl<const QUIET: bool> MovePicker<QUIET> {
 /// Scoring methods for noisy moves.
 impl<const QUIET: bool> MovePicker<QUIET> {
     #[rustfmt::skip]
-    fn score_single(&self, m: Move, board: &Board, thread: &Thread) -> i32 {
+    fn score_single(&self, m: Move, board: &Board, t: &Thread) -> i32 {
         const MVV: [i32; Piece::NUM] = [0, 2400, 2400, 4800, 9600, 0];
         const PROMO: i32 = NOISY_MAX + MVV[Piece::Queen.index()] + 1;
 
@@ -34,21 +34,21 @@ impl<const QUIET: bool> MovePicker<QUIET> {
             MoveFlag::CPromoQ      => return TAC_GOOD + PROMO,
             MoveFlag::PromoQ       => PROMO,
             t if t.is_underpromo() => return TAC_BAD,
-            _                      => MVV[board.captured(m).pt().index()] + thread.hist_noisy.get_bonus(board, m),
+            _                      => MVV[board.captured(m).pt().index()] + t.hist_noisy.get_bonus(board, m),
         };
 
         if board.see(m, Eval::DRAW) { score + TAC_GOOD } else { score + TAC_BAD }
     }
 
-    pub fn score_tacticals(&mut self, board: &Board, thread: &Thread) {
+    pub fn score_tacticals(&mut self, board: &Board, t: &Thread) {
         let mut i = self.idx_cur;
         self.idx_quiets = self.idx_cur;
 
         while i < self.idx_noisy_bad {
             let m = self.moves.moves[i];
 
-            if !QUIET || !m.flag().is_quiet() {
-                let score = self.score_single(m, board, thread);
+            if !QUIET || m.flag().is_noisy() {
+                let score = self.score_single(m, board, t);
 
                 if score >= TAC_GOOD {
                     self.moves.moves.swap(i, self.idx_quiets);

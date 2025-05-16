@@ -7,7 +7,7 @@ mod utils;
 use super::pos::Pos;
 
 impl Pos {
-    pub fn init_movepicker<const QUIETS: bool>(&self, tt_move: Option<Move>) -> Option<MovePicker<QUIETS>> {
+    pub fn init_movepicker<const QUIETS: bool>(&self, tt_move: Move) -> Option<MovePicker<QUIETS>> {
         let move_list = self.board.gen_moves::<QUIETS>();
         if move_list.is_empty() { None } else { Some(MovePicker::<QUIETS>::new(move_list, tt_move)) }
     }
@@ -28,7 +28,7 @@ pub enum Stage {
 pub struct MovePicker<const QUIETS: bool> {
     moves: MoveList,
     scores: [i32; MoveList::SIZE],
-    tt_move: Option<Move>,
+    tt_move: Move,
 
     idx_cur: usize,
     idx_quiets: usize,
@@ -40,13 +40,13 @@ pub struct MovePicker<const QUIETS: bool> {
 
 impl<const QUIETS: bool> MovePicker<QUIETS> {
     /// Initialize a new MovePicker for the given move list.
-    pub fn new(move_list: MoveList, tt_move: Option<Move>) -> MovePicker<QUIETS> {
+    pub fn new(move_list: MoveList, tt_move: Move) -> MovePicker<QUIETS> {
         let end = move_list.len();
 
-        let stage = match tt_move {
-            Some(m) if !QUIETS && m.flag().is_quiet() => Stage::ScoreTacticals,
-            None => Stage::ScoreTacticals,
-            _ => Stage::TTMove,
+        let stage = if tt_move.is_null() || (tt_move.flag().is_quiet() && !QUIETS) {
+            Stage::ScoreTacticals
+        } else {
+            Stage::TTMove
         };
 
         MovePicker {

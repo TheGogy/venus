@@ -127,7 +127,7 @@ impl Board {
         let cap = self.state.cap;
 
         // SAFETY: This will only be called when there is a valid move in the history.
-        let state = unsafe { self.history.pop().unwrap_unchecked() };
+        let state = self.history.pop().unwrap();
 
         // Update stm.
         self.stm = !self.stm;
@@ -204,7 +204,7 @@ impl Board {
     /// Undo a null move from the board.
     pub fn undo_null(&mut self) {
         // SAFETY: This will only be called when there is a valid move in the history.
-        let old_state = unsafe { self.history.pop().unwrap_unchecked() };
+        let old_state = self.history.pop().unwrap();
         self.state = old_state;
 
         // Update stm

@@ -17,6 +17,7 @@ use super::{
 /// Represented as:
 /// [wk][bk][wq][bq]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Default)]
+#[repr(transparent)]
 pub struct CastlingRights(pub u8);
 
 impl CastlingRights {
@@ -95,16 +96,19 @@ impl Not for CastlingRights {
 ///
 /// mask:  The castling mask map that we can use to swap out our castling rights.
 /// rooks: The rook starting squares. [ wk , bk , wq , bq ]
+/// frc:   Whether this is Fischer Random Chess. This is just used so we know what to
+///        print out for castling moves.
 #[derive(Clone, Debug)]
 pub struct CastlingMask {
     pub mask: [CastlingRights; Square::NUM],
     pub rooks: [Square; 4],
+    pub frc: bool,
 }
 
 /// Default Castling mask. Does not modify castling rights.
 impl Default for CastlingMask {
     fn default() -> Self {
-        Self { mask: [CastlingRights::ALL; Square::NUM], rooks: [Square::Invalid; 4] }
+        Self { mask: [CastlingRights::ALL; Square::NUM], rooks: [Square::Invalid; 4], frc: false }
     }
 }
 
@@ -199,6 +203,7 @@ impl CastlingRights {
                 }
 
                 'A'..='H' => {
+                    c_mask.frc = true;
                     let sq = Square::make(Rank::R1.relative(c), File::from_raw(t as u8 - b'A'));
                     (sq, CastlingRights::get_mask(c, ksq < sq))
                 }

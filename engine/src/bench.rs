@@ -12,6 +12,7 @@ impl Engine {
         let mut total_time = 0;
 
         for fen in FENS {
+            println!("{fen}");
             let tt = TT::default();
             let mut pos: Pos = format!("fen {fen}").parse().unwrap();
             let mut thread = Thread::new(Clock::fixed_depth(BENCH_DEPTH));
