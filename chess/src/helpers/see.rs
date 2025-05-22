@@ -28,7 +28,7 @@ impl Board {
     /// Static Exchange evaluation (SEE).
     /// This determines if we win after all captures are made on a given square.
     pub fn see(&self, m: Move, threshold: Eval) -> bool {
-        let (src, tgt) = (m.src(), m.tgt());
+        let (src, dst) = (m.src(), m.dst());
         let flag = m.flag();
 
         if flag == MoveFlag::Castling {
@@ -40,13 +40,13 @@ impl Board {
 
         // Get the value of the piece that we will use to capture.
         let mut move_val = if flag.is_cap() {
-            if flag == MoveFlag::EnPassant { Self::MVVLVA[0] } else { Self::MVVLVA[self.pc_at(tgt).index()] }
+            if flag == MoveFlag::EnPassant { Self::MVVLVA[0] } else { Self::MVVLVA[self.pc_at(dst).idx()] }
         } else {
             0
         };
 
         if flag.is_promo() {
-            move_val += Self::MVVLVA[victim.index()] - Self::MVVLVA[0];
+            move_val += Self::MVVLVA[victim.idx()] - Self::MVVLVA[0];
         }
 
         // Stop if opponent is winning.
@@ -56,7 +56,7 @@ impl Board {
         }
 
         // If balance is in our favor, we can stop now.
-        balance -= Self::MVVLVA[victim.index()];
+        balance -= Self::MVVLVA[victim.idx()];
         if balance >= 0 {
             return true;
         }
@@ -66,13 +66,13 @@ impl Board {
 
         let mut occ = self.occ();
         occ.pop_bit(src);
-        occ.pop_bit(tgt);
+        occ.pop_bit(dst);
 
         if flag == MoveFlag::EnPassant {
             occ.pop_bit(self.state.epsq.forward(!self.stm));
         }
 
-        let mut atk = self.attackers_to(tgt, occ) & occ;
+        let mut atk = self.attackers_to(dst, occ) & occ;
         let mut stm = !self.stm;
 
         loop {
@@ -89,16 +89,16 @@ impl Board {
 
             let pt = p.pt();
             if [Piece::Queen, Piece::Bishop, Piece::Pawn].contains(&pt) {
-                atk |= bishop_atk(tgt, occ) & diag_sliders;
+                atk |= bishop_atk(dst, occ) & diag_sliders;
             }
             if [Piece::Queen, Piece::Rook].contains(&pt) {
-                atk |= rook_atk(tgt, occ) & orth_sliders;
+                atk |= rook_atk(dst, occ) & orth_sliders;
             }
 
             atk &= occ;
 
             stm = !stm;
-            balance = -balance - 1 - Self::MVVLVA[p.index()];
+            balance = -balance - 1 - Self::MVVLVA[p.idx()];
             if balance >= 0 {
                 // If our final recapturing piece is a king, and the opponent has another attacker,
                 // then a positive balance should mean a loss.

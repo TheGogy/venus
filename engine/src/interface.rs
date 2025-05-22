@@ -9,6 +9,7 @@ use std::{
 };
 
 use chess::movegen::perft::perft;
+use nnue::network::NNUE;
 
 use crate::{position::pos::Pos, threading::threadpool::ThreadPool, timeman::time_control::TimeControl, tt::table::TT};
 
@@ -123,7 +124,8 @@ impl Engine {
 
     /// Handle eval command.
     fn handle_eval(&self) {
-        println!("{}", self.pos.evaluate());
+        let mut nnue = NNUE::default();
+        println!("{}", self.pos.evaluate(&mut nnue));
     }
 
     /// Handle setopt command.

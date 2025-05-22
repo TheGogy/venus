@@ -68,7 +68,7 @@ impl Clock {
     /// Update the node count for a given move.
     #[inline]
     pub fn update_node_count(&mut self, m: Move, searched: u64) {
-        self.node_count[m.src().index()][m.tgt().index()] += searched;
+        self.node_count[m.src().idx()][m.dst().idx()] += searched;
     }
 
     /// Spawn a generic clock for threads that should idle.
@@ -77,7 +77,7 @@ impl Clock {
     }
 
     /// Spawn a clock that searches up to a fixed depth.
-    pub fn fixed_depth(depth: usize) -> Self {
+    pub fn fixed_depth(depth: i16) -> Self {
         Self::new(Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)), TimeControl::FixedDepth(depth), Color::White)
     }
 
@@ -107,8 +107,8 @@ impl Clock {
 /// Whether we should start or continue the search.
 impl Clock {
     /// Whether we should start the search.
-    pub fn should_start_iteration(&mut self, depth: usize, nodes: u64, best_move: Move) -> bool {
-        if self.is_stopped() || !(1..MAX_DEPTH).contains(&depth) {
+    pub fn should_start_iteration(&mut self, depth: i16, nodes: u64, best_move: Move) -> bool {
+        if self.is_stopped() || !(1..MAX_DEPTH as i16).contains(&depth) {
             return depth == 0;
         }
 
@@ -134,7 +134,7 @@ impl Clock {
             return 1.0;
         }
 
-        let best_move_nodes = self.node_count[best_move.src().index()][best_move.tgt().index()];
+        let best_move_nodes = self.node_count[best_move.src().idx()][best_move.dst().idx()];
         let ratio = best_move_nodes as f64 / nodes as f64;
         (0.4 + (1.0 - ratio) * 2.0).max(0.5)
     }

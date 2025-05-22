@@ -207,7 +207,7 @@ impl Board {
 
             for file in 0..8 {
                 let square = Square::from_raw(rank * 8 + file);
-                let piece = self.pc_map[square.index()];
+                let piece = self.pc_map[square.idx()];
 
                 if piece != CPiece::None {
                     if empty > 0 {
@@ -277,13 +277,13 @@ impl Board {
     /// Get the bitboard of a given piece.
     #[inline]
     pub const fn p_bb(&self, p: Piece) -> Bitboard {
-        self.pieces[p.index()]
+        self.pieces[p.idx()]
     }
 
     /// Get the bitboard of a given color.
     #[inline]
     pub const fn c_bb(&self, c: Color) -> Bitboard {
-        self.colors[c.index()]
+        self.colors[c.idx()]
     }
 
     /// Get the bitboard of a given piece + color.
@@ -319,30 +319,30 @@ impl Board {
     /// Get the piece at a given position.
     #[inline]
     pub const fn pc_at(&self, s: Square) -> CPiece {
-        self.pc_map[s.index()]
+        self.pc_map[s.idx()]
     }
 
     /// Set the given piece on the given square.
     #[inline]
     pub const fn set_piece(&mut self, p: CPiece, s: Square) {
-        self.pieces[p.pt().index()].set_bit(s);
-        self.colors[p.color().index()].set_bit(s);
-        self.pc_map[s.index()] = p;
+        self.pieces[p.pt().idx()].set_bit(s);
+        self.colors[p.color().idx()].set_bit(s);
+        self.pc_map[s.idx()] = p;
     }
 
     /// Remove the piece on the given square.
     #[inline]
     pub const fn pop_piece(&mut self, s: Square) {
         let p = self.pc_at(s);
-        self.pieces[p.pt().index()].pop_bit(s);
-        self.colors[p.color().index()].pop_bit(s);
-        self.pc_map[s.index()] = CPiece::None;
+        self.pieces[p.pt().idx()].pop_bit(s);
+        self.colors[p.color().idx()].pop_bit(s);
+        self.pc_map[s.idx()] = CPiece::None;
     }
 
     /// Gets the piece at the given square.
     #[inline]
     pub const fn get_piece(&self, s: Square) -> CPiece {
-        self.pc_map[s.index()]
+        self.pc_map[s.idx()]
     }
 
     /// Find a move given a UCI move string.
@@ -375,7 +375,7 @@ impl Board {
         if m.flag() == MoveFlag::EnPassant {
             CPiece::create(!self.stm, Piece::Pawn)
         } else {
-            self.pc_at(m.tgt())
+            self.pc_at(m.dst())
         }
     }
 

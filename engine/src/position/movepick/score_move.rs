@@ -27,14 +27,14 @@ impl<const QUIET: bool> MovePicker<QUIET> {
     #[rustfmt::skip]
     fn score_single(&self, m: Move, board: &Board, t: &Thread) -> i32 {
         const MVV: [i32; Piece::NUM] = [0, 2400, 2400, 4800, 9600, 0];
-        const PROMO: i32 = NOISY_MAX + MVV[Piece::Queen.index()] + 1;
+        const PROMO: i32 = NOISY_MAX + MVV[Piece::Queen.idx()] + 1;
 
         // Enpassant / capture promotions (to queen) are always good
         let score = match m.flag() {
             MoveFlag::CPromoQ      => return TAC_GOOD + PROMO,
             MoveFlag::PromoQ       => PROMO,
             t if t.is_underpromo() => return TAC_BAD,
-            _                      => MVV[board.captured(m).pt().index()] + t.hist_noisy.get_bonus(board, m),
+            _                      => MVV[board.captured(m).pt().idx()] + t.hist_noisy.get_bonus(board, m),
         };
 
         if board.see(m, Eval::DRAW) { score + TAC_GOOD } else { score + TAC_BAD }

@@ -77,8 +77,8 @@ impl TTEntry {
 
     /// Get the depth.
     #[inline]
-    pub const fn depth(self) -> usize {
-        self.depth as usize
+    pub const fn depth(self) -> i16 {
+        self.depth as i16
     }
 
     /// Get the bound.

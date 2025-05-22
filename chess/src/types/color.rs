@@ -16,7 +16,7 @@ impl Color {
 
     /// The index of this color.
     #[inline]
-    pub const fn index(self) -> usize {
+    pub const fn idx(self) -> usize {
         self as usize
     }
 

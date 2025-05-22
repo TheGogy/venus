@@ -3,19 +3,19 @@ use crate::types::{bitboard::Bitboard, color::Color, direction::Direction, squar
 /// Get pawn attacks for a given color and square.
 #[inline]
 pub const fn pawn_atk(c: Color, s: Square) -> Bitboard {
-    PAWN_DATA[c.index()][s.index()]
+    PAWN_DATA[c.idx()][s.idx()]
 }
 
 /// Get all knight attacks for a given square.
 #[inline]
 pub const fn knight_atk(s: Square) -> Bitboard {
-    KNIGHT_DATA[s.index()]
+    KNIGHT_DATA[s.idx()]
 }
 
 /// Get all king attacks for a given square.
 #[inline]
 pub const fn king_atk(s: Square) -> Bitboard {
-    KING_DATA[s.index()]
+    KING_DATA[s.idx()]
 }
 
 /// Get all pawn attacks for a given side.

@@ -10,6 +10,7 @@ use chess::{
     MAX_DEPTH,
     types::{board::Board, color::Color, eval::Eval, moves::Move, piece::CPiece, square::Square},
 };
+use nnue::network::NNUE;
 
 use crate::{
     history::{
@@ -30,7 +31,7 @@ pub struct Thread {
     pub eval: Eval,
 
     pub ply: usize,
-    pub depth: usize,
+    pub depth: i16,
     pub seldepth: usize,
     pub ply_from_null: usize,
     pub nodes: u64,
@@ -41,6 +42,8 @@ pub struct Thread {
 
     pub pv: PVLine,
     pub stack: [SearchStackEntry; MAX_DEPTH],
+
+    pub nnue: NNUE,
 }
 
 impl Thread {
@@ -60,6 +63,7 @@ impl Thread {
             hist_cont: array::from_fn(|_| ContHist::default()),
             pv: PVLine::default(),
             stack: [SearchStackEntry::default(); MAX_DEPTH],
+            nnue: NNUE::default(),
         }
     }
 
@@ -71,7 +75,7 @@ impl Thread {
     /// Whether we should start the next iteration.
     #[inline]
     pub fn should_start_iter(&mut self) -> bool {
-        self.clock.should_start_iteration(self.depth, self.nodes, self.best_move())
+        self.clock.should_start_iteration(self.depth + 1, self.nodes, self.best_move())
     }
 
     /// Whether we should stop searching.
@@ -148,14 +152,14 @@ impl Thread {
     fn prev_move(&self, offset: usize) -> Option<(CPiece, Square)> {
         if self.ply >= offset && !self.ss_at(offset).mov.is_null() {
             let se = self.ss_at(offset);
-            Some((se.mvp, se.mov.tgt()))
+            Some((se.mvp, se.mov.dst()))
         } else {
             None
         }
     }
 
     /// Update the history tables given some quiet and noisy moves.
-    pub fn update_tables(&mut self, best: Move, depth: usize, board: &Board, quiets: Vec<Move>, noisies: Vec<Move>) {
+    pub fn update_tables(&mut self, best: Move, depth: i16, board: &Board, quiets: Vec<Move>, noisies: Vec<Move>) {
         let (bonus, malus) = hist_delta(depth);
         self.hist_noisy.update(board, best, &noisies, bonus, malus);
 
@@ -163,8 +167,8 @@ impl Thread {
             self.hist_quiet.update(board.stm, best, &quiets, bonus, malus);
 
             for i in 0..CONT_NUM {
-                if let Some((p, tgt)) = self.prev_move(1 + i) {
-                    self.hist_cont[i].update(best, p, tgt, &quiets, bonus, malus);
+                if let Some((p, dst)) = self.prev_move(1 + i) {
+                    self.hist_cont[i].update(best, p, dst, &quiets, bonus, malus);
                 }
             }
         }

@@ -28,7 +28,7 @@ impl Pos {
 
         // Check if we are reaching max depth.
         if t.ply >= MAX_DEPTH {
-            return if in_check { Eval::DRAW } else { self.evaluate() };
+            return if in_check { Eval::DRAW } else { self.evaluate(&mut t.nnue) };
         }
 
         // Stop searching if position is drawn.
@@ -78,43 +78,39 @@ impl Pos {
 
         let child_pv = &mut PVLine::default();
 
-        let mut mp = match self.init_movepicker::<TAC_ONLY>(tt_move) {
-            Some(mp) => mp,
-            None => {
-                return if in_check {
-                    Eval::mated_in(t.ply)
-                } else {
-                    self.store_search_result(t, tt, best_eval, alpha, beta, old_alpha, best_move, 0, t.ss().ttpv);
-                    alpha
-                };
-            }
-        };
+        // If we have moves in the position, process them.
+        if let Some(mut mp) = self.init_movepicker::<TAC_ONLY>(tt_move) {
+            while let Some((m, _)) = mp.next(&self.board, t) {
+                self.make_move(m, t);
+                let v = -self.qsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha);
+                self.undo_move(m, t);
 
-        while let Some((m, _)) = mp.next(&self.board, t) {
-            self.make_move(m, t);
-            let v = -self.qsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha);
-            self.undo_move(m, t);
+                // Update best
+                if v > best_eval {
+                    best_eval = v;
 
-            // Update best
-            if v > best_eval {
-                best_eval = v;
+                    if v > alpha {
+                        best_move = m;
 
-                if v > alpha {
-                    best_move = m;
+                        if NT::PV {
+                            pv.clear();
+                            pv.update(m, child_pv);
+                        }
 
-                    if NT::PV {
-                        pv.clear();
-                        pv.update(m, child_pv);
-                    }
-
-                    if v < beta {
-                        alpha = v;
-                    } else {
-                        alpha = beta;
-                        break;
+                        if v < beta {
+                            alpha = v;
+                        } else {
+                            alpha = beta;
+                            break;
+                        }
                     }
                 }
             }
+        }
+        // No moves left.
+        // If we are in check, that's checkmate.
+        else if in_check {
+            return Eval::mated_in(t.ply);
         }
 
         if best_eval > beta && !best_eval.abs().is_tb_mate_score() {

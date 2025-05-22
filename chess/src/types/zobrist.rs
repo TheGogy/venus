@@ -36,26 +36,26 @@ impl Hash {
     /// Toggle a piece on a square.
     #[inline]
     pub fn toggle_piece(&mut self, p: CPiece, s: Square) {
-        let k = PIECE_KEYS[p.index()][s.index()];
+        let k = PIECE_KEYS[p.idx()][s.idx()];
         self.key ^= k;
 
         if p.pt() == Piece::Pawn {
             self.pawn_key ^= k;
         } else {
-            self.non_pawn_key[p.color().index()] ^= k
+            self.non_pawn_key[p.color().idx()] ^= k
         }
     }
 
     /// Toggle castling rights on or off.
     #[inline]
     pub const fn toggle_castling(&mut self, cr: CastlingRights) {
-        self.key ^= CASTLING_KEYS[cr.index()]
+        self.key ^= CASTLING_KEYS[cr.idx()]
     }
 
     /// Toggle en passant for a given square.
     #[inline]
     pub const fn toggle_ep(&mut self, epsq: Square) {
-        self.key ^= EN_PASSANT_KEYS[epsq.file().index()]
+        self.key ^= EN_PASSANT_KEYS[epsq.file().idx()]
     }
 }
 

@@ -3,7 +3,7 @@ use std::time::Instant;
 use crate::{interface::Engine, position::pos::Pos, threading::thread::Thread, timeman::clock::Clock, tt::table::TT};
 
 // TODO: Increase this when we have pruning
-const BENCH_DEPTH: usize = 6;
+const BENCH_DEPTH: i16 = 12;
 
 impl Engine {
     /// Runs a benchmark of the engine on a number of positions.

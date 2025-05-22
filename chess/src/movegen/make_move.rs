@@ -13,14 +13,14 @@ impl Board {
         assert!(m.is_valid());
 
         let flag = m.flag();
-        let (src, tgt) = (m.src(), m.tgt());
+        let (src, dst) = (m.src(), m.dst());
         let mut piece = self.get_piece(src);
 
         // Clone current state
         let mut state = self.state.clone();
 
         // Increment fullmove counter
-        state.fullmoves += self.stm.index();
+        state.fullmoves += self.stm.idx();
 
         // Unset ep sq
         state.epsq = Square::Invalid;
@@ -45,7 +45,7 @@ impl Board {
 
             // Castle: move rook to castling square.
             MoveFlag::Castling => {
-                let (rf, rt) = self.castlingmask.rook_from_to(tgt);
+                let (rf, rt) = self.castlingmask.rook_src_dst(dst);
                 let p = CPiece::create(self.stm, Piece::Rook);
                 self.pop_piece(rf);
                 self.set_piece(p, rt);
@@ -64,16 +64,16 @@ impl Board {
 
             // Capture: Remove piece at target square.
             MoveFlag::Capture => {
-                let cap = self.get_piece(tgt);
+                let cap = self.get_piece(dst);
                 state.cap = cap;
-                self.pop_piece(tgt);
-                state.hash.toggle_piece(cap, tgt);
+                self.pop_piece(dst);
+                state.hash.toggle_piece(cap, dst);
                 state.halfmoves = 0;
             }
 
             // En passant: Remove ep captured piece.
             MoveFlag::EnPassant => {
-                let epsq = tgt.forward(!self.stm);
+                let epsq = dst.forward(!self.stm);
                 let cap = self.get_piece(epsq);
                 state.cap = cap;
                 self.pop_piece(epsq);
@@ -89,10 +89,10 @@ impl Board {
 
             // Capture promotion: remove piece from to square and set piece to promoted piece.
             MoveFlag::CPromoN | MoveFlag::CPromoB | MoveFlag::CPromoR | MoveFlag::CPromoQ => {
-                let cap = self.get_piece(tgt);
+                let cap = self.get_piece(dst);
                 state.cap = cap;
-                self.pop_piece(tgt);
-                state.hash.toggle_piece(cap, tgt);
+                self.pop_piece(dst);
+                state.hash.toggle_piece(cap, dst);
                 piece = CPiece::create(self.stm, flag.get_promo());
                 state.halfmoves = 0;
             }
@@ -100,12 +100,12 @@ impl Board {
 
         // Zero out bits in castling mask
         state.hash.toggle_castling(state.castling);
-        state.castling &= self.castlingmask.zero_out(src, tgt);
+        state.castling &= self.castlingmask.zero_out(src, dst);
         state.hash.toggle_castling(state.castling);
 
         // Set piece on target square.
-        self.set_piece(piece, tgt);
-        state.hash.toggle_piece(piece, tgt);
+        self.set_piece(piece, dst);
+        state.hash.toggle_piece(piece, dst);
 
         // Update stm.
         self.stm = !self.stm;
@@ -122,8 +122,8 @@ impl Board {
     /// Undo a move on the board.
     pub fn undo_move(&mut self, m: Move) {
         let flag = m.flag();
-        let (src, tgt) = (m.src(), m.tgt());
-        let mut piece = self.get_piece(tgt);
+        let (src, dst) = (m.src(), m.dst());
+        let mut piece = self.get_piece(dst);
         let cap = self.state.cap;
 
         // SAFETY: This will only be called when there is a valid move in the history.
@@ -133,7 +133,7 @@ impl Board {
         self.stm = !self.stm;
 
         // Remove moved piece.
-        self.pop_piece(tgt);
+        self.pop_piece(dst);
 
         // Do parts of move that do not include moving the piece.
         match flag {
@@ -142,14 +142,14 @@ impl Board {
 
             // Castling: move rook back.
             MoveFlag::Castling => {
-                let (rf, rt) = self.castlingmask.rook_from_to(tgt);
+                let (rf, rt) = self.castlingmask.rook_src_dst(dst);
                 self.pop_piece(rt);
                 self.set_piece(CPiece::create(self.stm, Piece::Rook), rf);
             }
 
             // Capture: replace the captured piece.
             MoveFlag::Capture => {
-                self.set_piece(cap, tgt);
+                self.set_piece(cap, dst);
             }
 
             // EnPassant: replace the captured piece.
@@ -163,9 +163,9 @@ impl Board {
                 piece = CPiece::create(self.stm, Piece::Pawn);
             }
 
-            // Capture promotion: add piece back to tgt square and set piece to promoted piece.
+            // Capture promotion: add piece back to destination square and set piece to promoted piece.
             MoveFlag::CPromoN | MoveFlag::CPromoB | MoveFlag::CPromoR | MoveFlag::CPromoQ => {
-                self.set_piece(cap, tgt);
+                self.set_piece(cap, dst);
                 piece = CPiece::create(self.stm, Piece::Pawn);
             }
         }

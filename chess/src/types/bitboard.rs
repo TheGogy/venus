@@ -30,19 +30,19 @@ impl Bitboard {
     /// Set the bit at the given index.
     #[inline]
     pub const fn set_bit(&mut self, s: Square) {
-        self.0 |= 1u64 << s.index()
+        self.0 |= 1u64 << s.idx()
     }
 
     /// Pop the bit at the given index.
     #[inline]
     pub const fn pop_bit(&mut self, s: Square) {
-        self.0 &= !(1u64 << s.index())
+        self.0 &= !(1u64 << s.idx())
     }
 
     /// Get the bit at the current index.
     #[inline]
     pub const fn get_bit(self, s: Square) -> bool {
-        self.0 & 1u64 << s.index() != 0
+        self.0 & 1u64 << s.idx() != 0
     }
 
     /// Get the least significant bit.

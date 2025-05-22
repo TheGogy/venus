@@ -17,27 +17,27 @@ pub const CONT_NUM: usize = 6;
 
 impl ContHist {
     #[inline]
-    fn index(m: Move, p: CPiece, s: Square) -> (usize, usize, usize, usize) {
-        (p.index(), s.index(), m.src().index(), m.tgt().index())
+    fn idx(m: Move, p: CPiece, s: Square) -> (usize, usize, usize, usize) {
+        (p.idx(), s.idx(), m.src().idx(), m.dst().idx())
     }
 
     #[inline]
     fn add_bonus(&mut self, m: Move, p: CPiece, s: Square, bonus: i16) {
-        let i = Self::index(m, p, s);
+        let i = Self::idx(m, p, s);
         self.0[i.0][i.1][i.2][i.3].gravity::<CONT_MAX>(bonus);
     }
 
     #[inline]
     pub fn get_bonus(&self, m: Move, p: CPiece, s: Square) -> i32 {
-        let i = Self::index(m, p, s);
+        let i = Self::idx(m, p, s);
         self.0[i.0][i.1][i.2][i.3].0 as i32
     }
 
-    pub fn update(&mut self, best: Move, p: CPiece, tgt: Square, quiets: &Vec<Move>, bonus: i16, malus: i16) {
-        self.add_bonus(best, p, tgt, bonus);
+    pub fn update(&mut self, best: Move, p: CPiece, dst: Square, quiets: &Vec<Move>, bonus: i16, malus: i16) {
+        self.add_bonus(best, p, dst, bonus);
 
         for m in quiets {
-            self.add_bonus(*m, p, tgt, -malus);
+            self.add_bonus(*m, p, dst, -malus);
         }
     }
 }

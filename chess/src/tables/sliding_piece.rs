@@ -16,19 +16,19 @@ fn init() {
 /// Get all bishop attacks from a square given some occupancy.
 #[inline]
 pub fn bishop_atk(s: Square, occ: Bitboard) -> Bitboard {
-    unsafe { BISHOP_PEXT_TABLE[s.index()].attacks(occ) }
+    unsafe { BISHOP_PEXT_TABLE[s.idx()].attacks(occ) }
 }
 
 /// Get all rook attacks from a square given some occupancy.
 #[inline]
 pub fn rook_atk(s: Square, occ: Bitboard) -> Bitboard {
-    unsafe { ROOK_PEXT_TABLE[s.index()].attacks(occ) }
+    unsafe { ROOK_PEXT_TABLE[s.idx()].attacks(occ) }
 }
 
 /// Get all squares in the line between two squares.
 #[inline]
 pub const fn between(a: Square, b: Square) -> Bitboard {
-    BETWEEN_TABLE[a.index()][b.index()]
+    BETWEEN_TABLE[a.idx()][b.idx()]
 }
 
 /// Initialize the bishop attacks.
@@ -138,8 +138,8 @@ static mut BISHOP_DATA: [Bitboard; BISHOP_TABLE_SIZE] = [Bitboard(0); BISHOP_TAB
 
 const fn sliding_atk_init(pt: Piece, s: Square, bb: Bitboard) -> Bitboard {
     match pt {
-        Piece::Rook => Bitboard(rook_atk_init(s.index(), bb.0)),
-        Piece::Bishop => Bitboard(bishop_atk_init(s.index(), bb.0)),
+        Piece::Rook => Bitboard(rook_atk_init(s.idx(), bb.0)),
+        Piece::Bishop => Bitboard(bishop_atk_init(s.idx(), bb.0)),
         _ => unreachable!(),
     }
 }
@@ -158,13 +158,13 @@ fn init_pext_table<const N: usize>(
         data.as_mut_ptr()
     } else {
         unsafe {
-            let prev_entry = &pext_table[s.index() - 1];
+            let prev_entry = &pext_table[s.idx() - 1];
             prev_entry.data.add(*prev_size)
         }
     };
 
     // Initialize the entry
-    let entry = &mut pext_table[s.index()];
+    let entry = &mut pext_table[s.idx()];
     entry.mask = sliding_atk_init(piece, s, Bitboard::EMPTY) & !edges;
     entry.data = data_ptr;
 

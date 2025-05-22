@@ -1,12 +1,13 @@
 [package]
 name = "engine"
-version = "0.1.1"
+version = "0.2.1"
 edition = "2024"
 authors = ["TheGogy"]
 
 [dependencies]
 chess = { path = "../chess" }
 utils = { path = "../utils" }
+nnue = { path = "../nnue" }
 
 [features]
 tune = []

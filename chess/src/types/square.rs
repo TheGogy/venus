@@ -39,7 +39,7 @@ impl Square {
 
     /// Get the index of the square.
     #[inline]
-    pub const fn index(self) -> usize {
+    pub const fn idx(self) -> usize {
         self as usize
     }
 
@@ -70,7 +70,7 @@ impl Square {
     /// Moves the square forward by one relative to the side.
     #[inline]
     pub const fn forward(self, c: Color) -> Self {
-        Self::from_raw(self as u8 + 8 - (16 * c.index() as u8))
+        Self::from_raw(self as u8 + 8 - (16 * c.idx() as u8))
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8)

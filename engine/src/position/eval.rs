@@ -1,51 +1,33 @@
 use chess::types::{eval::Eval, piece::Piece};
+use nnue::network::NNUE;
 
 use crate::{
-    maybe_const,
-    tunables::params::tunables::{val_bishop, val_knight, val_pawn, val_queen, val_rook},
+    tunables::params::tunables::*,
 };
 
 use super::pos::Pos;
 
 /// Evaluation.
 impl Pos {
-    /// Very basic evaluation function, using this as a placeholder.
-    pub fn evaluate(&self) -> Eval {
-        maybe_const!(
-            piece_vals: [i32; Piece::NUM] = [val_pawn(), val_knight(), val_bishop(), val_rook(), val_queen(), 0];
-        );
+    /// Evaluates the position using the NNUE.
+    pub fn evaluate(&self, nnue: &mut NNUE) -> Eval {
+        let mut v = nnue.update_and_evaluate(&self.board);
 
-        let stm = self.board.stm;
-        let ntm = !stm;
+        v = (v * self.material_scale()) / 1024;
 
-        let mut total = 0;
-
-        for p in Piece::iter() {
-            total += (self.board.pc_bb(stm, p).nbits() as i32 - self.board.pc_bb(ntm, p).nbits() as i32) * piece_vals[p.index()];
-        }
-
-        Eval(total)
+        v
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use chess::types::eval::Eval;
+    /// Get the material scale for the position.
+    #[inline]
+    #[rustfmt::skip]
+    fn material_scale(&self) -> i32 {
+        let total_material = 
+            self.board.p_bb(Piece::Knight).nbits() as i32 * val_knight() +
+            self.board.p_bb(Piece::Bishop).nbits() as i32 * val_bishop() +
+            self.board.p_bb(Piece::Rook).nbits() as i32 * val_rook() +
+            self.board.p_bb(Piece::Queen).nbits() as i32 * val_queen();
 
-    use crate::{
-        position::pos::Pos,
-        tunables::params::tunables::{val_queen, val_rook},
-    };
-
-    #[test]
-    fn test_eval() {
-        let b = Pos::default();
-        assert_eq!(b.evaluate(), Eval::DRAW);
-
-        let b: Pos = "fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 w Qkq - 0 1".parse().unwrap();
-        assert_eq!(b.evaluate(), Eval(-val_rook()));
-
-        let b: Pos = "fen rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBN1 w Qkq - 0 1".parse().unwrap();
-        assert_eq!(b.evaluate(), Eval(-val_rook() + val_queen()));
+        mat_scale_base() + (total_material / 32)
     }
 }

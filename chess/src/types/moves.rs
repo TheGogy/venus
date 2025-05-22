@@ -21,8 +21,8 @@ impl Move {
 
     /// Construct a move.
     #[inline]
-    pub const fn new(src: Square, tgt: Square, flag: MoveFlag) -> Self {
-        Move((src as u16) << 6 | (tgt as u16) | (flag as u16) << 12)
+    pub const fn new(src: Square, dst: Square, flag: MoveFlag) -> Self {
+        Move((src as u16) << 6 | (dst as u16) | (flag as u16) << 12)
     }
 
     /// Gets the source square of this move.
@@ -31,9 +31,9 @@ impl Move {
         Square::from_raw(((self.0 >> 6) & 63) as u8)
     }
 
-    /// Gets the target square of this move.
+    /// Gets the destination square of this move.
     #[inline]
-    pub const fn tgt(self) -> Square {
+    pub const fn dst(self) -> Square {
         Square::from_raw((self.0 & 63) as u8)
     }
 
@@ -73,19 +73,19 @@ impl Move {
 
         // Promotions.
         if flag.is_promo() {
-            return format!("{}{}{}", self.src(), self.tgt(), flag.get_promo().to_char());
+            return format!("{}{}{}", self.src(), self.dst(), flag.get_promo().to_char());
         }
 
         // Castling.
         // In regular -> Denoted by (king from, king to) - and so handled same as other moves.
         // In FRC     -> Denoted by the king moving onto the rook square.
         if cm.frc && flag == MoveFlag::Castling {
-            let (rf, _) = cm.rook_from_to(self.tgt());
+            let (rf, _) = cm.rook_src_dst(self.dst());
             return format!("{}{}", self.src(), rf);
         }
 
         // All other moves are just <from, to>.
-        format!("{}{}", self.src(), self.tgt())
+        format!("{}{}", self.src(), self.dst())
     }
 }
 
@@ -177,7 +177,7 @@ mod tests {
     fn test_move_creation() {
         let m = Move::new(Square::E2, Square::E4, MoveFlag::Normal);
         assert_eq!(m.src(), Square::E2);
-        assert_eq!(m.tgt(), Square::E4);
+        assert_eq!(m.dst(), Square::E4);
         assert_eq!(m.flag(), MoveFlag::Normal);
     }
 

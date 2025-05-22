@@ -30,7 +30,7 @@ impl TT {
 
     /// Get the index for a given hash.
     #[inline]
-    const fn index(&self, hash: Hash) -> usize {
+    const fn idx(&self, hash: Hash) -> usize {
         let key = hash.key as u128;
         let len = self.entries.len() as u128;
         ((key * len) >> 64) as usize
@@ -38,7 +38,7 @@ impl TT {
 
     /// Probe the table with some hash.
     pub fn probe(&self, hash: Hash) -> Option<TTEntry> {
-        let index = self.index(hash);
+        let index = self.idx(hash);
         unsafe { self.entries.get_unchecked(index).read(hash) }
     }
 
@@ -48,7 +48,7 @@ impl TT {
         #[cfg(target_arch = "x86_64")]
         unsafe {
             use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
-            let index = self.index(hash);
+            let index = self.idx(hash);
             let entry = self.entries.get_unchecked(index);
             _mm_prefetch::<_MM_HINT_T0>((entry as *const CompressedEntry).cast());
         }
@@ -68,8 +68,8 @@ impl TT {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn insert(&self, hash: Hash, bound: Bound, mov: Move, eval: Eval, value: Eval, depth: usize, ply: usize, pv: bool) {
-        let index = self.index(hash);
+    pub fn insert(&self, hash: Hash, bound: Bound, mov: Move, eval: Eval, value: Eval, depth: i16, ply: usize, pv: bool) {
+        let index = self.idx(hash);
         let slot = unsafe { self.entries.get_unchecked(index) };
         let old = slot.read_unchecked();
 
@@ -78,7 +78,7 @@ impl TT {
         let should_replace = self.age != old.age ||   // Always replace older entries
             !same_position ||                               // Always replace different positions
             bound == Bound::Exact ||                        // Always replace with exact scores
-            depth + tt_replace_d_min() + 2 * pv as usize > old.depth as usize; // Replace if deeper
+            depth + tt_replace_d_min() + 2 * pv as i16 > old.depth as i16; // Replace if deeper
 
         if should_replace {
             let new_move = if mov.is_null() && same_position { old.mov } else { mov };

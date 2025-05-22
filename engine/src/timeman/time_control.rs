@@ -5,7 +5,7 @@ use std::str::{FromStr, SplitWhitespace};
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug)]
 pub enum TimeControl {
     Infinite,
-    FixedDepth(usize),
+    FixedDepth(i16),
     FixedNodes(u64),
     FixedTime(u64),
     Variable(TimeSettings),

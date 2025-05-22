@@ -1,0 +1,8 @@
+[package]
+name = "nnue"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+utils = { path = "../utils" }
+chess = { path = "../chess" }

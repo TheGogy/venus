@@ -39,7 +39,7 @@ impl Piece {
 
     /// The index of this piece.
     #[inline]
-    pub const fn index(self) -> usize {
+    pub const fn idx(self) -> usize {
         self as usize
     }
 
@@ -61,7 +61,7 @@ impl CPiece {
 
     /// The index of this CPiece.
     #[inline]
-    pub const fn index(self) -> usize {
+    pub const fn idx(self) -> usize {
         self as usize
     }
 
@@ -122,14 +122,14 @@ mod tests {
     #[test]
     fn test_piece_index() {
         for i in 0..Piece::NUM {
-            assert_eq!(Piece::from(i).index(), i);
+            assert_eq!(Piece::from(i).idx(), i);
         }
     }
 
     #[test]
     fn test_cpiece_index() {
         for i in 0..CPiece::NUM {
-            assert_eq!(CPiece::from(i).index(), i);
+            assert_eq!(CPiece::from(i).idx(), i);
         }
     }
 

@@ -81,23 +81,23 @@ impl Board {
 
     /// Generate all quiet promotions.
     #[inline]
-    fn add_promos<const ALL: bool>(&self, src: Square, tgt: Square, ml: &mut MoveList) {
-        ml.push(Move::new(src, tgt, MoveFlag::PromoQ));
+    fn add_promos<const ALL: bool>(&self, src: Square, dst: Square, ml: &mut MoveList) {
+        ml.push(Move::new(src, dst, MoveFlag::PromoQ));
 
         if ALL {
-            ml.push(Move::new(src, tgt, MoveFlag::PromoN));
-            ml.push(Move::new(src, tgt, MoveFlag::PromoR));
-            ml.push(Move::new(src, tgt, MoveFlag::PromoB));
+            ml.push(Move::new(src, dst, MoveFlag::PromoN));
+            ml.push(Move::new(src, dst, MoveFlag::PromoR));
+            ml.push(Move::new(src, dst, MoveFlag::PromoB));
         }
     }
 
     /// Generate all capture promotions.
     #[inline]
-    fn add_cpromos(&self, src: Square, tgt: Square, ml: &mut MoveList) {
-        ml.push(Move::new(src, tgt, MoveFlag::CPromoQ));
-        ml.push(Move::new(src, tgt, MoveFlag::CPromoN));
-        ml.push(Move::new(src, tgt, MoveFlag::CPromoR));
-        ml.push(Move::new(src, tgt, MoveFlag::CPromoB));
+    fn add_cpromos(&self, src: Square, dst: Square, ml: &mut MoveList) {
+        ml.push(Move::new(src, dst, MoveFlag::CPromoQ));
+        ml.push(Move::new(src, dst, MoveFlag::CPromoN));
+        ml.push(Move::new(src, dst, MoveFlag::CPromoR));
+        ml.push(Move::new(src, dst, MoveFlag::CPromoB));
     }
 
     /// Add all pawn moves.
@@ -115,7 +115,7 @@ impl Board {
         let pawns = self.pc_bb(self.stm, Piece::Pawn);
 
         // Promotions.
-        let promo = pawns & Bitboard::PR[self.stm.index()] & !self.state.pin_orth;
+        let promo = pawns & Bitboard::PR[self.stm.idx()] & !self.state.pin_orth;
         if !promo.is_empty() {
             // With capture. We can move within pinmask as long as we stay within pinmask.
             let mut cl = ((promo & !diag).shift(ul) | (promo & diag).shift(ul) & diag) & opps;
@@ -148,7 +148,7 @@ impl Board {
 
         // En passants.
         if self.state.epsq != Square::Invalid {
-            let eprank = Bitboard::EP[self.stm.index()];
+            let eprank = Bitboard::EP[self.stm.idx()];
             let epcap = self.state.epsq.sub_dir(up).bb();
             let mut epbb = pawn_atk(!self.stm, self.state.epsq) & pawns & !orth;
 
@@ -181,7 +181,7 @@ impl Board {
         if ALL {
             let p = pawns & !promo & !diag;
             let mut singles = ((p & !orth).shift(up) | (p & orth).shift(up) & orth) & !self.occ();
-            let mut doubles = (Bitboard::DP[self.stm.index()] & singles).shift(up) & !self.occ();
+            let mut doubles = (Bitboard::DP[self.stm.idx()] & singles).shift(up) & !self.occ();
 
             if CHECK {
                 singles &= self.state.checkmask;

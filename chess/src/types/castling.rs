@@ -40,32 +40,32 @@ impl CastlingRights {
 
     /// The index of the current castling rights.
     #[inline]
-    pub const fn index(self) -> usize {
+    pub const fn idx(self) -> usize {
         self.0 as usize
     }
 
     /// The index into the rooks list for these castling rights.
     #[inline]
-    pub const fn rook_index(self) -> usize {
+    pub const fn rook_idx(self) -> usize {
         self.0.trailing_zeros() as usize
     }
 
     /// Whether the given color has kingside castling.
     #[inline]
     pub const fn has_ks(self, c: Color) -> bool {
-        self.0 & (0b0001 << c.index() as u8) != 0
+        self.0 & (0b0001 << c.idx() as u8) != 0
     }
 
     /// Whether the given color has queenside castling.
     #[inline]
     pub const fn has_qs(self, c: Color) -> bool {
-        self.0 & (0b0100 << c.index() as u8) != 0
+        self.0 & (0b0100 << c.idx() as u8) != 0
     }
 
     /// Gets the mask for a given color and side.
     #[inline]
     pub const fn get_mask(c: Color, is_ks: bool) -> Self {
-        Self::MASKS[c.index() + !is_ks as usize * 2]
+        Self::MASKS[c.idx() + !is_ks as usize * 2]
     }
 }
 
@@ -116,14 +116,14 @@ impl Default for CastlingMask {
 impl CastlingMask {
     /// Get the mask of the rights to zero out after a move.
     #[inline]
-    pub fn zero_out(&self, src: Square, tgt: Square) -> CastlingRights {
-        self.mask[src.index()] & self.mask[tgt.index()]
+    pub fn zero_out(&self, src: Square, dst: Square) -> CastlingRights {
+        self.mask[src.idx()] & self.mask[dst.idx()]
     }
 
-    /// Get the from and to squares for the rook given a king destination.
+    /// Get the source and destination squares for the rook given a king destination.
     /// Assumes that king_to is legal.
     #[inline]
-    pub const fn rook_from_to(&self, king_to: Square) -> (Square, Square) {
+    pub const fn rook_src_dst(&self, king_to: Square) -> (Square, Square) {
         match king_to {
             Square::G1 => (self.rooks[0], Square::F1),
             Square::G8 => (self.rooks[1], Square::F8),
@@ -136,16 +136,16 @@ impl CastlingMask {
     /// Adds rights to the castling mask for a given king and rook square.
     #[inline]
     pub fn add_rights(&mut self, ksq: Square, rsq: Square, r: CastlingRights) {
-        self.mask[ksq.index()] &= !r;
-        self.mask[rsq.index()] &= !r;
-        self.rooks[r.rook_index()] = rsq;
+        self.mask[ksq.idx()] &= !r;
+        self.mask[rsq.idx()] &= !r;
+        self.rooks[r.rook_idx()] = rsq;
     }
 
     /// Get the occupancy and attack masks that must be empty.
     #[inline]
     pub fn occ_atk<const KSIDE: bool>(&self, ksq: Square, c: Color) -> (Bitboard, Bitboard) {
         let kt = if KSIDE { Square::G1.relative(c) } else { Square::C1.relative(c) };
-        let (rf, rt) = self.rook_from_to(kt);
+        let (rf, rt) = self.rook_src_dst(kt);
 
         // King must not be attacked at any point while moving or at destination.
         let atk = between(ksq, kt) | kt.bb();
@@ -239,13 +239,13 @@ impl CastlingRights {
             let mut tmp = String::new();
             // Kingside.
             if b.state.castling.has_ks(c) {
-                let rook_sq = b.castlingmask.rooks[c.index()];
+                let rook_sq = b.castlingmask.rooks[c.idx()];
                 tmp.push(if rook_sq == Square::H1.relative(c) { 'K' } else { rook_sq.file().to_char() });
             }
 
             // Queenside.
             if b.state.castling.has_qs(c) {
-                let rook_sq = b.castlingmask.rooks[c.index() + 2];
+                let rook_sq = b.castlingmask.rooks[c.idx() + 2];
                 tmp.push(if rook_sq == Square::A1.relative(c) { 'Q' } else { rook_sq.file().to_char() });
             }
 

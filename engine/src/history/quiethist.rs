@@ -17,19 +17,19 @@ pub const QUIET_MAX: i32 = 8192;
 
 impl QuietHist {
     #[inline]
-    const fn index(c: Color, m: Move) -> (usize, usize, usize) {
-        (c.index(), m.src().index(), m.tgt().index())
+    const fn idx(c: Color, m: Move) -> (usize, usize, usize) {
+        (c.idx(), m.src().idx(), m.dst().idx())
     }
 
     #[inline]
     fn add_bonus(&mut self, c: Color, m: Move, bonus: i16) {
-        let i = Self::index(c, m);
+        let i = Self::idx(c, m);
         self.0[i.0][i.1][i.2].gravity::<QUIET_MAX>(bonus);
     }
 
     #[inline]
     pub fn get_bonus(&self, c: Color, m: Move) -> i32 {
-        let i = Self::index(c, m);
+        let i = Self::idx(c, m);
         self.0[i.0][i.1][i.2].0 as i32
     }
 
