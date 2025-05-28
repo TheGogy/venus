@@ -21,10 +21,16 @@ impl Bitboard {
     pub const EP: [Self; 2] = [Rank::R5.bb(), Rank::R4.bb()]; // Enpassant ranks.
     pub const DP: [Self; 2] = [Rank::R3.bb(), Rank::R6.bb()]; // Double push ranks.
 
-    /// If the bitboard is empty
+    /// If the bitboard is empty.
     #[inline]
     pub const fn is_empty(self) -> bool {
         self.0 == 0
+    }
+
+    /// Whether the bitboard contains any value.
+    #[inline]
+    pub const fn any(self) -> bool {
+        self.0 != 0
     }
 
     /// Set the bit at the given index.

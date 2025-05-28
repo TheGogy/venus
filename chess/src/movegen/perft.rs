@@ -1,33 +1,40 @@
-use crate::types::board::Board;
+use crate::{
+    MAX_MOVES,
+    types::{board::Board, moves::Move},
+};
 
-use super::ALL_MOVE;
+use super::MG_ALLMV;
 
-/// Counts all the legal positions up to a given depth.
-pub fn perft<const PRINT: bool>(b: &mut Board, depth: usize) -> usize {
-    let mut total = 0;
+impl Board {
+    /// Counts all the legal positions up to a given depth.
+    pub fn perft<const PRINT: bool>(&mut self, depth: usize) -> usize {
+        let mut total = 0;
 
-    let ml = b.gen_moves::<ALL_MOVE>();
+        let mut ml = [Move::NONE; MAX_MOVES];
+        let mut nb_moves = 0;
+        self.enumerate_moves::<_, MG_ALLMV>(|m| {
+            ml[nb_moves] = m;
+            nb_moves += 1;
+        });
 
-    // Base case: just count leaf nodes.
-    if !PRINT && depth <= 1 {
-        return ml.len();
-    }
-
-    let is_leaf = depth == 2;
-
-    for m in ml.iter() {
-        b.make_move(*m);
-        let n = if is_leaf { b.gen_moves::<ALL_MOVE>().len() } else { perft::<false>(b, depth - 1) };
-        b.undo_move(*m);
-
-        total += n;
-
-        if PRINT && n > 0 {
-            println!("{} | {n}", m.to_uci(&b.castlingmask));
+        if depth <= 1 {
+            return nb_moves;
         }
-    }
 
-    total
+        for m in ml[..nb_moves].iter() {
+            self.make_move(*m);
+            let n = self.perft::<false>(depth - 1);
+            self.undo_move(*m);
+
+            total += n;
+
+            if PRINT {
+                println!("{} | {n}", m.to_uci(&self.castlingmask));
+            }
+        }
+
+        total
+    }
 }
 
 #[cfg(test)]
@@ -79,7 +86,7 @@ mod tests {
         for (fen, correct_count, depth) in PERFT_TESTS {
             let mut board: Board = fen.parse().unwrap();
             println!("{fen}");
-            let nodes = perft::<true>(&mut board, *depth);
+            let nodes = board.perft::<true>(*depth);
             assert_eq!(nodes, *correct_count);
         }
     }

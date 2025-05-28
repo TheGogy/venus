@@ -1,6 +1,7 @@
-use crate::tunables::params::tunables::tt_replace_d_min;
+use crate::tunables::params::tunables::*;
 
 use super::entry::{Bound, CompressedEntry, TTEntry};
+
 use chess::types::{eval::Eval, moves::Move, zobrist::Hash};
 
 /// Transposition table.
@@ -37,6 +38,7 @@ impl TT {
     }
 
     /// Probe the table with some hash.
+    #[inline]
     pub fn probe(&self, hash: Hash) -> Option<TTEntry> {
         let index = self.idx(hash);
         unsafe { self.entries.get_unchecked(index).read(hash) }
@@ -60,7 +62,7 @@ impl TT {
         self.age = (self.age + 1) & 0x7F;
     }
 
-    /// Calculate table utilization (0 - 1000)
+    /// Calculate table utilization (0 - 1000).
     #[inline]
     pub fn hashfull(&self) -> usize {
         let sample_size = 1000.min(self.entries.len());

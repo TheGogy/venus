@@ -8,13 +8,13 @@ use std::{
 
 use chess::{
     MAX_DEPTH,
-    types::{board::Board, color::Color, eval::Eval, moves::Move, piece::CPiece, square::Square},
+    types::{board::Board, eval::Eval, moves::Move, piece::CPiece},
 };
 use nnue::network::NNUE;
 
 use crate::{
     history::{
-        conthist::{CONT_NUM, ContHist},
+        conthist::{CONT_NUM, ContHist, PieceTo},
         hist_delta,
         noisyhist::NoisyHist,
         quiethist::QuietHist,
@@ -38,7 +38,7 @@ pub struct Thread {
 
     pub hist_quiet: QuietHist,
     pub hist_noisy: NoisyHist,
-    pub hist_cont: [ContHist; CONT_NUM],
+    pub hist_conts: [ContHist; CONT_NUM],
 
     pub pv: PVLine,
     pub stack: [SearchStackEntry; MAX_DEPTH],
@@ -60,7 +60,7 @@ impl Thread {
             stop: false,
             hist_quiet: QuietHist::default(),
             hist_noisy: NoisyHist::default(),
-            hist_cont: array::from_fn(|_| ContHist::default()),
+            hist_conts: array::from_fn(|_| ContHist::default()),
             pv: PVLine::default(),
             stack: [SearchStackEntry::default(); MAX_DEPTH],
             nnue: NNUE::default(),
@@ -70,6 +70,11 @@ impl Thread {
     /// Creates a new idle thread.
     pub fn idle(global_stop: Arc<AtomicBool>, global_nodes: Arc<AtomicU64>) -> Self {
         Self::new(Clock::wait(global_stop, global_nodes))
+    }
+
+    /// Creates a new placeholder thread. Used for testing.
+    pub fn placeholder() -> Self {
+        Self::new(Clock::fixed_depth(0))
     }
 
     /// Whether we should start the next iteration.
@@ -148,18 +153,31 @@ impl Thread {
 }
 
 impl Thread {
-    /// Get the piece and square of the previous move, if it exists.
-    fn prev_move(&self, offset: usize) -> Option<(CPiece, Square)> {
-        if self.ply >= offset && !self.ss_at(offset).mov.is_null() {
+    /// Get the piece and square of the move n steps back.
+    pub fn pieceto_at(&self, offset: usize) -> Option<PieceTo> {
+        if self.ply >= offset {
             let se = self.ss_at(offset);
-            Some((se.mvp, se.mov.dst()))
-        } else {
-            None
+
+            if se.mov.is_valid() {
+                return Some((se.mvp, se.mov.dst()));
+            }
         }
+        None
+    }
+
+    /// Gets the previous moves played in the position for the continuation history.
+    pub fn get_prev_moves(&self) -> [Option<PieceTo>; CONT_NUM] {
+        let mut pms = [None; CONT_NUM];
+
+        for (i, pm) in pms.iter_mut().enumerate() {
+            *pm = self.pieceto_at(i + 1);
+        }
+
+        pms
     }
 
     /// Update the history tables given some quiet and noisy moves.
-    pub fn update_tables(&mut self, best: Move, depth: i16, board: &Board, quiets: Vec<Move>, noisies: Vec<Move>) {
+    pub fn update_history(&mut self, best: Move, depth: i16, board: &Board, quiets: Vec<Move>, noisies: Vec<Move>) {
         let (bonus, malus) = hist_delta(depth);
         self.hist_noisy.update(board, best, &noisies, bonus, malus);
 
@@ -167,22 +185,8 @@ impl Thread {
             self.hist_quiet.update(board.stm, best, &quiets, bonus, malus);
 
             for i in 0..CONT_NUM {
-                if let Some((p, dst)) = self.prev_move(1 + i) {
-                    self.hist_cont[i].update(best, p, dst, &quiets, bonus, malus);
-                }
-            }
-        }
-    }
-
-    pub fn assign_history_scores(&self, c: Color, moves: &[Move], scores: &mut [i32]) {
-        for i in 0..moves.len() {
-            scores[i] = self.hist_quiet.get_bonus(c, moves[i]);
-        }
-
-        for i in 0..CONT_NUM {
-            if let Some((piece, tgt)) = self.prev_move(1 + i) {
-                for j in 0..moves.len() {
-                    scores[j] += self.hist_cont[i].get_bonus(moves[j], piece, tgt);
+                if let Some(pt) = self.pieceto_at(i + 1) {
+                    self.hist_conts[i].update(best, pt, &quiets, bonus, malus);
                 }
             }
         }

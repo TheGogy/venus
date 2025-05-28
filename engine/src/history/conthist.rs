@@ -15,29 +15,31 @@ impl Default for ContHist {
 pub const CONT_MAX: i32 = 16384;
 pub const CONT_NUM: usize = 6;
 
+pub type PieceTo = (CPiece, Square);
+
 impl ContHist {
     #[inline]
-    fn idx(m: Move, p: CPiece, s: Square) -> (usize, usize, usize, usize) {
-        (p.idx(), s.idx(), m.src().idx(), m.dst().idx())
+    fn idx(m: Move, pt: PieceTo) -> (usize, usize, usize, usize) {
+        (pt.0.idx(), pt.1.idx(), m.src().idx(), m.dst().idx())
     }
 
     #[inline]
-    fn add_bonus(&mut self, m: Move, p: CPiece, s: Square, bonus: i16) {
-        let i = Self::idx(m, p, s);
+    fn add_bonus(&mut self, m: Move, pt: PieceTo, bonus: i16) {
+        let i = Self::idx(m, pt);
         self.0[i.0][i.1][i.2][i.3].gravity::<CONT_MAX>(bonus);
     }
 
     #[inline]
-    pub fn get_bonus(&self, m: Move, p: CPiece, s: Square) -> i32 {
-        let i = Self::idx(m, p, s);
+    pub fn get_bonus(&self, m: Move, pt: PieceTo) -> i32 {
+        let i = Self::idx(m, pt);
         self.0[i.0][i.1][i.2][i.3].0 as i32
     }
 
-    pub fn update(&mut self, best: Move, p: CPiece, dst: Square, quiets: &Vec<Move>, bonus: i16, malus: i16) {
-        self.add_bonus(best, p, dst, bonus);
+    pub fn update(&mut self, best: Move, pt: PieceTo, quiets: &Vec<Move>, bonus: i16, malus: i16) {
+        self.add_bonus(best, pt, bonus);
 
         for m in quiets {
-            self.add_bonus(*m, p, dst, -malus);
+            self.add_bonus(*m, pt, -malus);
         }
     }
 }

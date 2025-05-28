@@ -62,6 +62,12 @@ impl Move {
         !(self.is_none() || self.is_null())
     }
 
+    /// Returns self if valid, otherwise evaluates `f` and returns the result.
+    #[inline]
+    pub fn is_valid_or<F: FnOnce() -> Move>(self, f: F) -> Move {
+        if self.is_valid() { self } else { f() }
+    }
+
     /// Display the move according to UCI format.
     pub fn to_uci(self, cm: &CastlingMask) -> String {
         // Invalid moves.
@@ -144,10 +150,10 @@ impl MoveFlag {
         self as u16 & 0b1100 == 0
     }
 
-    /// Whether this MoveFlag denotes a noisy move.
+    /// Whether this MoveFlag denotes a noisy move. (i.e capture or queen promo)
     #[inline]
     pub const fn is_noisy(self) -> bool {
-        self as u16 & 0b1100 != 0
+        !self.is_quiet() || self as u16 == 0b1011
     }
 
     /// Whether this MoveFlag denotes a promotion that is not a queen.

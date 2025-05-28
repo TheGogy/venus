@@ -31,7 +31,7 @@ pub enum Square {
 impl Square {
     pub const NUM: usize = 64;
 
-    /// Make a square from a rank and file
+    /// Make a square from a rank and file.
     #[inline]
     pub const fn make(r: Rank, f: File) -> Self {
         Self::from_raw(((r as u8) << 3) + f as u8)
@@ -73,13 +73,13 @@ impl Square {
         Self::from_raw(self as u8 + 8 - (16 * c.idx() as u8))
     }
 
-    /// Gets the next square. (A1 -> H1 -> A8 -> H8)
+    /// Gets the next square. (A1 -> H1 -> A8 -> H8).
     #[inline]
     pub const fn next(self) -> Self {
         Self::from_raw(self as u8 + 1)
     }
 
-    /// Gets the previous square. (H8 -> A8 -> H1 -> A1)
+    /// Gets the previous square. (H8 -> A8 -> H1 -> A1).
     #[inline]
     pub const fn prev(self) -> Self {
         Self::from_raw(self as u8 - 1)

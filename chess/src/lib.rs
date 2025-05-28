@@ -6,3 +6,4 @@ pub mod types;
 pub mod utils;
 
 pub const MAX_DEPTH: usize = 127;
+pub const MAX_MOVES: usize = 220;

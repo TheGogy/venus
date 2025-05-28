@@ -1,12 +1,13 @@
 use chess::{
     MAX_DEPTH,
-    movegen::ALL_MOVE,
     types::{eval::Eval, moves::Move},
 };
 
 use crate::{
-    history::noisyhist::NOISY_MAX,
-    position::pos::Pos,
+    position::{
+        movepick::{MovePicker, SearchType},
+        pos::Pos,
+    },
     threading::thread::Thread,
     tt::{entry::Bound, table::TT},
     tunables::params::tunables::*,
@@ -79,15 +80,13 @@ impl Pos {
         //             TT lookup
         // -----------------------------------
         let tt_entry = tt.probe(self.board.state.hash);
-        let mut tt_move = Move::NULL;
+        let mut tt_move = Move::NONE;
         let mut tt_depth = -1;
 
         if let Some(tte) = tt_entry {
             tt_depth = tte.depth();
             let tt_bound = tte.bound();
             let tt_value = tte.value(t.ply);
-
-            tt_move = tte.mov();
 
             // TT cutoff.
             if !NT::PV
@@ -103,8 +102,9 @@ impl Pos {
                 return tt_value;
             }
 
-            ext_possible =
-                !NT::RT && depth >= ext_d_min() && !tt_value.is_tb_mate_score() && tt_bound != Bound::Upper && tt_depth >= depth - 3;
+            tt_move = tte.mov();
+
+            ext_possible = !NT::RT && depth >= ext_d_min() && !tt_value.is_tb_mate() && tt_bound != Bound::Upper && tt_depth >= depth - 3;
         }
 
         if !singular {
@@ -146,14 +146,9 @@ impl Pos {
 
         let old_alpha = alpha;
 
-        let mut mp = match self.init_movepicker::<ALL_MOVE>(tt_move) {
-            Some(mp) => mp,
-            None => {
-                return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };
-            }
-        };
+        let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
 
-        while let Some((m, s)) = mp.next(&self.board, t) {
+        while let Some(m) = mp.next(&self.board, t) {
             assert!(m.is_valid());
 
             // Ignore excluded move.
@@ -222,11 +217,6 @@ impl Pos {
                 r -= t.ss().ttpv as i16;
                 r -= (tt_depth >= depth) as i16;
 
-                // History based reduction.
-                if s < NOISY_MAX {
-                    r -= (s / (if is_quiet { lmr_quiet_div() } else { lmr_noisy_div() })) as i16;
-                }
-
                 // Reduce bad moves more.
                 r += !NT::PV as i16;
                 r += !improving as i16;
@@ -283,7 +273,7 @@ impl Pos {
 
                 if v >= beta {
                     alpha = beta;
-                    t.update_tables(m, depth, &self.board, quiets_tried, caps_tried);
+                    t.update_history(m, depth, &self.board, quiets_tried, caps_tried);
                     break;
                 }
             }
@@ -296,6 +286,12 @@ impl Pos {
             }
         }
 
+        // No moves tried: check or checkmate.
+        if moves_tried == 0 {
+            return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };
+        }
+
+        // Store the result in the TT.
         self.store_search_result(t, tt, best_eval, alpha, beta, old_alpha, best_move, depth, NT::PV);
 
         alpha

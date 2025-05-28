@@ -1,64 +1,100 @@
-use chess::types::{move_list::MoveList, moves::Move};
+pub mod perftmp;
+pub mod scored_ml;
 
 mod pick_move;
 mod score_move;
-mod utils;
 
-use super::pos::Pos;
+use chess::types::{eval::Eval, moves::Move};
+use scored_ml::ScoredMoveList;
 
-impl Pos {
-    pub fn init_movepicker<const QUIETS: bool>(&self, tt_move: Move) -> Option<MovePicker<QUIETS>> {
-        let move_list = self.board.gen_moves::<QUIETS>();
-        if move_list.is_empty() { None } else { Some(MovePicker::<QUIETS>::new(move_list, tt_move)) }
+/// Move picker stages.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
+#[repr(u8)]
+#[allow(dead_code)] // Compiler does not like `.next()`.
+pub enum MPStage {
+    // PV search starts here.
+    PvTT,
+    PvNoisyGen,
+    PvNoisyWin,
+    PvQuietGen,
+    PvQuietAll,
+    PvNoisyLoss,
+    PvEnd,
+
+    // Qsearch starts here.
+    QsTT,
+    QsNoisyGen,
+    QsNoisyAll,
+    QsEnd,
+
+    // Evasions start here.
+    EvTT,
+    EvGen,
+    EvAll,
+    EvEnd,
+}
+
+/// Search type.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
+#[repr(u8)]
+pub enum SearchType {
+    Pv,
+    Qs,
+}
+
+impl MPStage {
+    /// Get the next move pick stage.
+    pub fn next(self) -> Self {
+        assert!(![MPStage::PvEnd, MPStage::QsEnd, MPStage::EvEnd].contains(&self));
+        unsafe { std::mem::transmute(self as u8 + 1) }
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
-pub enum Stage {
-    TTMove,
-    ScoreTacticals,
-    GoodTacticals,
-    ScoreQuiets,
-    Quiets,
-    BadTacticals,
-    NoMoves,
-}
-
 #[derive(Clone, Debug)]
-pub struct MovePicker<const QUIETS: bool> {
-    moves: MoveList,
-    scores: [i32; MoveList::SIZE],
+pub struct MovePicker {
+    stage: MPStage,
+    searchtype: SearchType,
+
+    ml_quiet: ScoredMoveList,
+    ml_noisy_win: ScoredMoveList,
+    ml_noisy_loss: ScoredMoveList,
+
     tt_move: Move,
 
-    idx_cur: usize,
-    idx_quiets: usize,
-    idx_noisy_bad: usize,
+    // Constant for now, this is for when we implement probcut.
+    see_threshold: Eval,
 
-    pub stage: Stage,
-    pub skip_quiets: bool,
+    skip_quiets: bool,
 }
 
-impl<const QUIETS: bool> MovePicker<QUIETS> {
-    /// Initialize a new MovePicker for the given move list.
-    pub fn new(move_list: MoveList, tt_move: Move) -> MovePicker<QUIETS> {
-        let end = move_list.len();
-
-        let stage = if tt_move.is_null() || (tt_move.flag().is_quiet() && !QUIETS) {
-            Stage::ScoreTacticals
+impl MovePicker {
+    /// Construct a new move picker for the position.
+    pub fn new(searchtype: SearchType, in_check: bool, tt_move: Move) -> Self {
+        let mut stage = if in_check {
+            MPStage::EvTT
+        } else if searchtype == SearchType::Pv {
+            MPStage::PvTT
         } else {
-            Stage::TTMove
+            MPStage::QsTT
         };
 
-        MovePicker {
-            moves: move_list,
-            scores: [0; MoveList::SIZE],
-            tt_move,
+        let ttm = tt_move.is_valid_or(|| {
+            stage = stage.next();
+            Move::NONE
+        });
 
-            idx_cur: 0,
-            idx_quiets: 0,
-            idx_noisy_bad: end,
+        assert!(![MPStage::PvTT, MPStage::QsTT, MPStage::EvTT].contains(&stage) || !ttm.is_none());
 
+        Self {
             stage,
+            searchtype,
+
+            ml_quiet: ScoredMoveList::default(),
+            ml_noisy_win: ScoredMoveList::default(),
+            ml_noisy_loss: ScoredMoveList::default(),
+
+            tt_move: ttm,
+            see_threshold: Eval::DRAW,
             skip_quiets: false,
         }
     }

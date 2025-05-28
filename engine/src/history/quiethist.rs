@@ -13,7 +13,7 @@ impl Default for QuietHist {
     }
 }
 
-pub const QUIET_MAX: i32 = 8192;
+pub const QUIET_MAX: i32 = 16384;
 
 impl QuietHist {
     #[inline]

@@ -98,8 +98,8 @@ pub fn lmr_reduction(depth: i16, moves_tried: usize) -> i16 {
             return 0;
         }
 
-        let lmr_base = lmr_base_scaled() as f32 / 1000.0;
-        let lmr_mult = lmr_mult_scaled() as f32 / 1000.0;
+        let lmr_base = lmr_base() as f32 / 1000.0;
+        let lmr_mult = lmr_mult() as f32 / 1000.0;
 
         (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as i16
     }

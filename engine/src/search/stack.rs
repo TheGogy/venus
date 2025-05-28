@@ -18,22 +18,24 @@ pub struct SearchStackEntry {
 
 impl Thread {
     pub const fn ss(&self) -> &SearchStackEntry {
-        debug_assert!(self.ply < MAX_DEPTH);
+        assert!(self.ply < MAX_DEPTH);
         &self.stack[self.ply]
     }
 
     pub const fn ss_mut(&mut self) -> &mut SearchStackEntry {
-        debug_assert!(self.ply < MAX_DEPTH);
+        assert!(self.ply < MAX_DEPTH);
         &mut self.stack[self.ply]
     }
 
-    pub const fn ss_at(&self, offset: usize) -> &SearchStackEntry {
-        debug_assert!(self.ply < MAX_DEPTH);
+    pub fn ss_at(&self, offset: usize) -> &SearchStackEntry {
+        assert!(self.ply < MAX_DEPTH);
+        assert!(offset <= self.ply);
         &self.stack[self.ply - offset]
     }
 
     pub const fn ss_at_mut(&mut self, offset: usize) -> &mut SearchStackEntry {
-        debug_assert!(self.ply < MAX_DEPTH);
+        assert!(self.ply < MAX_DEPTH);
+        assert!(offset <= self.ply);
         &mut self.stack[self.ply - offset]
     }
 }

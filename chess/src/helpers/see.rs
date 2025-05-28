@@ -133,7 +133,7 @@ impl Board {
         for p in Piece::iter() {
             let s = atk & self.pc_bb(c, p) & my_occ;
 
-            if !s.is_empty() {
+            if s.any() {
                 return (CPiece::create(c, p), s.lsb());
             }
         }

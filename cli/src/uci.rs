@@ -61,7 +61,8 @@ impl UCIReader {
                 "stop"        => self.interface.handle_command(EngineCommand::Stop),
                 "eval"        => self.interface.handle_command(EngineCommand::Eval),
                 "print" | "p" => self.interface.handle_command(EngineCommand::Print),
-                "perft"       => return self.cmd_perft(&mut tokens),
+                "perft"       => return self.cmd_perft::<false>(&mut tokens),
+                "perftmp"     => return self.cmd_perft::<true>(&mut tokens),
                 "go"          => return self.cmd_go(&mut tokens),
                 "position"    => return self.cmd_position(&mut tokens),
                 "setoption"   => return self.cmd_setoption(&mut tokens),
@@ -92,9 +93,15 @@ impl UCIReader {
     }
 
     /// perft command.
-    pub fn cmd_perft(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+    pub fn cmd_perft<const MP: bool>(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
         match tokens.next().ok_or("No depth value!")?.parse() {
-            Ok(d) if d > 0 => self.interface.handle_command(EngineCommand::Perft(d)),
+            Ok(d) if d > 0 => {
+                if MP {
+                    self.interface.handle_command(EngineCommand::PerftMp(d))
+                } else {
+                    self.interface.handle_command(EngineCommand::Perft(d))
+                }
+            }
             _ => return Err("Invalid depth value!"),
         }
         Ok(())
