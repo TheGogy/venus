@@ -21,7 +21,7 @@ impl Board {
             2 => true,
 
             // King vs King + (...) => Draw if other piece is a knight or bishop.
-            3 => !(self.p_bb(Piece::Knight) | self.p_bb(Piece::Bishop)).is_empty(),
+            3 => (self.p_bb(Piece::Knight) | self.p_bb(Piece::Bishop)).any(),
 
             // Otherwise, assume winnable
             _ => false,

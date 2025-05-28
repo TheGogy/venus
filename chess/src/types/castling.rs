@@ -170,7 +170,6 @@ impl CastlingMask {
 ///
 /// 2. If the rook is NOT the closest to the side, we use the file.
 ///    Again, uppercase for white, lowercase for black.
-///
 impl CastlingRights {
     pub fn parse(b: &Board, s: &str) -> Result<(Self, CastlingMask), &'static str> {
         if s == "-" {

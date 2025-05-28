@@ -22,11 +22,15 @@ impl Board {
         // Increment fullmove counter
         state.fullmoves += self.stm.idx();
 
-        // Unset ep sq
+        // Remove ep key and unset ep sq
+        state.hash.toggle_ep(state.epsq);
         state.epsq = Square::Invalid;
 
         // Set moved piece.
         state.mvp = self.pc_at(src);
+
+        // Set move.
+        state.mov = m;
 
         // Remove piece from source square.
         self.pop_piece(src);
@@ -381,5 +385,9 @@ mod tests {
         b.make_null();
         assert_eq!(b.state.mov, Move::NULL);
         assert_eq!(b.state.mvp, CPiece::None);
+
+        let mut b: Board = "rnbqkbnr/pp2pp1p/8/2pP2p1/8/2P5/PP1P1PPP/RNBQKBNR w KQkq g6 1 4".parse().unwrap();
+        b.make_null();
+        assert_eq!(b.state.epsq, Square::Invalid);
     }
 }

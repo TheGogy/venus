@@ -2,8 +2,12 @@ use core::fmt;
 use std::str::FromStr;
 
 use crate::{
-    movegen::ALL_MOVE,
-    tables::{atk_by_type, leaping_piece::all_pawn_atk},
+    movegen::MG_ALLMV,
+    tables::{
+        atk_by_type,
+        leaping_piece::all_pawn_atk,
+        sliding_piece::{between, bishop_atk, rook_atk},
+    },
 };
 
 use super::{
@@ -40,6 +44,9 @@ pub struct BoardState {
 
     // Keys
     pub hash: Hash,
+
+    // Used for check detection
+    pub kinglines: [Bitboard; Piece::NUM],
 }
 
 /// Contains the current board state.
@@ -322,6 +329,12 @@ impl Board {
         self.pc_map[s.idx()]
     }
 
+    /// Get the squares that the king can be checked on for the given piece.
+    #[inline]
+    pub const fn king_line(&self, p: Piece) -> Bitboard {
+        self.state.kinglines[p.idx()]
+    }
+
     /// Set the given piece on the given square.
     #[inline]
     pub const fn set_piece(&mut self, p: CPiece, s: Square) {
@@ -348,7 +361,13 @@ impl Board {
     /// Find a move given a UCI move string.
     #[inline]
     pub fn find_move(&self, s: &str) -> Option<Move> {
-        self.gen_moves::<ALL_MOVE>().iter().find(|&m| m.to_uci(&self.castlingmask) == s).copied()
+        let mut mv = None;
+        self.enumerate_moves::<_, MG_ALLMV>(|m| {
+            if m.to_uci(&self.castlingmask) == s {
+                mv = Some(m);
+            }
+        });
+        mv
     }
 
     /// Get the history at `i` steps back.
@@ -395,6 +414,58 @@ impl Board {
             }
         }
     }
+
+    /// Whether a move gives check on the current board.
+    pub fn gives_check(&self, m: Move) -> bool {
+        assert!(m.is_valid());
+
+        let stm = self.stm;
+        let opp = !self.stm;
+
+        let opp_ksq = self.ksq(opp);
+        let opp_kbb = opp_ksq.bb();
+
+        let (src, dst) = (m.src(), m.dst());
+        let (sbb, dbb) = (src.bb(), dst.bb());
+
+        let occ = self.occ() ^ sbb;
+
+        // Direct check.
+        if (self.king_line(self.pc_at(src).pt()) & dbb).any() {
+            return true;
+        }
+
+        // Discovered check.
+        // If we are in line with the enemy king, check if there is a sliding piece giving check.
+        if between(opp_ksq, src).any()
+            && ((bishop_atk(opp_ksq, occ) & self.diag_slider(stm)).any() || (rook_atk(opp_ksq, occ) & self.orth_slider(stm)).any())
+        {
+            return true;
+        }
+
+        match m.flag() {
+            // We have checked the normal en passant stuff,
+            // we just need to see if it leads to discovered check.
+            MoveFlag::EnPassant => {
+                let epsq = dst.forward(opp).bb();
+                let ep_occ = (occ ^ epsq) | dbb;
+
+                (bishop_atk(opp_ksq, ep_occ) & self.diag_slider(stm)).any() || (rook_atk(opp_ksq, ep_occ) & self.orth_slider(stm)).any()
+            }
+
+            // See if the rook puts the king in check.
+            MoveFlag::Castling => {
+                let (_, rt) = self.castlingmask.rook_src_dst(dst);
+                (self.king_line(Piece::Rook) & rt.bb()).any()
+            }
+
+            // See if the piece we are promoting to puts the king in check.
+            f if f.is_promo() => (atk_by_type(f.get_promo(), dst, occ) & opp_kbb).any(),
+
+            // We have done all the checks for other move types already: they do not give check.
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -403,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_to_fen() {
-        let fens: [&str; 12] = [
+        const FENS: &[&str] = &[
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
             "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 10",
@@ -418,9 +489,40 @@ mod tests {
             "2r1k1r1/2q1bpp1/3p1nn1/p3pb1p/2pP1P2/1P5P/1BPNPNP1/R1RQKBR1 w GCgc - 0 1",
         ];
 
-        for fen in fens {
+        for fen in FENS {
             let board: Board = fen.parse().unwrap();
-            assert_eq!(board.to_fen(), fen);
+            assert_eq!(board.to_fen(), *fen);
         }
+    }
+
+    #[test]
+    fn test_gives_check() {
+        macro_rules! make_gives_check_tests {
+            ($($fen:expr, [$(($mv:expr, $res:expr))*];)*) => {
+                $(
+                    let b: Board = $fen.parse().unwrap();
+                    $(
+                        let m = b.find_move($mv).unwrap();
+                        assert_eq!(b.gives_check(m), $res);
+                    )*
+                )*
+            };
+        }
+
+        make_gives_check_tests!(
+            "8/8/8/3k4/8/2P3R1/3KP2Q/1B3N2 w - - 0 1", [("c3c4", true) ("e2e4", true) ("f1e3", true) ("b1a2", true) ("g3d3", true) ("h2g2", true) ("h2h5", true)];
+            "8/5r2/5k2/8/8/3K4/8/8 b - - 0 1", [("f7d7", true) ("f7e7", false)];
+            "8/3r4/3b1k2/8/8/3K4/8/8 b - - 0 1", [("d6e7", true) ("d7d8", false)];
+            "8/3q4/3b1k2/8/8/3K4/8/8 b - - 0 1", [("d6e7", true) ("d7b5", true) ("d7d8", false)];
+            "3r4/3n4/5k2/8/8/3K4/8/8 b - - 0 1", [("d7e5", true)];
+            "8/8/8/1KRpP1k1/8/8/8/8 w - d6 0 1", [("e5d6", true) ("c5d5", false) ("e5e6", false)];
+            "8/5k2/8/1K1pP3/8/1Q6/8/8 w - d6 0 1", [("e5d6", true) ("b5c6", false) ("e5e6", true)];
+            "8/5k2/8/1K1pP3/8/1Q6/8/8 w - d6 0 1", [("e5d6", true) ("b5c6", false) ("e5e6", true)];
+            "8/5k2/8/1K1pP3/2R5/1Q6/8/8 w - d6 0 1", [("e5d6", false) ("e5e6", true)];
+            "8/3P1k2/8/8/8/8/3K4/8 w - - 0 1", [("d7d8n", true) ("d7d8q", false)];
+            "8/8/8/8/8/8/8/R3K2k w Q - 0 1", [("e1c1", true)];
+            "8/8/8/8/8/8/8/R3KP1k w Q - 0 1", [("e1c1", false)];
+            "2rkr3/1b1pbppp/1p1q1n2/p1pPp1N1/PnP1P3/1QNB4/1P1BKPPP/3RR3 w - - 6 15", [("g5f7", true) ("g5e6", true) ("c3b5", false)];
+        );
     }
 }

@@ -11,7 +11,6 @@ pub enum Color {
 }
 
 impl Color {
-    /// Total number of colors.
     pub const NUM: usize = 2;
 
     /// The index of this color.

@@ -60,6 +60,8 @@ impl_from_type! {
 
 /// File implemenatations.
 impl File {
+    pub const NUM: usize = 8;
+
     /// Directly convert a file to a bitboard.
     #[inline]
     pub const fn bb(self) -> Bitboard {
@@ -80,6 +82,8 @@ impl File {
 
 /// Rank implemenatations.
 impl Rank {
+    pub const NUM: usize = 8;
+
     /// Directly convert a rank to a bitboard.
     #[inline]
     pub const fn bb(self) -> Bitboard {

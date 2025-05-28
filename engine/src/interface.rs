@@ -8,7 +8,6 @@ use std::{
     time::Instant,
 };
 
-use chess::movegen::perft::perft;
 use nnue::network::NNUE;
 
 use crate::{position::pos::Pos, threading::threadpool::ThreadPool, timeman::time_control::TimeControl, tt::table::TT};
@@ -40,6 +39,7 @@ pub enum EngineCommand {
     Position(Box<Pos>),
     Go(TimeControl),
     Perft(usize),
+    PerftMp(usize),
     Print,
     Stop,
     Eval,
@@ -85,7 +85,8 @@ impl Engine {
             EngineCommand::SetOpt(n, v)  => self.handle_setopt(n, v),
             EngineCommand::Position(pos) => self.pos = *pos,
             EngineCommand::Go(tc)        => self.handle_go(tc),
-            EngineCommand::Perft(d)      => self.handle_perft(d),
+            EngineCommand::Perft(d)      => self.handle_perft::<false>(d),
+            EngineCommand::PerftMp(d)    => self.handle_perft::<true>(d),
             EngineCommand::Eval          => self.handle_eval(),
             EngineCommand::Print         => println!("{}", self.pos.board),
             _ => eprintln!("Unknown command!")
@@ -109,9 +110,9 @@ impl Engine {
     }
 
     /// Handle perft command.
-    fn handle_perft(&mut self, d: usize) {
+    fn handle_perft<const MP: bool>(&mut self, depth: usize) {
         let start = Instant::now();
-        let total = perft::<true>(&mut self.pos.board.clone(), d);
+        let total = if MP { self.pos.perftmp::<true>(depth) } else { self.pos.board.perft::<true>(depth) };
         let duration = start.elapsed();
 
         let perf = total as u128 / duration.as_micros();

@@ -6,6 +6,7 @@ use super::{
     castling::CastlingRights,
     color::Color,
     piece::{CPiece, Piece},
+    rank_file::File,
     square::Square,
 };
 
@@ -52,10 +53,11 @@ impl Hash {
         self.key ^= CASTLING_KEYS[cr.idx()]
     }
 
-    /// Toggle en passant for a given square.
+    /// Toggle en passant on or off for a given square.
+    /// If the en passant square is unset, reset ep to zero.
     #[inline]
-    pub const fn toggle_ep(&mut self, epsq: Square) {
-        self.key ^= EN_PASSANT_KEYS[epsq.file().idx()]
+    pub fn toggle_ep(&mut self, epsq: Square) {
+        self.key ^= EN_PASSANT_KEYS[epsq.file().idx() + File::NUM * (epsq == Square::Invalid) as usize]
     }
 }
 
@@ -63,7 +65,6 @@ impl Hash {
 pub(crate) static COLOR_KEY: u64 = 0x83690DB1CD7C6C5;
 
 /// The bits to toggle on or off if a given piece is on a given square.
-/// Also used in cuckoo tables.
 pub(crate) static PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
     let mut piece_sq = [[0; Square::NUM]; CPiece::NUM];
     let mut state = 0xDE0D71DD0844AD02;
@@ -97,12 +98,13 @@ static CASTLING_KEYS: [u64; CastlingRights::NUM] = {
 };
 
 /// The bits to toggle on or off when we have an en passant square on a given file.
-static EN_PASSANT_KEYS: [u64; 8] = {
-    let mut en_passant = [0; 8];
+/// When EP is unset, this should be zero.
+static EN_PASSANT_KEYS: [u64; File::NUM + 1] = {
+    let mut en_passant = [0; File::NUM + 1];
     let mut state = 0x38550AD083D94048;
 
     let mut i = 0;
-    while i < 8 {
+    while i < File::NUM {
         en_passant[i] = state;
         state = next_rng(state);
         i += 1;
@@ -110,3 +112,27 @@ static EN_PASSANT_KEYS: [u64; 8] = {
 
     en_passant
 };
+
+#[cfg(test)]
+mod tests {
+    use crate::types::{
+        board::Board,
+        moves::{Move, MoveFlag},
+        square::Square,
+    };
+
+    #[test]
+    fn test_ep_key_diff() {
+        let mut b1: Board = "8/2k5/8/8/5p2/8/2K1P1P1/8 w - - 0 1".parse().unwrap();
+        b1.make_move(Move::new(Square::E2, Square::E4, MoveFlag::DoublePush));
+        b1.make_move(Move::new(Square::C7, Square::C6, MoveFlag::Normal));
+        b1.make_move(Move::new(Square::G2, Square::G4, MoveFlag::DoublePush));
+
+        let mut b2: Board = "8/2k5/8/8/5p2/8/2K1P1P1/8 w - - 0 1".parse().unwrap();
+        b2.make_move(Move::new(Square::G2, Square::G4, MoveFlag::DoublePush));
+        b2.make_move(Move::new(Square::C7, Square::C6, MoveFlag::Normal));
+        b2.make_move(Move::new(Square::E2, Square::E4, MoveFlag::DoublePush));
+
+        assert_ne!(b1.state.hash, b2.state.hash);
+    }
+}

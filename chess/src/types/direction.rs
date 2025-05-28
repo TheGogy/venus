@@ -21,19 +21,28 @@ impl Direction {
     /// Gets the direction up, relative to the color.
     #[inline]
     pub const fn up(c: Color) -> Direction {
-        unsafe { std::mem::transmute(8 + (-16 * c as i8)) }
+        match c {
+            Color::White => Self::North,
+            Color::Black => Self::South,
+        }
     }
 
     /// Gets the direction up + left, relative to the color.
     #[inline]
     pub const fn ul(c: Color) -> Direction {
-        unsafe { std::mem::transmute(9 + (-18 * c as i8)) }
+        match c {
+            Color::White => Self::NorthWest,
+            Color::Black => Self::SouthEast,
+        }
     }
 
     /// Gets the direction up + right, relative to the color.
     #[inline]
     pub const fn ur(c: Color) -> Direction {
-        unsafe { std::mem::transmute(7 + (-14 * c as i8)) }
+        match c {
+            Color::White => Self::NorthEast,
+            Color::Black => Self::SouthWest,
+        }
     }
 }
 

@@ -2,74 +2,69 @@ use chess::types::{board::Board, moves::Move};
 
 use crate::threading::thread::Thread;
 
-use super::{MovePicker, Stage, score_move::TAC_BAD};
+use super::{MPStage, MovePicker};
 
-impl<const QUIET: bool> MovePicker<QUIET> {
-    /// Get the next best move and its score.
-    pub fn next(&mut self, board: &Board, t: &Thread) -> Option<(Move, i32)> {
+impl MovePicker {
+    pub fn next(&mut self, b: &Board, t: &Thread) -> Option<Move> {
         match self.stage {
-            // No more moves to process
-            Stage::NoMoves => return None,
+            // Return TT move.
+            MPStage::PvTT | MPStage::QsTT | MPStage::EvTT => {
+                self.stage = self.stage.next();
+                return Some(self.tt_move);
+            }
 
-            // Try to find and return the transposition table move first
-            Stage::TTMove => {
-                let tt_move = self.tt_move;
-                if let Some(m) = self.find_pred(self.idx_cur, self.moves.len(), |m| m == tt_move) {
-                    self.idx_cur += 1;
-                    return Some((m, i32::MAX));
+            // Generate and score noisies.
+            MPStage::PvNoisyGen | MPStage::QsNoisyGen => {
+                self.gen_score_noisies(b, t);
+            }
+
+            // Return all winning noisies.
+            MPStage::PvNoisyWin | MPStage::QsNoisyAll => {
+                if self.ml_noisy_win.non_empty() {
+                    return Some(self.ml_noisy_win.next().0);
                 }
-                self.stage = Stage::ScoreTacticals;
             }
 
-            // Score all tactical moves based on MVV-LVA and SEE
-            Stage::ScoreTacticals => {
-                self.score_tacticals(board, t);
-                self.stage = Stage::GoodTacticals;
-            }
-
-            // Return all tactical moves with positive SEE
-            Stage::GoodTacticals => {
-                if let Some((m, s)) = self.partial_sort(self.idx_quiets) {
-                    return Some((m, s));
-                }
-
-                if !QUIET {
-                    return None;
-                }
-
-                self.stage = Stage::ScoreQuiets;
-            }
-
-            // Assign history scores to quiet moves for move ordering
-            Stage::ScoreQuiets => {
-                self.score_quiets(board, t);
-                self.stage = Stage::Quiets;
-            }
-
-            // Return quiet moves ordered by history score
-            Stage::Quiets => {
+            // Generate and score quiets.
+            MPStage::PvQuietGen => {
                 if !self.skip_quiets {
-                    if let Some((m, s)) = self.partial_sort(self.idx_noisy_bad) {
-                        return Some((m, s));
-                    }
+                    self.gen_score_quiets(b, t);
                 }
-                self.idx_cur = self.idx_noisy_bad;
-                self.stage = Stage::BadTacticals;
             }
 
-            // Return tactical moves with negative SEE (likely losing captures)
-            Stage::BadTacticals => {
-                if let Some((m, s)) = self.partial_sort(self.moves.len()) {
-                    if !(self.skip_quiets && s == TAC_BAD) {
-                        return Some((m, s));
-                    }
+            // Return all quiets.
+            MPStage::PvQuietAll => {
+                if !self.skip_quiets && self.ml_quiet.non_empty() {
+                    return Some(self.ml_quiet.next().0);
                 }
+            }
 
-                // No more moves to process
-                self.stage = Stage::NoMoves;
+            // Return remaining noisies.
+            MPStage::PvNoisyLoss => {
+                if self.ml_noisy_loss.non_empty() {
+                    return Some(self.ml_noisy_loss.next().0);
+                }
+            }
+
+            // Generate and score evasions.
+            MPStage::EvGen => {
+                self.gen_score_evasions(b, t);
+            }
+
+            // Return all evasions.
+            MPStage::EvAll => {
+                if self.ml_quiet.non_empty() {
+                    return Some(self.ml_quiet.next().0);
+                }
+            }
+
+            // No more moves to play: end here.
+            MPStage::PvEnd | MPStage::QsEnd | MPStage::EvEnd => {
+                return None;
             }
         }
 
-        self.next(board, t)
+        self.stage = self.stage.next();
+        self.next(b, t)
     }
 }

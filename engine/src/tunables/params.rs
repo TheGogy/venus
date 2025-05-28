@@ -46,6 +46,14 @@ init_tunables! {
     hist_malus_base: i16 = 372, 100, 600, 25;
     hist_malus_mult: i16 = 359, 100, 600, 25;
 
+    // Continuation history scales (scaled up x1000).
+    ch_scale_0: i32 = 1000, 500, 1500, 50;
+    ch_scale_1: i32 = 1000, 500, 1500, 50;
+    ch_scale_2: i32 = 1000, 500, 1500, 50;
+    ch_scale_3: i32 = 1000, 500, 1500, 50;
+    ch_scale_4: i32 = 1000, 500, 1500, 50;
+    ch_scale_5: i32 = 1000, 500, 1500, 50;
+
     // transposition table.
     tt_replace_d_min: i16 = 4, 2, 6, 1;
 
@@ -60,8 +68,9 @@ init_tunables! {
     lmr_m_min:      i16 = 1, 0, 6, 1;
     lmr_root_bonus: i16 = 2, 0, 6, 1;
 
-    lmr_base_scaled: i32 = 839, 500, 2000, 100;
-    lmr_mult_scaled: i32 = 1781, 1500, 4000, 100;
+    // Late move reduction parameters (scaled up x1000).
+    lmr_base: i32 = 839, 500, 2000, 100;
+    lmr_mult: i32 = 1781, 1500, 4000, 100;
 
     // Late move reduction verifications.
     lmr_ver_e_min: i32 = 80, 40, 200, 2;
