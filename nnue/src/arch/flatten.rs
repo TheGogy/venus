@@ -1,4 +1,4 @@
-use super::SideAccumulator;
+use crate::accumulator::SideAccumulator;
 
 pub fn flatten(acc: &SideAccumulator, weights: &SideAccumulator) -> i32 {
     #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
@@ -14,7 +14,7 @@ pub fn flatten(acc: &SideAccumulator, weights: &SideAccumulator) -> i32 {
 
 #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
 mod fallback {
-    use crate::arch::{QA, SideAccumulator};
+    use crate::{accumulator::SideAccumulator, arch::QA};
 
     /// Squared Clipped ReLU
     #[inline]
@@ -37,7 +37,8 @@ mod fallback {
 
 mod simdvec {
     use crate::{
-        arch::{L1, QA, SideAccumulator},
+        accumulator::SideAccumulator,
+        arch::{L1, QA},
         simd::{self, CHUNK_SIZE},
     };
 

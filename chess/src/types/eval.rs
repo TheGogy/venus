@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{MAX_DEPTH, impl_all_math_ops, impl_from_type, impl_math_assign_ops, impl_math_ops};
+use crate::{MAX_DEPTH, impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
 
 /// Represents the evaluation within a game.
 ///
@@ -8,8 +8,8 @@ use crate::{MAX_DEPTH, impl_all_math_ops, impl_from_type, impl_math_assign_ops, 
 /// All non-terminal evaluations are between [-30000, 30000].
 ///
 /// 0     => draw
-/// 32000 => checkmate now
 /// 30000 => checkmate according to tablebase
+/// 32000 => checkmate now
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct Eval(pub i32);
@@ -42,7 +42,7 @@ impl Eval {
         Eval(self.0.min(other.0))
     }
 
-    /// The value of a draw with a bit of randomness to de-incentivise repetitions
+    /// The value of a draw with a bit of randomness to de-incentivise repetitions.
     #[inline]
     pub const fn dithered_draw(rand: i32) -> Self {
         let dither_mask = 0b11;
@@ -85,7 +85,7 @@ impl Eval {
         self.0.abs() >= Self::LONGEST_TB_MATE.0
     }
 
-    /// Gets the corrected eval score, forcing between LONGEST_TB_MATE.
+    /// Gets the eval from the corrected value stored in the TT.
     #[inline]
     pub const fn from_corrected(self, ply: usize) -> Self {
         if self.0 >= Eval::LONGEST_TB_MATE.0 {
@@ -97,7 +97,7 @@ impl Eval {
         }
     }
 
-    /// Gets the corrected eval score, incorporating mate scores.
+    /// Converts the eval to the corrected value stored in the TT.
     #[inline]
     pub const fn to_corrected(self, ply: usize) -> Self {
         if self.0 >= Eval::LONGEST_TB_MATE.0 {
@@ -110,7 +110,7 @@ impl Eval {
     }
 
     /// Normalizes the evaluation.
-    /// TODO: Calculate proper normalized pawn value
+    /// TODO: Calculate proper normalized pawn value.
     /// https://github.com/official-stockfish/WDL_model
     #[inline]
     pub const fn normalized(self) -> Eval {
@@ -120,15 +120,13 @@ impl Eval {
     }
 }
 
+/// Display the eval according to UCI format.
 impl fmt::Display for Eval {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_mate() {
             let moves_to_mate = (Self::MATE - self.abs() + 1) / 2;
-            if *self > Self::DRAW {
-                write!(f, "mate {moves_to_mate}")
-            } else {
-                write!(f, "mate -{moves_to_mate}")
-            }
+            let sign = if *self > Self::DRAW { "" } else { "-" };
+            write!(f, "mate {sign}{moves_to_mate}")
         } else {
             write!(f, "cp {}", self.normalized().0)
         }
@@ -145,10 +143,5 @@ impl std::ops::Neg for Eval {
 
 impl_all_math_ops! {
     Eval: i32,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
-}
-
-impl_from_type! {
-    Eval, i32,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }

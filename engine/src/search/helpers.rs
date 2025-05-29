@@ -73,7 +73,7 @@ impl Pos {
 /// Reverse futility pruning.
 /// If the eval is well above beta, then we assume it will hold above beta.
 pub fn can_apply_rfp(t: &Thread, depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
-    let rfp_margin = rfp_mult() * Eval::from_raw(depth as i32) - rfp_improving_margin() * Eval::from_raw(improving as i32);
+    let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
     !t.ss().ttpv && depth <= rfp_d_min() && eval - rfp_margin >= beta
 }
 
