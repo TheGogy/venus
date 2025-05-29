@@ -58,7 +58,7 @@ dependencies = [
 
 [[package]]
 name = "nnue"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "chess",
  "utils",
