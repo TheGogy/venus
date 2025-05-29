@@ -171,7 +171,7 @@ impl MoveFlag {
 }
 
 impl_from_type! {
-    MoveFlag, u8,
+    MoveFlag, u8, 16,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 

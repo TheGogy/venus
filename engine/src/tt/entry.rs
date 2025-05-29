@@ -96,13 +96,13 @@ impl TTEntry {
     /// Get static evaluation.
     #[inline]
     pub const fn eval(self) -> Eval {
-        Eval::from_raw(self.eval as i32)
+        Eval(self.eval as i32)
     }
 
     /// Get the search score.
     #[inline]
     pub const fn value(self, ply: usize) -> Eval {
-        Eval::from_raw(self.value as i32).from_corrected(ply)
+        Eval(self.value as i32).from_corrected(ply)
     }
 
     /// Get the tightest bound with the current eval.

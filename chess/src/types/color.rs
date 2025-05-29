@@ -37,7 +37,7 @@ impl Not for Color {
 }
 
 impl_from_type! {
-    Color, u8,
+    Color, u8, 2,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize, bool]
 }
 

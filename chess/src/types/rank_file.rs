@@ -36,7 +36,7 @@ impl TryFrom<char> for File {
 }
 
 impl_from_type! {
-    File, u8,
+    File, u8, 8,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
@@ -54,7 +54,7 @@ impl TryFrom<char> for Rank {
 }
 
 impl_from_type! {
-    Rank, u8,
+    Rank, u8, 8,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 

@@ -1,12 +1,9 @@
+use ::utils::Align64;
+
 pub mod propagate;
 pub mod utils;
 
 mod flatten;
-
-use ::utils::Align64;
-
-/// Accumulator for each side.
-pub type SideAccumulator = Align64<[i16; L1]>;
 
 //  Quantization factors
 pub const QA: i32 = 255;

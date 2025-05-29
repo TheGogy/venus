@@ -71,7 +71,7 @@ impl MovePicker {
             }
 
             // See if we should put this move into the good noisy moves or bad noisy moves.
-            let see_threshold = if self.searchtype == SearchType::Pv { Eval::from_raw(-s / 32) } else { self.see_threshold };
+            let see_threshold = if self.searchtype == SearchType::Pv { Eval(-s / 32) } else { self.see_threshold };
             if b.see(m, see_threshold) && !m.flag().is_underpromo() {
                 self.ml_noisy_win.add(m, s);
             } else {

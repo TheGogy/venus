@@ -107,12 +107,12 @@ impl TryFrom<char> for CPiece {
 }
 
 impl_from_type! {
-    Piece, u8,
+    Piece, u8, 6,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
 impl_from_type! {
-    CPiece, u8,
+    CPiece, u8, 12,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 

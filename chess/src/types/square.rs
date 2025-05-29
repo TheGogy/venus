@@ -128,7 +128,7 @@ impl fmt::Display for Square {
 }
 
 impl_from_type! {
-    Square, u8,
+    Square, u8, 64,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
 
