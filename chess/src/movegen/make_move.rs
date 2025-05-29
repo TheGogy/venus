@@ -1,5 +1,5 @@
 use crate::types::{
-    board::Board,
+    board::{Board, BoardState},
     moves::{Move, MoveFlag},
     piece::{CPiece, Piece},
     square::Square,
@@ -16,15 +16,19 @@ impl Board {
         let (src, dst) = (m.src(), m.dst());
         let mut piece = self.get_piece(src);
 
-        // Clone current state
-        let mut state = self.state.clone();
+        let mut state = BoardState::default();
 
-        // Increment fullmove counter
-        state.fullmoves += self.stm.idx();
+        // Copy over persistent state info.
+        state.hash = self.state.hash;
+        state.castling = self.state.castling;
 
         // Remove ep key and unset ep sq
-        state.hash.toggle_ep(state.epsq);
+        state.hash.toggle_ep(self.state.epsq);
         state.epsq = Square::Invalid;
+
+        // Increment halfmove and fullmove counters.
+        state.fullmoves = self.state.fullmoves + self.stm.idx();
+        state.halfmoves = self.state.halfmoves + 1;
 
         // Set moved piece.
         state.mvp = self.pc_at(src);
@@ -42,8 +46,6 @@ impl Board {
             MoveFlag::Normal => {
                 if piece.pt() == Piece::Pawn {
                     state.halfmoves = 0
-                } else {
-                    state.halfmoves += 1
                 }
             }
 
@@ -55,7 +57,6 @@ impl Board {
                 self.set_piece(p, rt);
                 state.hash.toggle_piece(p, rf);
                 state.hash.toggle_piece(p, rt);
-                state.halfmoves += 1;
             }
 
             // Double push: update epsq.
@@ -63,7 +64,6 @@ impl Board {
                 let epsq = src.forward(self.stm);
                 state.epsq = epsq;
                 state.hash.toggle_ep(epsq);
-                state.halfmoves += 1;
             }
 
             // Capture: Remove piece at target square.
@@ -182,13 +182,12 @@ impl Board {
 
     /// Make a null move on the board.
     pub fn make_null(&mut self) {
-        let mut state = self.state.clone();
+        let mut state = BoardState::default();
 
-        // Update epsq
-        if state.epsq != Square::Invalid {
-            state.epsq = Square::Invalid;
-            state.hash.toggle_ep(state.epsq);
-        }
+        state.hash = self.state.hash;
+
+        // Unset ep square from hash.
+        state.hash.toggle_ep(state.epsq);
 
         // Add null move
         state.mov = Move::NULL;

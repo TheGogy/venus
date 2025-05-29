@@ -109,7 +109,6 @@ impl Pos {
                     if v < beta {
                         alpha = v;
                     } else {
-                        alpha = beta;
                         break;
                     }
                 }

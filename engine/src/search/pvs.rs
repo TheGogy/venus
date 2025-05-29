@@ -16,10 +16,10 @@ use crate::{
 use super::{NodeType, helpers::*, pv::PVLine};
 
 impl Pos {
-    /// Negamax search function.
+    /// Principal variation search function.
     /// This performs the majority of the searching, then drops into qsearch at the end.
     #[allow(clippy::too_many_arguments)]
-    pub fn negamax<NT: NodeType>(
+    pub fn pvs<NT: NodeType>(
         &mut self,
         t: &mut Thread,
         tt: &TT,
@@ -246,7 +246,7 @@ impl Pos {
             // For the first move of each node, do a full depth, full window search.
             // We should also do that if the score breaks the upper bound.
             if NT::PV && (moves_tried == 1 || v > alpha) {
-                v = -self.negamax::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
+                v = -self.pvs::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
             }
 
             self.undo_move(m, t);

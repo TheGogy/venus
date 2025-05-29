@@ -62,6 +62,7 @@ impl CPiece {
     /// The index of this CPiece.
     #[inline]
     pub const fn idx(self) -> usize {
+        assert!((self as usize) < Self::NUM);
         self as usize
     }
 

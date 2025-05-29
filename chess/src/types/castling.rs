@@ -41,6 +41,7 @@ impl CastlingRights {
     /// The index of the current castling rights.
     #[inline]
     pub const fn idx(self) -> usize {
+        assert!((self.0 as usize) < Self::NUM);
         self.0 as usize
     }
 

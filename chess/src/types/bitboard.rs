@@ -57,6 +57,12 @@ impl Bitboard {
         Square::from_raw(self.0.trailing_zeros() as u8)
     }
 
+    /// Pop the least significant bit.
+    #[inline]
+    pub const fn pop(&mut self) {
+        self.0 &= self.0 - 1
+    }
+
     /// Get the number of bits set.
     #[inline]
     pub const fn nbits(self) -> u32 {
@@ -69,11 +75,10 @@ impl Bitboard {
     where
         F: FnMut(Square),
     {
-        let mut bb = self.0;
-        while bb != 0 {
-            let square = bb.trailing_zeros() as u8;
-            f(Square::from_raw(square));
-            bb &= bb - 1;
+        let mut bb = *self;
+        while bb.any() {
+            f(bb.lsb());
+            bb.pop();
         }
     }
 

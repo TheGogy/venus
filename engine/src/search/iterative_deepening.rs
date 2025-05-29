@@ -50,7 +50,7 @@ impl Pos {
 
         loop {
             // Search within the window
-            let v = self.negamax::<Root>(t, tt, &mut pv, alpha, beta, search_depth, false);
+            let v = self.pvs::<Root>(t, tt, &mut pv, alpha, beta, search_depth, false);
 
             if t.stop {
                 return -Eval::INFINITY;
