@@ -5,15 +5,16 @@ pub mod utils;
 
 mod flatten;
 
-//  Quantization factors
+// Quantization factors.
 pub const QA: i32 = 255;
 pub const QB: i32 = 64;
 pub const QAB: i32 = QA * QB;
 
-// Scaling factor
+// Scaling factor.
 pub const SCALE: i32 = 400;
 
-// Layer sizes
+// Layer sizes.
+// These should ideally be divisible by Simd::CHUNK_SIZE.
 pub const FEATURES: usize = 768;
 pub const L1: usize = 1024;
 
