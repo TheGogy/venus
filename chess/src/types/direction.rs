@@ -19,7 +19,6 @@ pub enum Direction {
 /// Relative directions.
 impl Direction {
     /// Gets the direction up, relative to the color.
-    #[inline]
     pub const fn up(c: Color) -> Direction {
         match c {
             Color::White => Self::North,
@@ -28,7 +27,6 @@ impl Direction {
     }
 
     /// Gets the direction up + left, relative to the color.
-    #[inline]
     pub const fn ul(c: Color) -> Direction {
         match c {
             Color::White => Self::NorthWest,
@@ -37,7 +35,6 @@ impl Direction {
     }
 
     /// Gets the direction up + right, relative to the color.
-    #[inline]
     pub const fn ur(c: Color) -> Direction {
         match c {
             Color::White => Self::NorthEast,

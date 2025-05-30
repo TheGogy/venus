@@ -125,46 +125,39 @@ pub enum MoveFlag {
 
 impl MoveFlag {
     /// Whether this MoveFlag denotes a capture.
-    #[inline]
     pub const fn is_cap(self) -> bool {
         self as u16 & 0b0100 != 0
     }
 
     /// Whether this MoveFlag denotes a promotion.
     /// This includes underpromotions.
-    #[inline]
     pub const fn is_promo(self) -> bool {
         self as u16 & 0b1000 != 0
     }
 
     /// Whether this MoveFlag denotes a quiet promotion.
     /// This includes underpromotions.
-    #[inline]
     pub const fn is_qpromo(self) -> bool {
         self.is_promo() && !self.is_cap()
     }
 
     /// Whether this MoveFlag denotes a quiet move.
-    #[inline]
     pub const fn is_quiet(self) -> bool {
         self as u16 & 0b1100 == 0
     }
 
     /// Whether this MoveFlag denotes a noisy move. (i.e capture or queen promo)
-    #[inline]
     pub const fn is_noisy(self) -> bool {
         !self.is_quiet() || self as u16 == 0b1011
     }
 
     /// Whether this MoveFlag denotes a promotion that is not a queen.
-    #[inline]
     pub const fn is_underpromo(self) -> bool {
         self.is_promo() && self as u16 & 0b1011 != 0b1011
     }
 
     /// Get the piece this MoveFlag denotes a promotion to.
     /// Equivalent to the last 2 bits plus a knight (hence the +1).
-    #[inline]
     pub const fn get_promo(self) -> Piece {
         unsafe { std::mem::transmute(((self as u8) & 0b0011) + 1) }
     }

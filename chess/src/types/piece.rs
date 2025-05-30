@@ -1,4 +1,4 @@
-use crate::impl_from_type;
+use crate::{impl_from_type, impl_lists};
 
 use super::color::Color;
 
@@ -34,17 +34,9 @@ pub enum CPiece {
 }
 
 impl Piece {
-    pub const NUM: usize = 6;
     const UCI_CHAR: &str = "pnbrqk ";
 
-    /// The index of this piece.
-    #[inline]
-    pub const fn idx(self) -> usize {
-        self as usize
-    }
-
     /// Iterate over all Pieces.
-    #[inline]
     pub fn iter() -> impl Iterator<Item = Self> {
         (0..6).map(Self::from_raw)
     }
@@ -56,36 +48,24 @@ impl Piece {
 }
 
 impl CPiece {
-    pub const NUM: usize = 12;
     const UCI_CHAR: &str = "PpNnBbRrQqKk ";
 
-    /// The index of this CPiece.
-    #[inline]
-    pub const fn idx(self) -> usize {
-        assert!((self as usize) < Self::NUM);
-        self as usize
-    }
-
     /// The color of this CPiece.
-    #[inline]
     pub const fn color(self) -> Color {
         Color::from_raw(self as u8 & 1)
     }
 
     /// The type of this CPiece.
-    #[inline]
     pub const fn pt(self) -> Piece {
         Piece::from_raw(self as u8 >> 1)
     }
 
     /// Create a CPiece from a Color and a Piece.
-    #[inline]
     pub const fn create(c: Color, p: Piece) -> Self {
         Self::from_raw(((p as u8) << 1) + c as u8)
     }
 
     /// Iterate over all CPieces.
-    #[inline]
     pub fn iter() -> impl Iterator<Item = Self> {
         (0..12).map(Self::from_raw)
     }
@@ -105,6 +85,9 @@ impl TryFrom<char> for CPiece {
         Ok(Self::from(Self::UCI_CHAR.chars().position(|x| x == value).ok_or("Invalid CPiece!")?))
     }
 }
+
+impl_lists! {Piece, 6}
+impl_lists! {CPiece, 12}
 
 impl_from_type! {
     Piece, u8, 6,

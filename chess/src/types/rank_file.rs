@@ -1,4 +1,4 @@
-use crate::impl_from_type;
+use crate::{impl_from_type, impl_lists};
 
 use super::{bitboard::Bitboard, color::Color};
 
@@ -35,11 +35,6 @@ impl TryFrom<char> for File {
     }
 }
 
-impl_from_type! {
-    File, u8, 8,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
-}
-
 /// Get a Rank from a character.
 impl TryFrom<char> for Rank {
     type Error = &'static str;
@@ -53,6 +48,14 @@ impl TryFrom<char> for Rank {
     }
 }
 
+impl_lists! {File, 8}
+impl_lists! {Rank, 8}
+
+impl_from_type! {
+    File, u8, 8,
+    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
+}
+
 impl_from_type! {
     Rank, u8, 8,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
@@ -60,19 +63,10 @@ impl_from_type! {
 
 /// File implemenatations.
 impl File {
-    pub const NUM: usize = 8;
-
     /// Directly convert a file to a bitboard.
     #[inline]
     pub const fn bb(self) -> Bitboard {
         Bitboard(0x0101010101010101 << (self as u8))
-    }
-
-    /// Get the index of the File.
-    #[inline]
-    pub const fn idx(self) -> usize {
-        assert!((self as usize) < Self::NUM);
-        self as usize
     }
 
     /// Get the char representing the file.
@@ -83,25 +77,14 @@ impl File {
 
 /// Rank implemenatations.
 impl Rank {
-    pub const NUM: usize = 8;
-
     /// Directly convert a rank to a bitboard.
-    #[inline]
     pub const fn bb(self) -> Bitboard {
         Bitboard(0xff << (8 * self as u8))
-    }
-
-    /// Get the index of the rank.
-    #[inline]
-    pub const fn idx(self) -> usize {
-        assert!((self as usize) < Self::NUM);
-        self as usize
     }
 
     /// Get the file from that color's perspective.
     /// e.g:
     /// File::A.relative(Color::Black) == File::H
-    #[inline]
     pub const fn relative(self, c: Color) -> Self {
         Self::from_raw(self as u8 ^ (c as u8 * 7))
     }

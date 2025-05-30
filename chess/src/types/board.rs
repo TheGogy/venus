@@ -282,61 +282,51 @@ impl fmt::Display for Board {
 /// Board implementations.
 impl Board {
     /// Get the bitboard of a given piece.
-    #[inline]
     pub const fn p_bb(&self, p: Piece) -> Bitboard {
         self.pieces[p.idx()]
     }
 
     /// Get the bitboard of a given color.
-    #[inline]
     pub const fn c_bb(&self, c: Color) -> Bitboard {
         self.colors[c.idx()]
     }
 
     /// Get the bitboard of a given piece + color.
-    #[inline]
     pub fn pc_bb(&self, c: Color, p: Piece) -> Bitboard {
         self.p_bb(p) & self.c_bb(c)
     }
 
     /// Get all the diagonal sliders on the board (queens + bishops).
-    #[inline]
     pub fn diag_slider(&self, c: Color) -> Bitboard {
         (self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)) & self.c_bb(c)
     }
 
     /// Get all the orthogonal sliders on the board (queens + rooks).
-    #[inline]
     pub fn orth_slider(&self, c: Color) -> Bitboard {
         (self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)) & self.c_bb(c)
     }
 
     /// Get the total occupancy of the position.
-    #[inline]
     pub fn occ(&self) -> Bitboard {
         self.colors[0] | self.colors[1]
     }
 
     /// Gets the position of the king of the given color.
-    #[inline]
     pub fn ksq(&self, c: Color) -> Square {
         self.pc_bb(c, Piece::King).lsb()
     }
 
     /// Get the piece at a given position.
-    #[inline]
     pub const fn pc_at(&self, s: Square) -> CPiece {
         self.pc_map[s.idx()]
     }
 
     /// Get the squares that the king can be checked on for the given piece.
-    #[inline]
     pub const fn king_line(&self, p: Piece) -> Bitboard {
         self.state.kinglines[p.idx()]
     }
 
     /// Set the given piece on the given square.
-    #[inline]
     pub const fn set_piece(&mut self, p: CPiece, s: Square) {
         self.pieces[p.pt().idx()].set_bit(s);
         self.colors[p.color().idx()].set_bit(s);
@@ -344,7 +334,6 @@ impl Board {
     }
 
     /// Remove the piece on the given square.
-    #[inline]
     pub const fn pop_piece(&mut self, s: Square) {
         let p = self.pc_at(s);
         self.pieces[p.pt().idx()].pop_bit(s);
@@ -353,13 +342,11 @@ impl Board {
     }
 
     /// Gets the piece at the given square.
-    #[inline]
     pub const fn get_piece(&self, s: Square) -> CPiece {
         self.pc_map[s.idx()]
     }
 
     /// Find a move given a UCI move string.
-    #[inline]
     pub fn find_move(&self, s: &str) -> Option<Move> {
         let mut mv = None;
         self.enumerate_moves::<_, MG_ALLMV>(|m| {
@@ -370,26 +357,17 @@ impl Board {
         mv
     }
 
-    /// Get the history at `i` steps back.
-    #[inline]
-    pub fn hist_sub(&self, i: usize) -> &BoardState {
-        &self.history[self.history.len() - i]
-    }
-
     /// Get the current ply of the board.
-    #[inline]
     pub fn ply(&self) -> usize {
         self.history.len()
     }
 
     /// Whether we are in check.
-    #[inline]
     pub const fn in_check(&self) -> bool {
         !self.state.checkers.is_empty()
     }
 
     /// Get the piece that is captured by a move.
-    #[inline]
     pub fn captured(&self, m: Move) -> CPiece {
         if m.flag() == MoveFlag::EnPassant {
             CPiece::create(!self.stm, Piece::Pawn)
@@ -399,7 +377,6 @@ impl Board {
     }
 
     /// All attacks from a given piece type.
-    #[inline]
     pub fn atk_from(&self, p: Piece, c: Color) -> Bitboard {
         match p {
             Piece::Pawn => all_pawn_atk(self.pc_bb(c, p), c),

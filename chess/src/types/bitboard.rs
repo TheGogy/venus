@@ -22,55 +22,46 @@ impl Bitboard {
     pub const DP: [Self; 2] = [Rank::R3.bb(), Rank::R6.bb()]; // Double push ranks.
 
     /// If the bitboard is empty.
-    #[inline]
     pub const fn is_empty(self) -> bool {
         self.0 == 0
     }
 
     /// Whether the bitboard contains any value.
-    #[inline]
     pub const fn any(self) -> bool {
         self.0 != 0
     }
 
     /// Set the bit at the given index.
-    #[inline]
     pub const fn set_bit(&mut self, s: Square) {
         self.0 |= 1u64 << s.idx()
     }
 
     /// Pop the bit at the given index.
-    #[inline]
     pub const fn pop_bit(&mut self, s: Square) {
         self.0 &= !(1u64 << s.idx())
     }
 
     /// Get the bit at the current index.
-    #[inline]
     pub const fn get_bit(self, s: Square) -> bool {
         self.0 & 1u64 << s.idx() != 0
     }
 
     /// Get the least significant bit.
-    #[inline]
     pub const fn lsb(self) -> Square {
         Square::from_raw(self.0.trailing_zeros() as u8)
     }
 
     /// Pop the least significant bit.
-    #[inline]
     pub const fn pop(&mut self) {
         self.0 &= self.0 - 1
     }
 
     /// Get the number of bits set.
-    #[inline]
     pub const fn nbits(self) -> u32 {
         self.0.count_ones()
     }
 
     /// Iterates over each set bit in the bitboard, calling the provided closure with the square index
-    #[inline]
     pub fn bitloop<F>(&self, mut f: F)
     where
         F: FnMut(Square),

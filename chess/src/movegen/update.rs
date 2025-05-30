@@ -21,7 +21,7 @@ impl Board {
     }
 
     /// Updates the attacked pieces mask.
-    #[inline]
+    #[inline(never)]
     fn update_attacked(&self, state: &mut BoardState) {
         let opp = !self.stm;
         let occ = self.occ() ^ self.pc_bb(self.stm, Piece::King);

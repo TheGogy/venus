@@ -12,14 +12,14 @@ pub mod vi16 {
 
     /// Returns a vector set to the given value.
     #[inline]
-    pub fn from_val(val: i32) -> Vec {
-        unsafe { _mm256_set1_epi32(val) }
+    pub fn from_val(val: i16) -> Vec {
+        unsafe { _mm256_set1_epi16(val) }
     }
 
     /// Loads a vector in directly from the values at the given pointer.
     #[inline]
     pub fn from_ptr(ptr: *const i16) -> Vec {
-        unsafe { _mm256_load_epi32(ptr.cast()) }
+        unsafe { _mm256_load_si256(ptr.cast()) }
     }
 
     /// Multiplies two vectors together.

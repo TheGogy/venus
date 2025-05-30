@@ -114,7 +114,6 @@ impl Board {
     }
 
     /// Returns a bitboard of all pieces that can attack the given square.
-    #[inline]
     #[rustfmt::skip]
     fn attackers_to(&self, s: Square, occ: Bitboard) -> Bitboard {
           self.pc_bb(Color::White, Piece::Pawn) & pawn_atk(Color::Black, s)
@@ -126,7 +125,6 @@ impl Board {
     }
 
     /// Gets the least valuable attacker to a position.
-    #[inline]
     fn get_lva(&self, c: Color, atk: Bitboard) -> (CPiece, Square) {
         let my_occ = self.c_bb(c);
 

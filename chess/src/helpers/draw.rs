@@ -8,13 +8,11 @@ impl Board {
     }
 
     /// Whether the 50 move rule has been passed.
-    #[inline]
     const fn is_fifty_move(&self) -> bool {
         self.state.halfmoves >= 100
     }
 
     /// Whether the current position has insufficient material to win for either side.
-    #[inline]
     fn is_insufficient_material(&self) -> bool {
         match self.occ().nbits() {
             // King vs King => draw.
@@ -29,7 +27,6 @@ impl Board {
     }
 
     /// Whether the current position has been repeated.
-    #[inline]
     fn is_repetition(&self, ply_from_null: usize) -> bool {
         let end = 1 + ply_from_null.min(self.state.halfmoves);
 
