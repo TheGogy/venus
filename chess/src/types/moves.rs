@@ -20,50 +20,42 @@ impl Move {
     pub const NULL: Self = Self(0x41);
 
     /// Construct a move.
-    #[inline]
     pub const fn new(src: Square, dst: Square, flag: MoveFlag) -> Self {
         Move((src as u16) << 6 | (dst as u16) | (flag as u16) << 12)
     }
 
     /// Gets the source square of this move.
-    #[inline]
     pub const fn src(self) -> Square {
         Square::from_raw(((self.0 >> 6) & 63) as u8)
     }
 
     /// Gets the destination square of this move.
-    #[inline]
     pub const fn dst(self) -> Square {
         Square::from_raw((self.0 & 63) as u8)
     }
 
     /// Gets the flag of this move.
-    #[inline]
     pub const fn flag(self) -> MoveFlag {
         const TYPE: u16 = 0xF << 12;
         MoveFlag::from_raw(((self.0 & TYPE) >> 12) as u8)
     }
 
     /// Whether the move is null.
-    #[inline]
     pub const fn is_null(&self) -> bool {
         self.0 == 0x41
     }
 
     /// Whether the move is none.
-    #[inline]
     pub const fn is_none(&self) -> bool {
         self.0 == 0x00
     }
 
     /// Whether the move is valid (not null or none).
-    #[inline]
     pub const fn is_valid(&self) -> bool {
         !(self.is_none() || self.is_null())
     }
 
     /// Returns self if valid, otherwise evaluates `f` and returns the result.
-    #[inline]
     pub fn is_valid_or<F: FnOnce() -> Move>(self, f: F) -> Move {
         if self.is_valid() { self } else { f() }
     }

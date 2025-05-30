@@ -61,7 +61,6 @@ impl Board {
     }
 
     /// Add all moves from a given square.
-    #[inline]
     fn add_moves<F, const MG: usize, const CHECK: bool>(&self, from: Square, mut dest: Bitboard, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -84,7 +83,6 @@ impl Board {
     }
 
     /// Generate all quiet promotions.
-    #[inline]
     fn add_promos<F, const MG: usize>(&self, src: Square, dst: Square, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -102,7 +100,6 @@ impl Board {
 
     /// Generate all capture promotions.
     /// This should only be called if we are enumerating noisy moves.
-    #[inline]
     fn add_cpromos<F>(&self, src: Square, dst: Square, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -114,7 +111,6 @@ impl Board {
     }
 
     /// Add all pawn moves.
-    #[inline]
     fn enumerate_pawn<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -242,7 +238,6 @@ impl Board {
     /// Add all castling moves.
     /// This should only be called when we are enumerating quiet moves
     /// and are not in check.
-    #[inline]
     fn enumerate_castling<F>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -271,7 +266,6 @@ impl Board {
     }
 
     /// Add all king moves.
-    #[inline]
     fn enumerate_king<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -281,7 +275,6 @@ impl Board {
     }
 
     /// Add all knight moves.
-    #[inline]
     fn enumerate_knight<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -295,7 +288,6 @@ impl Board {
     }
 
     /// Add all diagonal slider moves.
-    #[inline]
     fn enumerate_diag<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -316,7 +308,6 @@ impl Board {
     }
 
     // Add all orthogonal slider moves.
-    #[inline]
     fn enumerate_orth<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),

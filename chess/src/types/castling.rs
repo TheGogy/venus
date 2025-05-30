@@ -214,12 +214,11 @@ impl CastlingRights {
 /// 2. Otherwise, use rook file.
 impl CastlingRights {
     pub fn to_str(self, b: &Board) -> String {
-        let mut s = String::new();
-
         if self == Self::NONE {
-            s.push('-');
-            return s;
+            return "-".to_owned();
         }
+
+        let mut s = String::new();
 
         for c in Color::iter() {
             let mut tmp = String::new();

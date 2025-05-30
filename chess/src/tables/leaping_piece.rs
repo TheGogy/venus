@@ -24,7 +24,7 @@ pub const fn all_pawn_atk(bb: Bitboard, c: Color) -> Bitboard {
 }
 
 /// Pawn attacks bitboard lookup table.
-const PAWN_DATA: [[Bitboard; 64]; 2] = {
+static PAWN_DATA: [[Bitboard; 64]; 2] = {
     let mut pd = [[Bitboard(0); 64]; 2];
     let mut sq = 0;
 
@@ -54,7 +54,7 @@ const fn init_knight_atk(bb: Bitboard) -> Bitboard {
 }
 
 /// Knight attacks bitboard lookup table.
-const KNIGHT_DATA: [Bitboard; 64] = {
+static KNIGHT_DATA: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 
@@ -83,7 +83,7 @@ const fn init_king_atk(bb: Bitboard) -> Bitboard {
 }
 
 /// King attacks bitboard lookup table.
-const KING_DATA: [Bitboard; 64] = {
+static KING_DATA: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 

@@ -81,13 +81,11 @@ pub const fn sliding_ray(d: Direction, s: usize, occ: u64) -> Bitboard {
 /// Shift a square in the given direction.
 impl Square {
     /// Add a direction to a square.
-    #[inline]
     pub const fn add_dir(self, dir: Direction) -> Self {
         Square::from_raw((self as u8).wrapping_add(dir as u8))
     }
 
     /// Subtract a direction from a square.
-    #[inline]
     pub const fn sub_dir(self, dir: Direction) -> Self {
         Square::from_raw((self as u8).wrapping_sub(dir as u8))
     }

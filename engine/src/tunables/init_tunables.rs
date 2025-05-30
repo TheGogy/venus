@@ -32,13 +32,11 @@ macro_rules! init_tunables {
 
             $(
                 #[cfg(not(feature = "tune"))]
-                #[inline]
                 pub const fn $name() -> $t {
                     $val
                 }
 
                 #[cfg(feature = "tune")]
-                #[inline]
                 pub fn $name() -> $t {
                     use std::sync::atomic::Ordering;
                     storage::$name.load(Ordering::Relaxed) as $t
@@ -108,21 +106,4 @@ macro_rules! init_tunables {
             }
         }
     }
-}
-
-/// Macro to make things constant when they should be.
-/// Otherwise, allow them to be updated.
-#[macro_export]
-macro_rules! maybe_const {
-    ($name:ident: $ty:ty = $value:expr) => {
-        #[allow(non_upper_case_globals)]
-        #[allow(non_snake_case)]
-        #[cfg(not(feature = "tune"))]
-        const $name: $ty = $value;
-
-        #[allow(non_upper_case_globals)]
-        #[allow(non_snake_case)]
-        #[cfg(feature = "tune")]
-        let $name: $ty = $value;
-    };
 }

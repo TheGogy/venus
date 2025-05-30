@@ -17,13 +17,11 @@ mod fallback {
     use crate::{accumulator::SideAccumulator, arch::QA};
 
     /// Squared Clipped ReLU
-    #[inline]
     pub fn screlu(x: i16) -> i32 {
         (x.clamp(0, QA as i16) as i32).pow(2)
     }
 
     /// Flatten the accumulator using the given weights. (fallback: non-vectorized)
-    #[inline]
     pub fn flatten(acc: &SideAccumulator, weights: &SideAccumulator) -> i32 {
         let mut sum = 0;
 
@@ -43,7 +41,6 @@ mod simdvec {
     };
 
     /// Flatten the accumulator using the given weights. (vectorized)
-    #[inline]
     pub fn flatten(acc: &SideAccumulator, weights: &SideAccumulator) -> i32 {
         use simd::vi16::*;
 
