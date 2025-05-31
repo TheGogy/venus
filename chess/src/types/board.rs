@@ -24,40 +24,40 @@ use super::{
 /// Contains information about the current board used to generate, make and unmake moves.
 #[derive(Default, Debug, Clone)]
 pub struct BoardState {
-    // Current board info
+    // Current board info.
     pub castling: CastlingRights,
     pub epsq: Square,
     pub halfmoves: usize,
     pub fullmoves: usize,
 
-    // Used to unmake moves
+    // Used to unmake moves.
     pub mov: Move,
     pub cap: CPiece,
     pub mvp: CPiece,
 
-    // Bitboards for movegen
+    // Bitboards for movegen.
     pub attacked: Bitboard,
     pub checkers: Bitboard,
     pub pin_diag: Bitboard,
     pub pin_orth: Bitboard,
     pub checkmask: Bitboard,
 
-    // Keys
+    // Keys.
     pub hash: Hash,
 
-    // Used for check detection
+    // Used for check detection.
     pub kinglines: [Bitboard; Piece::NUM],
 }
 
 /// Contains the current board state.
 #[derive(Clone, Debug)]
 pub struct Board {
-    // Piece placement
+    // Piece placement.
     pub pieces: [Bitboard; Piece::NUM],
     pub colors: [Bitboard; Color::NUM],
     pub pc_map: [CPiece; Square::NUM],
 
-    // Game state
+    // Game state.
     pub stm: Color,
     pub castlingmask: CastlingMask,
 
@@ -66,7 +66,7 @@ pub struct Board {
     pub history: Vec<BoardState>,
 }
 
-/// Empty board
+/// Empty board.
 impl Board {
     pub fn empty() -> Self {
         Self {
@@ -119,7 +119,6 @@ impl FromStr for Board {
 
         let mut state = BoardState::default();
 
-        // Parse piece placement
         let mut file: u8 = 0;
         let mut rank: u8 = 7;
         for token in fen[0].chars() {
@@ -156,7 +155,6 @@ impl FromStr for Board {
             return Err("Incorrect number of kings!");
         }
 
-        // Parse side to move
         match fen[1] {
             "w" => {
                 board.stm = Color::White;
@@ -166,21 +164,17 @@ impl FromStr for Board {
             _ => return Err("Invalid side to move!"),
         }
 
-        // Update the board state masks for movegen.
         board.update_masks(&mut state);
 
-        // Parse castling rights
         let (c_rights, c_mask) = match CastlingRights::parse(&board, fen[2]) {
             Ok((r, m)) => (r, m),
             Err(e) => return Err(e),
         };
 
         board.castlingmask = c_mask;
-
         state.castling = c_rights;
         state.hash.toggle_castling(c_rights);
 
-        // Parse en passant
         match fen[3] {
             "-" => state.epsq = Square::Invalid,
             s => {
@@ -190,15 +184,10 @@ impl FromStr for Board {
             }
         }
 
-        // Parse halfmove count
         state.halfmoves = fen[4].parse().map_err(|_| "Invalid halfmove count!")?;
-
-        // Parse fullmove count
         state.fullmoves = fen[5].parse().map_err(|_| "Invalid fullmove count!")?;
 
-        // Set board state.
         board.state = state;
-
         Ok(board)
     }
 }
@@ -297,13 +286,23 @@ impl Board {
     }
 
     /// Get all the diagonal sliders on the board (queens + bishops).
-    pub fn diag_slider(&self, c: Color) -> Bitboard {
-        (self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)) & self.c_bb(c)
+    pub fn all_diag(&self) -> Bitboard {
+        self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)
     }
 
-    /// Get all the orthogonal sliders on the board (queens + rooks).
+    /// Get all the orthoonal sliders on the board (queens + bishops).
+    pub fn all_orth(&self) -> Bitboard {
+        self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)
+    }
+
+    /// Get all the diagonal sliders on the board (queens + bishops) of a specific color.
+    pub fn diag_slider(&self, c: Color) -> Bitboard {
+        self.all_diag() & self.c_bb(c)
+    }
+
+    /// Get all the orthogonal sliders on the board (queens + rooks) of a specific color.
     pub fn orth_slider(&self, c: Color) -> Bitboard {
-        (self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)) & self.c_bb(c)
+        self.all_orth() & self.c_bb(c)
     }
 
     /// Get the total occupancy of the position.

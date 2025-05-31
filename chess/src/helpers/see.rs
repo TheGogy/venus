@@ -61,8 +61,8 @@ impl Board {
             return true;
         }
 
-        let diag_sliders = self.p_bb(Piece::Queen) | self.p_bb(Piece::Bishop);
-        let orth_sliders = self.p_bb(Piece::Queen) | self.p_bb(Piece::Rook);
+        let diag_sliders = self.all_diag();
+        let orth_sliders = self.all_orth();
 
         let mut occ = self.occ();
         occ.pop_bit(src);
@@ -118,10 +118,10 @@ impl Board {
     fn attackers_to(&self, s: Square, occ: Bitboard) -> Bitboard {
           self.pc_bb(Color::White, Piece::Pawn) & pawn_atk(Color::Black, s)
         | self.pc_bb(Color::Black, Piece::Pawn) & pawn_atk(Color::White, s)
-        | (self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)) & bishop_atk(s, occ)
-        | (self.p_bb(Piece::Rook)   | self.p_bb(Piece::Queen)) & rook_atk(s, occ)
-        | self.p_bb(Piece::Knight) & knight_atk(s)
-        | self.p_bb(Piece::King) & king_atk(s)
+        | self.p_bb(Piece::Knight)              & knight_atk(s)
+        | self.p_bb(Piece::King)                & king_atk(s)
+        | self.all_diag()                       & bishop_atk(s, occ)
+        | self.all_orth()                       & rook_atk(s, occ)
     }
 
     /// Gets the least valuable attacker to a position.
