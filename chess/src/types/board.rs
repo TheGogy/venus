@@ -78,7 +78,7 @@ impl Board {
             castlingmask: CastlingMask::default(),
 
             state: BoardState::default(),
-            history: Vec::new(),
+            history: Vec::with_capacity(256),
         }
     }
 }
@@ -259,11 +259,13 @@ impl fmt::Display for Board {
         write!(
             f,
             "{board_str}
--> FEN : {}
--> Hash: {}
+-> FEN :      {}
+-> Hash:      {}
+-> Prev move: {}
 ",
             self.to_fen(),
-            self.state.hash
+            self.state.hash,
+            self.state.mov.to_uci(&self.castlingmask)
         )
     }
 }
@@ -477,7 +479,9 @@ mod tests {
             ($($fen:expr, [$(($mv:expr, $res:expr))*];)*) => {
                 $(
                     let b: Board = $fen.parse().unwrap();
+                    println!("{}", $fen);
                     $(
+                        println!("{}", $mv);
                         let m = b.find_move($mv).unwrap();
                         assert_eq!(b.gives_check(m), $res);
                     )*

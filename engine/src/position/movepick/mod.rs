@@ -1,11 +1,13 @@
 pub mod perftmp;
-pub mod scored_ml;
+pub mod utils;
 
 mod pick_move;
 mod score_move;
 
-use chess::types::{eval::Eval, moves::Move};
-use scored_ml::ScoredMoveList;
+use chess::{
+    MAX_MOVES,
+    types::{eval::Eval, moves::Move},
+};
 
 /// Move picker stages.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
@@ -51,13 +53,9 @@ impl MPStage {
 }
 
 #[derive(Clone, Debug)]
-pub struct MovePicker {
+pub struct MovePickerNew {
     stage: MPStage,
     searchtype: SearchType,
-
-    ml_quiet: ScoredMoveList,
-    ml_noisy_win: ScoredMoveList,
-    ml_noisy_loss: ScoredMoveList,
 
     tt_move: Move,
 
@@ -65,9 +63,17 @@ pub struct MovePicker {
     see_threshold: Eval,
 
     skip_quiets: bool,
+
+    mvs: [Move; MAX_MOVES],
+    scs: [i32; MAX_MOVES],
+
+    cur: usize,
+    end: usize,
+
+    noisy_loss_end: usize,
 }
 
-impl MovePicker {
+impl MovePickerNew {
     /// Construct a new move picker for the position.
     pub fn new(searchtype: SearchType, in_check: bool, tt_move: Move) -> Self {
         let mut stage = if in_check {
@@ -88,14 +94,14 @@ impl MovePicker {
         Self {
             stage,
             searchtype,
-
-            ml_quiet: ScoredMoveList::default(),
-            ml_noisy_win: ScoredMoveList::default(),
-            ml_noisy_loss: ScoredMoveList::default(),
-
             tt_move: ttm,
             see_threshold: Eval::DRAW,
             skip_quiets: false,
+            mvs: [Move::NONE; MAX_MOVES],
+            scs: [0; MAX_MOVES],
+            cur: 0,
+            noisy_loss_end: MAX_MOVES - 1,
+            end: 0,
         }
     }
 }

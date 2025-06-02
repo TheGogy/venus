@@ -1,10 +1,13 @@
-use chess::types::{board::Board, moves::Move};
+use chess::{
+    MAX_MOVES,
+    types::{board::Board, moves::Move},
+};
 
 use crate::threading::thread::Thread;
 
-use super::{MPStage, MovePicker};
+use super::{MPStage, MovePickerNew};
 
-impl MovePicker {
+impl MovePickerNew {
     pub fn next(&mut self, b: &Board, t: &Thread) -> Option<Move> {
         match self.stage {
             // Return TT move.
@@ -13,15 +16,15 @@ impl MovePicker {
                 return Some(self.tt_move);
             }
 
-            // Generate and score noisies.
+            // Generate and score noisies, and get ready to return noisy moves.
             MPStage::PvNoisyGen | MPStage::QsNoisyGen => {
                 self.gen_score_noisies(b, t);
             }
 
             // Return all winning noisies.
-            MPStage::PvNoisyWin | MPStage::QsNoisyAll => {
-                if self.ml_noisy_win.non_empty() {
-                    return Some(self.ml_noisy_win.next().0);
+            MPStage::PvNoisyWin | MPStage::QsNoisyAll | MPStage::EvAll => {
+                if self.cur < self.end {
+                    return Some(self.select_upto::<true>(self.end));
                 }
             }
 
@@ -34,28 +37,24 @@ impl MovePicker {
 
             // Return all quiets.
             MPStage::PvQuietAll => {
-                if !self.skip_quiets && self.ml_quiet.non_empty() {
-                    return Some(self.ml_quiet.next().0);
+                if !self.skip_quiets && self.cur < self.end {
+                    return Some(self.select_upto::<true>(self.end));
                 }
+
+                // Go to the end and work backwards through the losing noisy moves.
+                self.cur = MAX_MOVES - 1;
             }
 
-            // Return remaining noisies.
+            // Return all remaining moves.
             MPStage::PvNoisyLoss => {
-                if self.ml_noisy_loss.non_empty() {
-                    return Some(self.ml_noisy_loss.next().0);
+                if self.cur > self.noisy_loss_end {
+                    return Some(self.select_upto::<false>(self.noisy_loss_end));
                 }
             }
 
             // Generate and score evasions.
             MPStage::EvGen => {
                 self.gen_score_evasions(b, t);
-            }
-
-            // Return all evasions.
-            MPStage::EvAll => {
-                if self.ml_quiet.non_empty() {
-                    return Some(self.ml_quiet.next().0);
-                }
             }
 
             // No more moves to play: end here.

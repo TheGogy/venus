@@ -16,6 +16,7 @@ impl Board {
     pub(crate) fn update_masks(&self, state: &mut BoardState) {
         self.update_attacked(state);
         self.update_checkers(state);
+        self.update_kinglines(state);
         self.update_pins(state);
     }
 
@@ -58,6 +59,19 @@ impl Board {
           | self.pc_bb(opp, Piece::Knight) & knight_atk(ksq)
           | self.diag_slider(opp)          & bishop_atk(ksq, occ)
           | self.orth_slider(opp)          & rook_atk(ksq, occ)
+    }
+
+    /// Update the king lines.
+    #[rustfmt::skip]
+    fn update_kinglines(&self, state: &mut BoardState) {
+        let ksq = self.ksq(!self.stm);
+        let occ = self.occ();
+
+        state.kinglines[0] = pawn_atk(!self.stm, ksq);                // Pawn
+        state.kinglines[1] = knight_atk(ksq);                         // Knight
+        state.kinglines[2] = bishop_atk(ksq, occ);                    // Bishop
+        state.kinglines[3] = rook_atk(ksq, occ);                      // Rook
+        state.kinglines[4] = state.kinglines[2] | state.kinglines[3]; // Queen
     }
 
     /// Update the pins on the board.

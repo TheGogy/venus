@@ -22,7 +22,7 @@ impl Board {
             return nb_moves;
         }
 
-        assert!(nb_moves < MAX_MOVES);
+        assert!(nb_moves <= MAX_MOVES);
         for m in ml[..nb_moves].iter() {
             self.make_move(*m);
             let n = self.perft::<false>(depth - 1);

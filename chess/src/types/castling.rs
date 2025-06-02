@@ -130,17 +130,17 @@ impl CastlingMask {
     }
 
     /// Get the occupancy and attack masks that must be empty.
-    pub fn occ_atk<const KSIDE: bool>(&self, ksq: Square, c: Color) -> (Bitboard, Bitboard) {
+    pub fn can_castle<const KSIDE: bool>(&self, ksq: Square, c: Color, occ: Bitboard, atk: Bitboard) -> bool {
         let kt = if KSIDE { Square::G1.relative(c) } else { Square::C1.relative(c) };
         let (rf, rt) = self.rook_src_dst(kt);
 
         // King must not be attacked at any point while moving or at destination.
-        let atk = between(ksq, kt) | kt.bb();
+        let atk_mask = between(ksq, kt) | kt.bb();
 
         // Neither king or rook should have any piece in their path (except themselves)
-        let occ = (atk | between(ksq, rf) | rt.bb()) & !(ksq.bb() | rf.bb());
+        let occ_mask = (atk_mask | between(ksq, rf) | rt.bb()) & !(ksq.bb() | rf.bb());
 
-        (occ, atk)
+        (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty()
     }
 }
 
