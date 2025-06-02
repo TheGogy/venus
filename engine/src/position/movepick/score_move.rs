@@ -59,8 +59,7 @@ impl MovePickerNew {
             }
 
             // Add to the front of the list.
-            self.mvs[self.end] = m;
-            self.scs[self.end] = s;
+            self.insert(m, s, self.end);
             self.end += 1;
         });
     }
@@ -85,13 +84,11 @@ impl MovePickerNew {
             let see_threshold = if self.searchtype == SearchType::Pv { Eval(-s / 32) } else { self.see_threshold };
             if b.see(m, see_threshold) && !m.flag().is_underpromo() {
                 // Good noisy move.
-                self.mvs[self.end] = m;
-                self.scs[self.end] = s;
+                self.insert(m, s, self.end);
                 self.end += 1;
             } else {
                 // Bad noisy move.
-                self.mvs[self.noisy_loss_end] = m;
-                self.scs[self.noisy_loss_end] = s;
+                self.insert(m, s, self.noisy_loss_end);
                 self.noisy_loss_end -= 1;
             }
         });
@@ -104,6 +101,7 @@ impl MovePickerNew {
 
         b.enumerate_moves::<_, MG_ALLMV>(|m| {
             // We've already picked the TT move if it exists.
+            // TODO: Remove this ..?? Further testing required.
             if m == self.tt_move {
                 return;
             }
@@ -115,8 +113,7 @@ impl MovePickerNew {
                 t.hist_quiet.get_bonus(b.stm, m) + ch
             };
 
-            self.mvs[self.end] = m;
-            self.scs[self.end] = s;
+            self.insert(m, s, self.end);
             self.end += 1;
         });
     }

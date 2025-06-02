@@ -130,7 +130,7 @@ impl Pos {
             // Null move pruning.
         }
 
-        // TODO: Probcut?
+        // TODO: Probcut.
 
         // -----------------------------------
         //             Moves loop
