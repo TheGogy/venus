@@ -22,7 +22,6 @@ macro_rules! impl_math_ops {
         $(impl std::ops::$trait for $t {
             type Output = Self;
 
-            #[inline]
             fn $fn(self, other: Self) -> Self::Output {
                 Self(std::ops::$trait::$fn(self.0, other.0))
             }
@@ -33,7 +32,6 @@ macro_rules! impl_math_ops {
         $(impl std::ops::$trait<$prim> for $t {
             type Output = $t;
 
-            #[inline]
             fn $fn(self, other: $prim) -> $t {
                 unsafe { std::mem::transmute(std::ops::$trait::$fn(self.0, other as $inner)) }
             }
@@ -42,7 +40,6 @@ macro_rules! impl_math_ops {
         $(impl std::ops::$trait<$t> for $prim {
             type Output = $prim;
 
-            #[inline]
             fn $fn(self, other: $t) -> $prim {
                 #[allow(clippy::useless_transmute)]
                 unsafe { std::mem::transmute(std::ops::$trait::$fn(self, other.0 as $prim)) }
@@ -74,7 +71,6 @@ macro_rules! impl_math_assign_ops {
     ($t:ty, $($trait:ident::$fn:ident),*) => {
         $(impl std::ops::$trait for $t {
 
-            #[inline]
             fn $fn(&mut self, other: Self) {
                 std::ops::$trait::$fn(&mut self.0, other.0)
             }
@@ -84,7 +80,6 @@ macro_rules! impl_math_assign_ops {
     ($t:ty: $inner:ty, $prim:ty, $($trait:ident::$fn:ident),*) => {
         $(impl std::ops::$trait<$prim> for $t {
 
-            #[inline]
             fn $fn(&mut self, other: $prim) {
                 std::ops::$trait::$fn(&mut self.0, other as $inner)
             }

@@ -13,6 +13,7 @@ impl Board {
         let mut ml = [Move::NONE; MAX_MOVES];
         let mut nb_moves = 0;
         self.enumerate_moves::<_, MG_ALLMV>(|m| {
+            assert!(nb_moves < MAX_MOVES);
             ml[nb_moves] = m;
             nb_moves += 1;
         });
@@ -21,6 +22,7 @@ impl Board {
             return nb_moves;
         }
 
+        assert!(nb_moves <= MAX_MOVES);
         for m in ml[..nb_moves].iter() {
             self.make_move(*m);
             let n = self.perft::<false>(depth - 1);

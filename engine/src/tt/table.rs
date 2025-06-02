@@ -30,7 +30,6 @@ impl TT {
     }
 
     /// Get the index for a given hash.
-    #[inline]
     const fn idx(&self, hash: Hash) -> usize {
         let key = hash.key as u128;
         let len = self.entries.len() as u128;
@@ -38,14 +37,12 @@ impl TT {
     }
 
     /// Probe the table with some hash.
-    #[inline]
     pub fn probe(&self, hash: Hash) -> Option<TTEntry> {
         let index = self.idx(hash);
         unsafe { self.entries.get_unchecked(index).read(hash) }
     }
 
     /// Prefetch an entry into the cache.
-    #[inline]
     pub fn prefetch(&self, hash: Hash) {
         #[cfg(target_arch = "x86_64")]
         unsafe {
@@ -57,13 +54,11 @@ impl TT {
     }
 
     /// Increment the table age.
-    #[inline]
     pub const fn increment_age(&mut self) {
         self.age = (self.age + 1) & 0x7F;
     }
 
     /// Calculate table utilization (0 - 1000).
-    #[inline]
     pub fn hashfull(&self) -> usize {
         let sample_size = 1000.min(self.entries.len());
         self.entries[..sample_size].iter().filter(|e| e.is_occupied()).count()

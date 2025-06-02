@@ -21,18 +21,17 @@ impl Default for NoisyHist {
 pub const NOISY_MAX: i32 = 16384;
 
 impl NoisyHist {
-    #[inline]
     fn idx(b: &Board, m: Move) -> (usize, usize, usize) {
-        (m.dst().idx(), b.get_piece(m.src()).idx(), b.captured(m).pt().idx())
+        let cap = b.captured(m);
+        let p_idx = if cap == CPiece::None { 6 } else { cap.pt().idx() };
+        (m.dst().idx(), b.get_piece(m.src()).idx(), p_idx)
     }
 
-    #[inline]
     fn add_bonus(&mut self, b: &Board, m: Move, bonus: i16) {
         let i = Self::idx(b, m);
         self.0[i.0][i.1][i.2].gravity::<NOISY_MAX>(bonus);
     }
 
-    #[inline]
     pub fn get_bonus(&self, b: &Board, m: Move) -> i32 {
         let i = Self::idx(b, m);
         self.0[i.0][i.1][i.2].0 as i32

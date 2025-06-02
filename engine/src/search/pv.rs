@@ -19,7 +19,6 @@ impl Default for PVLine {
 
 impl PVLine {
     /// Update the PV line with a child line.
-    #[inline]
     pub fn update(&mut self, m: Move, child: &Self) {
         self.length = child.length + 1;
         self.moves[0] = m;

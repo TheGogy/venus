@@ -48,25 +48,21 @@ impl fmt::Display for Clock {
 
 impl Clock {
     /// Get the total number of nodes searched by all threads.
-    #[inline]
     pub fn global_nodes(&self) -> u64 {
         self.global_nodes.load(Ordering::Relaxed)
     }
 
     /// Get the time elapsed since starting the search.
-    #[inline]
     pub fn elapsed(&self) -> Duration {
         self.start_time.elapsed()
     }
 
     /// Whether we have stopped.
-    #[inline]
     pub fn is_stopped(&self) -> bool {
         self.global_stop.load(Ordering::Relaxed)
     }
 
     /// Update the node count for a given move.
-    #[inline]
     pub fn update_node_count(&mut self, m: Move, searched: u64) {
         self.node_count[m.src().idx()][m.dst().idx()] += searched;
     }

@@ -1,25 +1,21 @@
 use crate::types::{bitboard::Bitboard, color::Color, direction::Direction, square::Square};
 
 /// Get pawn attacks for a given color and square.
-#[inline]
 pub const fn pawn_atk(c: Color, s: Square) -> Bitboard {
     PAWN_DATA[c.idx()][s.idx()]
 }
 
 /// Get all knight attacks for a given square.
-#[inline]
 pub const fn knight_atk(s: Square) -> Bitboard {
     KNIGHT_DATA[s.idx()]
 }
 
 /// Get all king attacks for a given square.
-#[inline]
 pub const fn king_atk(s: Square) -> Bitboard {
     KING_DATA[s.idx()]
 }
 
 /// Get all pawn attacks for a given side.
-#[inline]
 pub const fn all_pawn_atk(bb: Bitboard, c: Color) -> Bitboard {
     match c {
         Color::White => Bitboard(bb.shift(Direction::NorthEast).0 | bb.shift(Direction::NorthWest).0),
@@ -28,7 +24,7 @@ pub const fn all_pawn_atk(bb: Bitboard, c: Color) -> Bitboard {
 }
 
 /// Pawn attacks bitboard lookup table.
-const PAWN_DATA: [[Bitboard; 64]; 2] = {
+static PAWN_DATA: [[Bitboard; 64]; 2] = {
     let mut pd = [[Bitboard(0); 64]; 2];
     let mut sq = 0;
 
@@ -58,7 +54,7 @@ const fn init_knight_atk(bb: Bitboard) -> Bitboard {
 }
 
 /// Knight attacks bitboard lookup table.
-const KNIGHT_DATA: [Bitboard; 64] = {
+static KNIGHT_DATA: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 
@@ -87,7 +83,7 @@ const fn init_king_atk(bb: Bitboard) -> Bitboard {
 }
 
 /// King attacks bitboard lookup table.
-const KING_DATA: [Bitboard; 64] = {
+static KING_DATA: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
     let mut square = 0;
 

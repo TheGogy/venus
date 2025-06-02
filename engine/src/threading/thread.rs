@@ -78,19 +78,16 @@ impl Thread {
     }
 
     /// Whether we should start the next iteration.
-    #[inline]
     pub fn should_start_iter(&mut self) -> bool {
         self.clock.should_start_iteration(self.depth + 1, self.nodes, self.best_move())
     }
 
     /// Whether we should stop searching.
-    #[inline]
     pub fn should_stop(&mut self) -> bool {
         self.stop || self.clock.should_stop(self.nodes)
     }
 
     /// The best move found by this thread.
-    #[inline]
     pub const fn best_move(&self) -> Move {
         self.pv.moves[0]
     }
@@ -107,7 +104,6 @@ impl Thread {
     }
 
     /// Tell the thread that a move has been made.
-    #[inline]
     pub const fn move_made(&mut self, p: CPiece, m: Move) {
         self.ss_mut().mvp = p;
         self.ss_mut().mov = m;
@@ -119,7 +115,6 @@ impl Thread {
     }
 
     /// Tell the thread that a null move has been made.
-    #[inline]
     pub const fn null_made(&mut self) {
         self.ss_mut().mvp = CPiece::None;
         self.ss_mut().mov = Move::NULL;
@@ -131,14 +126,12 @@ impl Thread {
     }
 
     /// Tell the thread that a move has been undone.
-    #[inline]
     pub const fn move_undo(&mut self) {
         self.ply -= 1;
         self.ply_from_null = self.ss().ply_from_null;
     }
 
     /// Whether the current position is improving.
-    #[inline]
     pub fn is_improving(&self, in_check: bool) -> bool {
         if in_check {
             false

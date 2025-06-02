@@ -29,13 +29,11 @@ impl fmt::Display for Hash {
 
 impl Hash {
     /// Toggle the color bits after a given move.
-    #[inline]
     pub const fn toggle_color(&mut self) {
         self.key ^= COLOR_KEY
     }
 
     /// Toggle a piece on a square.
-    #[inline]
     pub fn toggle_piece(&mut self, p: CPiece, s: Square) {
         let k = PIECE_KEYS[p.idx()][s.idx()];
         self.key ^= k;
@@ -48,16 +46,15 @@ impl Hash {
     }
 
     /// Toggle castling rights on or off.
-    #[inline]
     pub const fn toggle_castling(&mut self, cr: CastlingRights) {
         self.key ^= CASTLING_KEYS[cr.idx()]
     }
 
     /// Toggle en passant on or off for a given square.
     /// If the en passant square is unset, reset ep to zero.
-    #[inline]
     pub fn toggle_ep(&mut self, epsq: Square) {
-        self.key ^= EN_PASSANT_KEYS[epsq.file().idx() + File::NUM * (epsq == Square::Invalid) as usize]
+        let index = if epsq == Square::Invalid { File::NUM } else { epsq.file().idx() };
+        self.key ^= EN_PASSANT_KEYS[index];
     }
 }
 

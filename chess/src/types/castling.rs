@@ -1,6 +1,6 @@
 use std::ops::Not;
 
-use crate::{impl_math_assign_ops, impl_math_ops, tables::sliding_piece::between};
+use crate::{impl_all_math_ops, impl_math_assign_ops, impl_math_ops, tables::sliding_piece::between};
 
 use super::{
     bitboard::Bitboard,
@@ -39,50 +39,40 @@ impl CastlingRights {
     const MASKS: [Self; 4] = [Self::WK, Self::BK, Self::WQ, Self::BQ];
 
     /// The index of the current castling rights.
-    #[inline]
     pub const fn idx(self) -> usize {
-        assert!((self.0 as usize) < Self::NUM);
-        self.0 as usize
+        let idx = self.0 as usize;
+        debug_assert!(idx < Self::NUM);
+        // Safety: caller guarantees idx is always < NUM
+        if idx >= Self::NUM {
+            unsafe { std::hint::unreachable_unchecked() }
+        }
+        idx
     }
 
     /// The index into the rooks list for these castling rights.
-    #[inline]
     pub const fn rook_idx(self) -> usize {
         self.0.trailing_zeros() as usize
     }
 
     /// Whether the given color has kingside castling.
-    #[inline]
     pub const fn has_ks(self, c: Color) -> bool {
         self.0 & (0b0001 << c.idx() as u8) != 0
     }
 
     /// Whether the given color has queenside castling.
-    #[inline]
     pub const fn has_qs(self, c: Color) -> bool {
         self.0 & (0b0100 << c.idx() as u8) != 0
     }
 
     /// Gets the mask for a given color and side.
-    #[inline]
     pub const fn get_mask(c: Color, is_ks: bool) -> Self {
         Self::MASKS[c.idx() + !is_ks as usize * 2]
     }
 }
 
-// Implement math operations and assignment operations on CastlingRights.
-impl_math_ops! {
-    CastlingRights,
-    BitAnd::bitand,
-    BitOr::bitor,
-    BitXor::bitxor
-}
-
-impl_math_assign_ops! {
-    CastlingRights,
-    BitAndAssign::bitand_assign,
-    BitOrAssign::bitor_assign,
-    BitXorAssign::bitxor_assign
+impl_all_math_ops! {
+    CastlingRights: u8,
+    [u8, usize]
 }
 
 impl Not for CastlingRights {
@@ -116,14 +106,12 @@ impl Default for CastlingMask {
 /// CastlingRights implementations.
 impl CastlingMask {
     /// Get the mask of the rights to zero out after a move.
-    #[inline]
     pub fn zero_out(&self, src: Square, dst: Square) -> CastlingRights {
         self.mask[src.idx()] & self.mask[dst.idx()]
     }
 
     /// Get the source and destination squares for the rook given a king destination.
     /// Assumes that king_to is legal.
-    #[inline]
     pub const fn rook_src_dst(&self, king_to: Square) -> (Square, Square) {
         match king_to {
             Square::G1 => (self.rooks[0], Square::F1),
@@ -135,7 +123,6 @@ impl CastlingMask {
     }
 
     /// Adds rights to the castling mask for a given king and rook square.
-    #[inline]
     pub fn add_rights(&mut self, ksq: Square, rsq: Square, r: CastlingRights) {
         self.mask[ksq.idx()] &= !r;
         self.mask[rsq.idx()] &= !r;
@@ -143,18 +130,17 @@ impl CastlingMask {
     }
 
     /// Get the occupancy and attack masks that must be empty.
-    #[inline]
-    pub fn occ_atk<const KSIDE: bool>(&self, ksq: Square, c: Color) -> (Bitboard, Bitboard) {
+    pub fn can_castle<const KSIDE: bool>(&self, ksq: Square, c: Color, occ: Bitboard, atk: Bitboard) -> bool {
         let kt = if KSIDE { Square::G1.relative(c) } else { Square::C1.relative(c) };
         let (rf, rt) = self.rook_src_dst(kt);
 
         // King must not be attacked at any point while moving or at destination.
-        let atk = between(ksq, kt) | kt.bb();
+        let atk_mask = between(ksq, kt) | kt.bb();
 
         // Neither king or rook should have any piece in their path (except themselves)
-        let occ = (atk | between(ksq, rf) | rt.bb()) & !(ksq.bb() | rf.bb());
+        let occ_mask = (atk_mask | between(ksq, rf) | rt.bb()) & !(ksq.bb() | rf.bb());
 
-        (occ, atk)
+        (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty()
     }
 }
 
@@ -228,12 +214,11 @@ impl CastlingRights {
 /// 2. Otherwise, use rook file.
 impl CastlingRights {
     pub fn to_str(self, b: &Board) -> String {
-        let mut s = String::new();
-
         if self == Self::NONE {
-            s.push('-');
-            return s;
+            return "-".to_owned();
         }
+
+        let mut s = String::new();
 
         for c in Color::iter() {
             let mut tmp = String::new();

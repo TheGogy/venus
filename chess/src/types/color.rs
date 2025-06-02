@@ -1,6 +1,6 @@
 use std::{fmt, ops::Not};
 
-use crate::impl_from_type;
+use crate::{impl_from_type, impl_lists};
 
 /// Color. This represents the two sides, White and Black.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -11,17 +11,7 @@ pub enum Color {
 }
 
 impl Color {
-    pub const NUM: usize = 2;
-
-    /// The index of this color.
-    #[inline]
-    pub const fn idx(self) -> usize {
-        assert!((self as usize) < Self::NUM);
-        self as usize
-    }
-
     /// Iterate over both colors.
-    #[inline]
     pub fn iter() -> impl Iterator<Item = Color> {
         [Color::White, Color::Black].into_iter()
     }
@@ -35,6 +25,8 @@ impl Not for Color {
         Self::from_raw(1 ^ self as u8)
     }
 }
+
+impl_lists! {Color, 2}
 
 impl_from_type! {
     Color, u8, 2,

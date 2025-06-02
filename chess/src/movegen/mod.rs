@@ -61,7 +61,6 @@ impl Board {
     }
 
     /// Add all moves from a given square.
-    #[inline]
     fn add_moves<F, const MG: usize, const CHECK: bool>(&self, from: Square, mut dest: Bitboard, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -84,7 +83,6 @@ impl Board {
     }
 
     /// Generate all quiet promotions.
-    #[inline]
     fn add_promos<F, const MG: usize>(&self, src: Square, dst: Square, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -102,7 +100,6 @@ impl Board {
 
     /// Generate all capture promotions.
     /// This should only be called if we are enumerating noisy moves.
-    #[inline]
     fn add_cpromos<F>(&self, src: Square, dst: Square, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -114,7 +111,6 @@ impl Board {
     }
 
     /// Add all pawn moves.
-    #[inline]
     fn enumerate_pawn<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -185,14 +181,8 @@ impl Board {
                     return;
                 }
 
-                // Prune orth pins
-                // 1. Do a quick first check to make sure that our king and opponent's orthogonal
-                //    sliders are not on ep rank
-                // 2. If this first check passes, then make sure that our king is not in danger
-                //    after the move happens and both pieces are removed from the rank.
-                if (eprank & self.pc_bb(self.stm, Piece::King)).is_empty() && (eprank & self.orth_slider(!self.stm)).is_empty()
-                    || (eprank & rook_atk(self.ksq(self.stm), occ ^ src.bb() ^ epcap) & self.orth_slider(!self.stm)).is_empty()
-                {
+                // Prune orthgonal pins.
+                if (eprank & rook_atk(self.ksq(self.stm), occ ^ src.bb() ^ epcap) & self.orth_slider(!self.stm)).is_empty() {
                     receiver(Move::new(src, self.state.epsq, MoveFlag::EnPassant));
                 }
             });
@@ -242,7 +232,6 @@ impl Board {
     /// Add all castling moves.
     /// This should only be called when we are enumerating quiet moves
     /// and are not in check.
-    #[inline]
     fn enumerate_castling<F>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -254,24 +243,17 @@ impl Board {
         let qs_pin = (Square::C1.relative(self.stm).bb() | Square::B1.relative(self.stm).bb()) & self.state.pin_orth;
 
         // Kingside
-        if self.state.castling.has_ks(self.stm) && ks_pin.is_empty() {
-            let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<true>(ksq, self.stm);
-            if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
-                receiver(Move::new(ksq, Square::G1.relative(self.stm), MoveFlag::Castling));
-            }
+        if self.state.castling.has_ks(self.stm) && ks_pin.is_empty() && self.castlingmask.can_castle::<true>(ksq, self.stm, occ, atk) {
+            receiver(Move::new(ksq, Square::G1.relative(self.stm), MoveFlag::Castling));
         }
 
         // Queenside
-        if self.state.castling.has_qs(self.stm) && qs_pin.is_empty() {
-            let (occ_mask, atk_mask) = self.castlingmask.occ_atk::<false>(ksq, self.stm);
-            if (occ & occ_mask).is_empty() && (atk & atk_mask).is_empty() {
-                receiver(Move::new(ksq, Square::C1.relative(self.stm), MoveFlag::Castling));
-            }
+        if self.state.castling.has_qs(self.stm) && qs_pin.is_empty() && self.castlingmask.can_castle::<false>(ksq, self.stm, occ, atk) {
+            receiver(Move::new(ksq, Square::C1.relative(self.stm), MoveFlag::Castling));
         }
     }
 
     /// Add all king moves.
-    #[inline]
     fn enumerate_king<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -281,7 +263,6 @@ impl Board {
     }
 
     /// Add all knight moves.
-    #[inline]
     fn enumerate_knight<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -295,7 +276,6 @@ impl Board {
     }
 
     /// Add all diagonal slider moves.
-    #[inline]
     fn enumerate_diag<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
@@ -316,7 +296,6 @@ impl Board {
     }
 
     // Add all orthogonal slider moves.
-    #[inline]
     fn enumerate_orth<F, const MG: usize, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),

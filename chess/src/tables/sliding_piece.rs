@@ -14,19 +14,16 @@ fn init() {
 }
 
 /// Get all bishop attacks from a square given some occupancy.
-#[inline]
 pub fn bishop_atk(s: Square, occ: Bitboard) -> Bitboard {
     unsafe { BISHOP_PEXT_TABLE[s.idx()].attacks(occ) }
 }
 
 /// Get all rook attacks from a square given some occupancy.
-#[inline]
 pub fn rook_atk(s: Square, occ: Bitboard) -> Bitboard {
     unsafe { ROOK_PEXT_TABLE[s.idx()].attacks(occ) }
 }
 
 /// Get all squares in the line between two squares.
-#[inline]
 pub const fn between(a: Square, b: Square) -> Bitboard {
     BETWEEN_TABLE[a.idx()][b.idx()]
 }
@@ -110,7 +107,6 @@ struct PextEntry {
 
 impl PextEntry {
     /// Get the attacks for this PEXT entry.
-    #[inline]
     pub fn attacks(&self, occ: Bitboard) -> Bitboard {
         // Safety: The data pointer is valid and points to the static arrays.
         unsafe { *self.data.add(pext(occ.0, self.mask.0) as usize) }
@@ -122,7 +118,6 @@ impl PextEntry {
 }
 
 /// Parallel bit extract wrapper.
-#[inline]
 fn pext(a: u64, b: u64) -> u64 {
     use std::arch::x86_64::_pext_u64;
     unsafe { _pext_u64(a, b) }

@@ -19,7 +19,6 @@ impl Pos {
     }
 
     /// Get the material scale for the position.
-    #[inline]
     #[rustfmt::skip]
     fn material_scale(&self) -> i32 {
         let total_material = 

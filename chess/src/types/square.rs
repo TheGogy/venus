@@ -1,7 +1,7 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::impl_from_type;
+use crate::{impl_from_type, impl_lists};
 
 use super::{
     bitboard::Bitboard,
@@ -29,69 +29,53 @@ pub enum Square {
 }
 
 impl Square {
-    pub const NUM: usize = 64;
-
     /// Make a square from a rank and file.
-    #[inline]
     pub const fn make(r: Rank, f: File) -> Self {
         Self::from_raw(((r as u8) << 3) + f as u8)
     }
 
-    /// Get the index of the square.
-    #[inline]
-    pub const fn idx(self) -> usize {
-        assert!((self as usize) < Self::NUM);
-        self as usize
-    }
-
     /// Get a bitboard with only this square set.
-    #[inline]
     pub const fn bb(self) -> Bitboard {
         Bitboard(1u64 << self as u64)
     }
 
     /// Get the file the square is on.
-    #[inline]
     pub const fn file(self) -> File {
         File::from_raw(self as u8 & 0x7)
     }
 
     /// Get the rank the square is on.
-    #[inline]
     pub const fn rank(self) -> Rank {
         Rank::from_raw(self as u8 >> 3)
     }
 
     /// Gets the square relative to white's side.
-    #[inline]
     pub const fn relative(self, c: Color) -> Self {
         Self::from_raw(self as u8 ^ (c as u8 * 56))
     }
 
     /// Moves the square forward by one relative to the side.
-    #[inline]
     pub const fn forward(self, c: Color) -> Self {
         Self::from_raw(self as u8 + 8 - (16 * c.idx() as u8))
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8).
-    #[inline]
     pub const fn next(self) -> Self {
         Self::from_raw(self as u8 + 1)
     }
 
     /// Gets the previous square. (H8 -> A8 -> H1 -> A1).
-    #[inline]
     pub const fn prev(self) -> Self {
         Self::from_raw(self as u8 - 1)
     }
 
     /// Iterate over all squares.
-    #[inline]
     pub fn iter() -> impl Iterator<Item = Square> {
         (0..64).map(Square::from_raw)
     }
 }
+
+impl_lists! {Square, 64}
 
 /// Convert a string to a Square
 impl FromStr for Square {

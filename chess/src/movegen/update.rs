@@ -21,7 +21,6 @@ impl Board {
     }
 
     /// Updates the attacked pieces mask.
-    #[inline]
     fn update_attacked(&self, state: &mut BoardState) {
         let opp = !self.stm;
         let occ = self.occ() ^ self.pc_bb(self.stm, Piece::King);
@@ -50,7 +49,6 @@ impl Board {
 
     /// Update the king lines and checkers.
     #[rustfmt::skip]
-    #[inline]
     fn update_checkers(&self, state: &mut BoardState) {
         let opp = !self.stm;
         let ksq = self.ksq(self.stm);
@@ -65,7 +63,6 @@ impl Board {
 
     /// Update the king lines.
     #[rustfmt::skip]
-    #[inline]
     fn update_kinglines(&self, state: &mut BoardState) {
         let ksq = self.ksq(!self.stm);
         let occ = self.occ();
@@ -79,7 +76,6 @@ impl Board {
 
     /// Update the pins on the board.
     #[rustfmt::skip]
-    #[inline]
     fn update_pins(&self, state: &mut BoardState) {
         let opp = !self.stm;
         let ksq = self.ksq(self.stm);

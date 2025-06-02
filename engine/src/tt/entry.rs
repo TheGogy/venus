@@ -43,13 +43,11 @@ pub struct CompressedEntry {
 
 impl TTEntry {
     /// Make a new TT entry.
-    #[inline]
     pub const fn new(key: u64, age: u8, depth: u8, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
         Self { key, age, depth, bound, mov, eval: eval.0 as i16, value: value.0 as i16 }
     }
 
     /// Compress this TT entry.
-    #[inline]
     pub const fn compress(self) -> (u64, u64) {
         let data = (self.age as u64)
             | bits::pack_depth(self.depth)
@@ -62,7 +60,6 @@ impl TTEntry {
     }
 
     /// Get a TT entry from compressed format.
-    #[inline]
     pub const fn from_compressed(key: u64, data: u64) -> Self {
         Self {
             key: key ^ data, // Recover original key
@@ -76,37 +73,31 @@ impl TTEntry {
     }
 
     /// Get the depth.
-    #[inline]
     pub const fn depth(self) -> i16 {
         self.depth as i16
     }
 
     /// Get the bound.
-    #[inline]
     pub const fn bound(self) -> Bound {
         self.bound
     }
 
     /// Get the move.
-    #[inline]
     pub const fn mov(self) -> Move {
         self.mov
     }
 
     /// Get static evaluation.
-    #[inline]
     pub const fn eval(self) -> Eval {
         Eval(self.eval as i32)
     }
 
     /// Get the search score.
-    #[inline]
     pub const fn value(self, ply: usize) -> Eval {
         Eval(self.value as i32).from_corrected(ply)
     }
 
     /// Get the tightest bound with the current eval.
-    #[inline]
     pub fn get_tightest(self, eval: Eval, ply: usize) -> Eval {
         match self.bound() {
             Bound::Exact => self.value(ply),
@@ -119,7 +110,6 @@ impl TTEntry {
 
 impl CompressedEntry {
     /// Read the entry, with hash verification.
-    #[inline]
     pub fn read(&self, hash: Hash) -> Option<TTEntry> {
         let key = self.key.load(Ordering::Relaxed);
         let data = self.data.load(Ordering::Relaxed);
@@ -129,7 +119,6 @@ impl CompressedEntry {
     }
 
     /// Read without verification - only use when known valid.
-    #[inline]
     pub fn read_unchecked(&self) -> TTEntry {
         let key = self.key.load(Ordering::Relaxed);
         let data = self.data.load(Ordering::Relaxed);
@@ -137,7 +126,6 @@ impl CompressedEntry {
     }
 
     /// Write an entry to the table.
-    #[inline]
     pub fn write(&self, entry: TTEntry) {
         let (key, data) = entry.compress();
         self.key.store(key, Ordering::Relaxed);
@@ -145,7 +133,6 @@ impl CompressedEntry {
     }
 
     /// Check if this entry is occupied.
-    #[inline]
     pub fn is_occupied(&self) -> bool {
         self.key.load(Ordering::Relaxed) != 0
     }

@@ -1,11 +1,41 @@
 pub mod perftmp;
-pub mod scored_ml;
+pub mod utils;
 
 mod pick_move;
 mod score_move;
 
-use chess::types::{eval::Eval, moves::Move};
-use scored_ml::ScoredMoveList;
+use chess::{
+    MAX_MOVES,
+    types::{eval::Eval, moves::Move},
+};
+
+// ------------------------------------------------------------------------------------------------
+//
+// The movepicker sorts moves from what is probably the best move to what is probably the worst
+// move. This allows us to have more cuts in alpha-beta pruning.
+//
+// For PV search, moves are stored as follows:
+//
+//  N = Winning noisy move.
+//  n = Losing noisy move.
+//  Q = Quiet move.
+// +-----------+---------------+---------------------------------------------------+---------+
+// | N N N N N | Q Q Q Q Q Q Q |                                                   | n n n n |
+// +-----------+---------------+---------------------------------------------------+---------+
+// ^           ^               ^                                                   ^
+// cur         end             end (after enumerating quiets)                      noisy_loss_end
+//
+// 1. We enumerate noisy moves. Winning ones are placed starting from the left, losing ones are placed
+//    starting from the right.
+// 2. We go through the winning noisy moves, up to end (as shown above).
+// 3. We enumerate quiet moves, and put them all on the left.
+// 4. We go through all quiet moves, up to end (as shown above, after enumerating quiets).
+// 5. We go through the bad noisy moves, starting from the end of the list and working toward the
+//    middle.
+//
+// For all other search types, we go through each move sequentially as they are generated.
+//
+// ------------------------------------------------------------------------------------------------
 
 /// Move picker stages.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
@@ -51,13 +81,9 @@ impl MPStage {
 }
 
 #[derive(Clone, Debug)]
-pub struct MovePicker {
+pub struct MovePickerNew {
     stage: MPStage,
     searchtype: SearchType,
-
-    ml_quiet: ScoredMoveList,
-    ml_noisy_win: ScoredMoveList,
-    ml_noisy_loss: ScoredMoveList,
 
     tt_move: Move,
 
@@ -65,9 +91,17 @@ pub struct MovePicker {
     see_threshold: Eval,
 
     skip_quiets: bool,
+
+    mvs: [Move; MAX_MOVES],
+    scs: [i32; MAX_MOVES],
+
+    cur: usize,
+    end: usize,
+
+    noisy_loss_end: usize,
 }
 
-impl MovePicker {
+impl MovePickerNew {
     /// Construct a new move picker for the position.
     pub fn new(searchtype: SearchType, in_check: bool, tt_move: Move) -> Self {
         let mut stage = if in_check {
@@ -88,14 +122,14 @@ impl MovePicker {
         Self {
             stage,
             searchtype,
-
-            ml_quiet: ScoredMoveList::default(),
-            ml_noisy_win: ScoredMoveList::default(),
-            ml_noisy_loss: ScoredMoveList::default(),
-
             tt_move: ttm,
             see_threshold: Eval::DRAW,
             skip_quiets: false,
+            mvs: [Move::NONE; MAX_MOVES],
+            scs: [0; MAX_MOVES],
+            cur: 0,
+            noisy_loss_end: MAX_MOVES - 1,
+            end: 0,
         }
     }
 }
