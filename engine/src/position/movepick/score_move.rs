@@ -104,9 +104,9 @@ impl MovePickerNew {
 
         b.enumerate_moves::<_, MG_ALLMV>(|m| {
             // We've already picked the TT move if it exists.
-            // if m == self.tt_move {
-            //     return;
-            // }
+            if m == self.tt_move {
+                return;
+            }
 
             let s = if m.flag().is_noisy() {
                 NOISY_BASE + capture_value(b, m)
