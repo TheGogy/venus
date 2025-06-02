@@ -1,0 +1,25 @@
+name: OpenBench
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build_and_archive:
+    name: Build and Archive
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clone
+      uses: actions/checkout@v3
+
+    - name: Build
+      run: make
+
+    - name: Archive binary 
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ github.sha }}-linux
+        path: Venus
