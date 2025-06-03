@@ -4,7 +4,7 @@ pub mod pv;
 pub mod stack;
 
 mod helpers;
-mod pvs;
+mod pvsearch;
 mod qsearch;
 
 /// Node Type trait.

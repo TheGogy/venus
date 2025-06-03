@@ -1,8 +1,8 @@
 use chess::{MAX_MOVES, types::moves::Move};
 
-use super::MovePickerNew;
+use super::MovePicker;
 
-impl MovePickerNew {
+impl MovePicker {
     // Selects the next best move, and moves it to the front of the list.
     // We then move the current index towards the middle of the list.
     pub fn select_upto<const FORWARD: bool>(&mut self, end: usize) -> Move {

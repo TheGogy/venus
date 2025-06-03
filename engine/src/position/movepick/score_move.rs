@@ -10,12 +10,12 @@ use chess::{
 
 use crate::{
     history::conthist::CONT_NUM,
-    position::movepick::{MovePickerNew, SearchType},
+    position::movepick::{MovePicker, SearchType},
     threading::thread::Thread,
     tunables::params::tunables::*,
 };
 
-impl MovePickerNew {
+impl MovePicker {
     /// Generate all quiet moves and score them.
     pub fn gen_score_quiets(&mut self, b: &Board, t: &Thread) {
         const THREAT_Q: i32 = 32768;

@@ -2,7 +2,7 @@ use chess::{MAX_MOVES, types::moves::Move};
 
 use crate::{position::pos::Pos, threading::thread::Thread};
 
-use super::{MovePickerNew, SearchType};
+use super::{MovePicker, SearchType};
 
 impl Pos {
     /// Counts all the legal positions up to a given depth using the move picker.
@@ -16,7 +16,7 @@ impl Pos {
 
         let mut ml = [Move::NONE; MAX_MOVES];
         let mut nb_moves = 0;
-        let mut mp = MovePickerNew::new(SearchType::Pv, self.board.in_check(), Move::NONE);
+        let mut mp = MovePicker::new(SearchType::Pv, self.board.in_check(), Move::NONE);
         while let Some(m) = mp.next(&self.board, t) {
             ml[nb_moves] = m;
             nb_moves += 1;

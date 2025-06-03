@@ -5,7 +5,7 @@ use chess::types::{
     square::Square,
 };
 
-use super::HistEntry;
+use super::{HistEntry, movebuffer::MoveBuffer};
 
 /// [piecetype][captured][to]
 #[derive(Clone, Debug)]
@@ -37,12 +37,12 @@ impl NoisyHist {
         self.0[i.0][i.1][i.2].0 as i32
     }
 
-    pub fn update(&mut self, b: &Board, best: Move, noisies: &Vec<Move>, bonus: i16, malus: i16) {
+    pub fn update(&mut self, b: &Board, best: Move, noisies: &MoveBuffer, bonus: i16, malus: i16) {
         if best.flag().is_cap() {
             self.add_bonus(b, best, bonus);
         }
 
-        for m in noisies {
+        for m in noisies.iter() {
             self.add_bonus(b, *m, -malus);
         }
     }

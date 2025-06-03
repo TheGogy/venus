@@ -5,9 +5,9 @@ use chess::{
 
 use crate::threading::thread::Thread;
 
-use super::{MPStage, MovePickerNew};
+use super::{MPStage, MovePicker};
 
-impl MovePickerNew {
+impl MovePicker {
     pub fn next(&mut self, b: &Board, t: &Thread) -> Option<Move> {
         match self.stage {
             // Return TT move.

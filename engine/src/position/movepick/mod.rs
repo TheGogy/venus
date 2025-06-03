@@ -81,7 +81,7 @@ impl MPStage {
 }
 
 #[derive(Clone, Debug)]
-pub struct MovePickerNew {
+pub struct MovePicker {
     stage: MPStage,
     searchtype: SearchType,
 
@@ -101,7 +101,7 @@ pub struct MovePickerNew {
     noisy_loss_end: usize,
 }
 
-impl MovePickerNew {
+impl MovePicker {
     /// Construct a new move picker for the position.
     pub fn new(searchtype: SearchType, in_check: bool, tt_move: Move) -> Self {
         let mut stage = if in_check {

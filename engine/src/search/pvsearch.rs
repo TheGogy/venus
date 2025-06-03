@@ -4,8 +4,9 @@ use chess::{
 };
 
 use crate::{
+    history::movebuffer::MoveBuffer,
     position::{
-        movepick::{MovePickerNew, SearchType},
+        movepick::{MovePicker, SearchType},
         pos::Pos,
     },
     threading::thread::Thread,
@@ -82,11 +83,13 @@ impl Pos {
         let tt_entry = tt.probe(self.board.state.hash);
         let mut tt_move = Move::NONE;
         let mut tt_depth = -1;
+        let mut tt_value = Eval::DRAW;
 
         if let Some(tte) = tt_entry {
             tt_depth = tte.depth();
             let tt_bound = tte.bound();
-            let tt_value = tte.value(t.ply);
+
+            tt_value = tte.value(t.ply);
 
             // TT cutoff.
             if !NT::PV
@@ -138,15 +141,15 @@ impl Pos {
         let mut best_eval = -Eval::INFINITY;
         let mut best_move = Move::NONE;
 
-        let mut caps_tried = Vec::with_capacity(32);
-        let mut quiets_tried = Vec::with_capacity(32);
+        let mut caps_tried = MoveBuffer::default();
+        let mut quiets_tried = MoveBuffer::default();
         let mut moves_tried = 0;
 
         let child_pv = &mut PVLine::default();
 
         let old_alpha = alpha;
 
-        let mut mp = MovePickerNew::new(SearchType::Pv, in_check, tt_move);
+        let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
 
         while let Some(m) = mp.next(&self.board, t) {
             assert!(m.is_valid());
@@ -165,7 +168,6 @@ impl Pos {
 
             // Extensions.
             if ext_possible && m == tt_move {
-                let tt_value = tt_entry.unwrap().value(t.ply);
                 let ext_beta = (tt_value - (depth * ext_mult() / 64)).max(-Eval::INFINITY);
 
                 t.ss_mut().excluded = m;
@@ -273,7 +275,7 @@ impl Pos {
 
                 if v >= beta {
                     alpha = beta;
-                    t.update_history(m, depth, &self.board, quiets_tried, caps_tried);
+                    t.update_history(m, depth, &self.board, &quiets_tried, &caps_tried);
                     break;
                 }
             }
