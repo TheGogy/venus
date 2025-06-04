@@ -20,7 +20,7 @@ impl Pos {
     /// Principal variation search function.
     /// This performs the majority of the searching, then drops into qsearch at the end.
     #[allow(clippy::too_many_arguments)]
-    pub fn pvs<NT: NodeType>(
+    pub fn pvsearch<NT: NodeType>(
         &mut self,
         t: &mut Thread,
         tt: &TT,
@@ -171,7 +171,7 @@ impl Pos {
                 let ext_beta = (tt_value - (depth * ext_mult() / 64)).max(-Eval::INFINITY);
 
                 t.ss_mut().excluded = m;
-                let v = self.null_window_search(t, tt, pv, ext_beta, new_depth / 2, cutnode);
+                let v = self.nwsearch(t, tt, pv, ext_beta, new_depth / 2, cutnode);
                 t.ss_mut().excluded = Move::NULL;
 
                 let mut ext = 0;
@@ -227,7 +227,7 @@ impl Pos {
                 // We shouldn't extend or drop into qsearch.
                 let lmr_depth = (new_depth - r).clamp(1, new_depth + 1);
 
-                v = -self.null_window_search(t, tt, child_pv, -alpha, lmr_depth, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, lmr_depth, true);
 
                 // Verification search.
                 // If LMR search succeeds, then do a full search to verify it.
@@ -236,19 +236,19 @@ impl Pos {
                     new_depth -= (v < best_eval + new_depth && !NT::RT) as i16;
 
                     if lmr_depth < new_depth {
-                        v = -self.null_window_search(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
                     }
                 }
             }
             // If we can't do LMR, then instead do a null window search at full depth.
             else if !NT::PV || moves_tried > 1 {
-                v = -self.null_window_search(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
             }
 
             // For the first move of each node, do a full depth, full window search.
             // We should also do that if the score breaks the upper bound.
             if NT::PV && (moves_tried == 1 || v > alpha) {
-                v = -self.pvs::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
+                v = -self.pvsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
             }
 
             self.undo_move(m, t);

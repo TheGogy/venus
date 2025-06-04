@@ -23,7 +23,7 @@ use chess::{
 // | N N N N N | Q Q Q Q Q Q Q |                                                   | n n n n |
 // +-----------+---------------+---------------------------------------------------+---------+
 // ^           ^               ^                                                   ^
-// cur         end             end (after enumerating quiets)                      noisy_loss_end
+// cur         left            left (after enumerating quiets)                     right
 //
 // 1. We enumerate noisy moves. Winning ones are placed starting from the left, losing ones are placed
 //    starting from the right.
@@ -96,9 +96,9 @@ pub struct MovePicker {
     scs: [i32; MAX_MOVES],
 
     cur: usize,
-    end: usize,
 
-    noisy_loss_end: usize,
+    left: usize,
+    right: usize,
 }
 
 impl MovePicker {
@@ -125,11 +125,14 @@ impl MovePicker {
             tt_move: ttm,
             see_threshold: Eval::DRAW,
             skip_quiets: false,
+
             mvs: [Move::NONE; MAX_MOVES],
             scs: [0; MAX_MOVES],
+
             cur: 0,
-            noisy_loss_end: MAX_MOVES - 1,
-            end: 0,
+
+            right: MAX_MOVES - 1,
+            left: 0,
         }
     }
 }

@@ -39,7 +39,7 @@ fn main() {
         // Benchmarking
         Some("bench") => Engine::run_bench(),
 
-        Some(&_) => println!("Unknown command!"),
+        Some(&_) => println!("Unknown command! (run '--help')"),
         None => UCIReader::default().run(),
     }
 }
