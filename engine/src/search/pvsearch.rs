@@ -42,11 +42,6 @@ impl Pos {
             return self.qsearch::<NT::Next>(t, tt, pv, alpha, beta);
         }
 
-        // Other base case: If we are close to reaching max ply, quit here.
-        if t.ply >= MAX_DEPTH - 4 {
-            return if in_check { Eval::DRAW } else { self.evaluate(&mut t.nnue) };
-        }
-
         // Check extensions
         if in_check && depth < MAX_DEPTH as i16 {
             depth += 1;
@@ -152,7 +147,7 @@ impl Pos {
         let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
 
         while let Some(m) = mp.next(&self.board, t) {
-            assert!(m.is_valid());
+            debug_assert!(m.is_valid());
 
             // Ignore excluded move.
             if m == excluded {

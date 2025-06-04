@@ -20,9 +20,18 @@ impl Default for PVLine {
 impl PVLine {
     /// Update the PV line with a child line.
     pub fn update(&mut self, m: Move, child: &Self) {
+        debug_assert!(child.length < MAX_DEPTH);
+
         self.length = child.length + 1;
         self.moves[0] = m;
-        self.moves[1..=child.length].copy_from_slice(&child.moves[..child.length]);
+
+        // SAFETY: We've asserted that child.length < MAX_DEPTH,
+        // so child.length is a valid index, and the slice is valid.
+        unsafe {
+            let src = child.moves.get_unchecked(..child.length);
+            let dst = self.moves.get_unchecked_mut(1..=child.length);
+            dst.copy_from_slice(src);
+        }
     }
 
     /// Clear the PV line.

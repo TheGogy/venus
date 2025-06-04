@@ -72,7 +72,7 @@ impl TT {
 
         let same_position = hash.key == old.key;
 
-        let should_replace = self.age != old.age ||   // Always replace older entries
+        let should_replace = self.age != old.age ||         // Always replace older entries
             !same_position ||                               // Always replace different positions
             bound == Bound::Exact ||                        // Always replace with exact scores
             depth + tt_replace_d_min() + 2 * pv as i16 > old.depth as i16; // Replace if deeper
