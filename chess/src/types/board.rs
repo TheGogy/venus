@@ -377,6 +377,12 @@ impl Board {
         }
     }
 
+    /// Whether the only pieces remaining are kings and pawns.
+    pub fn only_king_pawns_left(&self) -> bool {
+        let stm = self.stm;
+        (self.c_bb(stm) ^ self.pc_bb(stm, Piece::King) ^ self.pc_bb(stm, Piece::Pawn)).is_empty()
+    }
+
     /// All attacks from a given piece type.
     pub fn atk_from(&self, p: Piece, c: Color) -> Bitboard {
         match p {

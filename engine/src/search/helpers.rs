@@ -1,4 +1,4 @@
-use chess::types::{eval::Eval, moves::Move};
+use chess::types::{board::Board, eval::Eval, moves::Move};
 
 use crate::{
     position::pos::Pos,
@@ -74,7 +74,18 @@ impl Pos {
 /// If the eval is well above beta, then we assume it will hold above beta.
 pub fn can_apply_rfp(t: &Thread, depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
     let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
-    !t.ss().ttpv && depth <= rfp_d_min() && eval - rfp_margin >= beta
+    !t.ss().ttpv && depth <= rfp_d_min() && eval - rfp_margin >= beta && !eval.is_tb_mate()
+}
+
+/// Null move pruning.
+/// If the opponent gets a free move and we're still above beta, then our
+/// position is probably so good we can just return beta.
+pub fn can_apply_nmp(b: &Board, t: &Thread, depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
+    depth > nmp_d_min()
+        && t.ply_from_null > 0
+        && eval >= t.ss().eval
+        && eval + nmp_improving_margin() * Eval(improving as i32) >= beta
+        && !b.only_king_pawns_left()
 }
 
 /// Late move reductions.

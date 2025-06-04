@@ -62,6 +62,7 @@ impl Pos {
         let in_check = self.board.in_check();
         let excluded = t.ss().excluded;
         let singular = !excluded.is_null();
+        let child_pv = &mut PVLine::default();
         let mut ext_possible = false;
 
         // -----------------------------------
@@ -118,6 +119,17 @@ impl Pos {
             }
 
             // Null move pruning.
+            if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
+                let r = (nmp_base() + depth / nmp_factor()).min(depth);
+
+                self.make_null(t);
+                let v = -self.nwsearch(t, tt, child_pv, -(beta - Eval(1)), depth - r, false);
+                self.undo_null(t);
+
+                if v >= beta {
+                    return beta;
+                }
+            }
         }
 
         // TODO: Probcut.
@@ -131,8 +143,6 @@ impl Pos {
         let mut caps_tried = MoveBuffer::default();
         let mut quiets_tried = MoveBuffer::default();
         let mut moves_tried = 0;
-
-        let child_pv = &mut PVLine::default();
 
         let old_alpha = alpha;
 

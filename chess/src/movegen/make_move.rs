@@ -2,7 +2,6 @@ use crate::types::{
     board::{Board, BoardState},
     moves::{Move, MoveFlag},
     piece::{CPiece, Piece},
-    square::Square,
 };
 
 /// Make and unmake move functions.
@@ -24,7 +23,6 @@ impl Board {
 
         // Remove ep key and unset ep sq
         state.hash.toggle_ep(self.state.epsq);
-        state.epsq = Square::Invalid;
 
         // Increment halfmove and fullmove counters.
         state.fullmoves = self.state.fullmoves + self.stm.idx();
@@ -185,9 +183,10 @@ impl Board {
         let mut state = BoardState::default();
 
         state.hash = self.state.hash;
+        state.castling = self.state.castling;
 
         // Unset ep square from hash.
-        state.hash.toggle_ep(state.epsq);
+        state.hash.toggle_ep(self.state.epsq);
 
         // Add null move
         state.mov = Move::NULL;
@@ -206,11 +205,7 @@ impl Board {
 
     /// Undo a null move from the board.
     pub fn undo_null(&mut self) {
-        // SAFETY: This will only be called when there is a valid move in the history.
-        let old_state = self.history.pop().unwrap();
-        self.state = old_state;
-
-        // Update stm
+        self.state = self.history.pop().unwrap();
         self.stm = !self.stm;
     }
 }
@@ -388,5 +383,18 @@ mod tests {
         let mut b: Board = "rnbqkbnr/pp2pp1p/8/2pP2p1/8/2P5/PP1P1PPP/RNBQKBNR w KQkq g6 1 4".parse().unwrap();
         b.make_null();
         assert_eq!(b.state.epsq, Square::Invalid);
+    }
+
+    #[test]
+    fn test_null_move_undo() {
+        let mut b: Board = "rnbqkbnr/pp2pp1p/8/2pP2p1/8/2P5/PP1P1PPP/RNBQKBNR w KQkq g6 1 4".parse().unwrap();
+        b.make_null();
+        b.undo_null();
+
+        assert_eq!(b.to_fen(), "rnbqkbnr/pp2pp1p/8/2pP2p1/8/2P5/PP1P1PPP/RNBQKBNR w KQkq g6 1 4");
+
+        // let d: Board = "rnbqkbnr/pp2pp1p/8/2pP2p1/8/2P5/PP1P1PPP/RNBQKBNR w KQkq g6 1 4".parse().unwrap();
+        // assert_eq!(b.castlingmask.mask, d.castlingmask.mask);
+        // assert_eq!(b.castlingmask.mask, d.castlingmask.mask);
     }
 }

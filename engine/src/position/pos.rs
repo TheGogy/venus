@@ -64,19 +64,28 @@ impl std::str::FromStr for Pos {
 }
 
 impl Pos {
+    /// Make a null move on the board on the given thread.
     pub fn make_move(&mut self, m: Move, t: &mut Thread) {
         let p = self.board.pc_at(m.src());
         t.move_made(p, m);
         self.board.make_move(m);
     }
 
+    /// Undo a move on the board on a given thread.
+    pub fn undo_move(&mut self, m: Move, t: &mut Thread) {
+        t.move_undo();
+        self.board.undo_move(m);
+    }
+
+    /// Make a null move on the board on a given thread.
     pub fn make_null(&mut self, t: &mut Thread) {
         t.null_made();
         self.board.make_null();
     }
 
-    pub fn undo_move(&mut self, m: Move, t: &mut Thread) {
+    /// Make a null move on the board on a given thread.
+    pub fn undo_null(&mut self, t: &mut Thread) {
         t.move_undo();
-        self.board.undo_move(m);
+        self.board.undo_null();
     }
 }

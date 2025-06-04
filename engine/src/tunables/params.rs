@@ -83,4 +83,10 @@ init_tunables! {
     rfp_d_min:            i16 = 9, 5, 12, 1;
     rfp_mult:             i32 = 76, 40, 120, 5;
     rfp_improving_margin: i32 = 55, 25, 85, 5;
+
+    // Null move pruning.
+    nmp_d_min:            i16 = 1, 1, 4, 1;
+    nmp_improving_margin: i32 = 67, 40, 100, 5;
+    nmp_base:             i16 = 5, 2, 7, 1;
+    nmp_factor:           i16 = 4, 2, 8, 1;
 }
