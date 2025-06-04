@@ -1,7 +1,4 @@
-use chess::{
-    MAX_DEPTH,
-    types::{eval::Eval, moves::Move},
-};
+use chess::types::{eval::Eval, moves::Move};
 
 use crate::{
     history::movebuffer::MoveBuffer,
@@ -27,24 +24,12 @@ impl Pos {
         pv: &mut PVLine,
         mut alpha: Eval,
         mut beta: Eval,
-        mut depth: i16,
+        depth: i16,
         cutnode: bool,
     ) -> Eval {
-        if t.should_stop() {
-            t.stop = true;
-            return Eval::DRAW;
-        }
-
-        let in_check = self.board.in_check();
-
         // Base case: depth = 0.
-        if depth <= 0 && !in_check {
+        if depth <= 0 {
             return self.qsearch::<NT::Next>(t, tt, pv, alpha, beta);
-        }
-
-        // Check extensions
-        if in_check && depth < MAX_DEPTH as i16 {
-            depth += 1;
         }
 
         pv.clear();
@@ -52,6 +37,12 @@ impl Pos {
         t.seldepth = if NT::RT { 0 } else { t.seldepth.max(t.ply) };
 
         if !NT::RT {
+            // Check if we should stop here in the search.
+            if t.should_stop() {
+                t.stop = true;
+                return Eval::DRAW;
+            }
+
             // Mate distance pruning.
             // If we have already found a faster mate,
             // then we don't need to search this node.
@@ -68,6 +59,7 @@ impl Pos {
             }
         }
 
+        let in_check = self.board.in_check();
         let excluded = t.ss().excluded;
         let singular = !excluded.is_null();
         let mut ext_possible = false;
