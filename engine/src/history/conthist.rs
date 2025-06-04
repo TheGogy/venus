@@ -1,6 +1,6 @@
 use chess::types::{moves::Move, piece::CPiece, square::Square};
 
-use super::HistEntry;
+use super::{HistEntry, movebuffer::MoveBuffer};
 
 #[derive(Clone, Debug)]
 pub struct ContHist(Box<[[[[HistEntry; Square::NUM]; Square::NUM]; Square::NUM]; CPiece::NUM]>);
@@ -32,10 +32,10 @@ impl ContHist {
         self.0[i.0][i.1][i.2][i.3].0 as i32
     }
 
-    pub fn update(&mut self, best: Move, pt: PieceTo, quiets: &Vec<Move>, bonus: i16, malus: i16) {
+    pub fn update(&mut self, best: Move, pt: PieceTo, quiets: &MoveBuffer, bonus: i16, malus: i16) {
         self.add_bonus(best, pt, bonus);
 
-        for m in quiets {
+        for m in quiets.iter() {
             self.add_bonus(*m, pt, -malus);
         }
     }

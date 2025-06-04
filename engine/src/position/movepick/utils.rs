@@ -1,11 +1,11 @@
 use chess::{MAX_MOVES, types::moves::Move};
 
-use super::MovePickerNew;
+use super::MovePicker;
 
-impl MovePickerNew {
+impl MovePicker {
     // Selects the next best move, and moves it to the front of the list.
     // We then move the current index towards the middle of the list.
-    pub fn select_upto<const FORWARD: bool>(&mut self, end: usize) -> Move {
+    pub fn select_upto<const IS_LEFT: bool>(&mut self, end: usize) -> Move {
         let cur = self.cur;
 
         let mut best_idx = cur;
@@ -14,7 +14,7 @@ impl MovePickerNew {
         let mut i = cur;
         while i != end {
             assert!(i < MAX_MOVES);
-            assert!((FORWARD && i < end) || (!FORWARD && i > end));
+            assert!((IS_LEFT && i < end) || (!IS_LEFT && i > end));
             assert!(self.mvs[i].is_valid());
 
             let s = self.scs[i];
@@ -24,12 +24,12 @@ impl MovePickerNew {
                 best_scr = s;
             }
 
-            if FORWARD { i += 1 } else { i -= 1 }
+            if IS_LEFT { i += 1 } else { i -= 1 }
         }
 
         self.swap(cur, best_idx);
 
-        if FORWARD {
+        if IS_LEFT {
             self.cur += 1
         } else {
             self.cur -= 1

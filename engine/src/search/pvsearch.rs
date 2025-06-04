@@ -4,8 +4,9 @@ use chess::{
 };
 
 use crate::{
+    history::movebuffer::MoveBuffer,
     position::{
-        movepick::{MovePickerNew, SearchType},
+        movepick::{MovePicker, SearchType},
         pos::Pos,
     },
     threading::thread::Thread,
@@ -19,7 +20,7 @@ impl Pos {
     /// Principal variation search function.
     /// This performs the majority of the searching, then drops into qsearch at the end.
     #[allow(clippy::too_many_arguments)]
-    pub fn pvs<NT: NodeType>(
+    pub fn pvsearch<NT: NodeType>(
         &mut self,
         t: &mut Thread,
         tt: &TT,
@@ -39,11 +40,6 @@ impl Pos {
         // Base case: depth = 0.
         if depth <= 0 && !in_check {
             return self.qsearch::<NT::Next>(t, tt, pv, alpha, beta);
-        }
-
-        // Other base case: If we are close to reaching max ply, quit here.
-        if t.ply >= MAX_DEPTH - 4 {
-            return if in_check { Eval::DRAW } else { self.evaluate(&mut t.nnue) };
         }
 
         // Check extensions
@@ -82,11 +78,13 @@ impl Pos {
         let tt_entry = tt.probe(self.board.state.hash);
         let mut tt_move = Move::NONE;
         let mut tt_depth = -1;
+        let mut tt_value = Eval::DRAW;
 
         if let Some(tte) = tt_entry {
             tt_depth = tte.depth();
             let tt_bound = tte.bound();
-            let tt_value = tte.value(t.ply);
+
+            tt_value = tte.value(t.ply);
 
             // TT cutoff.
             if !NT::PV
@@ -138,18 +136,18 @@ impl Pos {
         let mut best_eval = -Eval::INFINITY;
         let mut best_move = Move::NONE;
 
-        let mut caps_tried = Vec::with_capacity(32);
-        let mut quiets_tried = Vec::with_capacity(32);
+        let mut caps_tried = MoveBuffer::default();
+        let mut quiets_tried = MoveBuffer::default();
         let mut moves_tried = 0;
 
         let child_pv = &mut PVLine::default();
 
         let old_alpha = alpha;
 
-        let mut mp = MovePickerNew::new(SearchType::Pv, in_check, tt_move);
+        let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
 
         while let Some(m) = mp.next(&self.board, t) {
-            assert!(m.is_valid());
+            debug_assert!(m.is_valid());
 
             // Ignore excluded move.
             if m == excluded {
@@ -165,11 +163,10 @@ impl Pos {
 
             // Extensions.
             if ext_possible && m == tt_move {
-                let tt_value = tt_entry.unwrap().value(t.ply);
                 let ext_beta = (tt_value - (depth * ext_mult() / 64)).max(-Eval::INFINITY);
 
                 t.ss_mut().excluded = m;
-                let v = self.null_window_search(t, tt, pv, ext_beta, new_depth / 2, cutnode);
+                let v = self.nwsearch(t, tt, pv, ext_beta, new_depth / 2, cutnode);
                 t.ss_mut().excluded = Move::NULL;
 
                 let mut ext = 0;
@@ -225,7 +222,7 @@ impl Pos {
                 // We shouldn't extend or drop into qsearch.
                 let lmr_depth = (new_depth - r).clamp(1, new_depth + 1);
 
-                v = -self.null_window_search(t, tt, child_pv, -alpha, lmr_depth, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, lmr_depth, true);
 
                 // Verification search.
                 // If LMR search succeeds, then do a full search to verify it.
@@ -234,19 +231,19 @@ impl Pos {
                     new_depth -= (v < best_eval + new_depth && !NT::RT) as i16;
 
                     if lmr_depth < new_depth {
-                        v = -self.null_window_search(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
                     }
                 }
             }
             // If we can't do LMR, then instead do a null window search at full depth.
             else if !NT::PV || moves_tried > 1 {
-                v = -self.null_window_search(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
             }
 
             // For the first move of each node, do a full depth, full window search.
             // We should also do that if the score breaks the upper bound.
             if NT::PV && (moves_tried == 1 || v > alpha) {
-                v = -self.pvs::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
+                v = -self.pvsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
             }
 
             self.undo_move(m, t);
@@ -273,7 +270,7 @@ impl Pos {
 
                 if v >= beta {
                     alpha = beta;
-                    t.update_history(m, depth, &self.board, quiets_tried, caps_tried);
+                    t.update_history(m, depth, &self.board, &quiets_tried, &caps_tried);
                     break;
                 }
             }

@@ -1,6 +1,6 @@
 use chess::types::{color::Color, moves::Move, square::Square};
 
-use super::HistEntry;
+use super::{HistEntry, movebuffer::MoveBuffer};
 
 /// [color][from][to]
 #[derive(Clone, Debug)]
@@ -30,10 +30,10 @@ impl QuietHist {
         self.0[i.0][i.1][i.2].0 as i32
     }
 
-    pub fn update(&mut self, c: Color, best: Move, quiets: &Vec<Move>, bonus: i16, malus: i16) {
+    pub fn update(&mut self, c: Color, best: Move, quiets: &MoveBuffer, bonus: i16, malus: i16) {
         self.add_bonus(c, best, bonus);
 
-        for m in quiets {
+        for m in quiets.iter() {
             self.add_bonus(c, *m, -malus);
         }
     }

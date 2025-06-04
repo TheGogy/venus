@@ -10,12 +10,12 @@ use chess::{
 
 use crate::{
     history::conthist::CONT_NUM,
-    position::movepick::{MovePickerNew, SearchType},
+    position::movepick::{MovePicker, SearchType},
     threading::thread::Thread,
     tunables::params::tunables::*,
 };
 
-impl MovePickerNew {
+impl MovePicker {
     /// Generate all quiet moves and score them.
     pub fn gen_score_quiets(&mut self, b: &Board, t: &Thread) {
         const THREAT_Q: i32 = 32768;
@@ -59,8 +59,8 @@ impl MovePickerNew {
             }
 
             // Add to the front of the list.
-            self.insert(m, s, self.end);
-            self.end += 1;
+            self.insert(m, s, self.left);
+            self.left += 1;
         });
     }
 
@@ -84,12 +84,12 @@ impl MovePickerNew {
             let see_threshold = if self.searchtype == SearchType::Pv { Eval(-s / 32) } else { self.see_threshold };
             if b.see(m, see_threshold) && !m.flag().is_underpromo() {
                 // Good noisy move.
-                self.insert(m, s, self.end);
-                self.end += 1;
+                self.insert(m, s, self.left);
+                self.left += 1;
             } else {
                 // Bad noisy move.
-                self.insert(m, s, self.noisy_loss_end);
-                self.noisy_loss_end -= 1;
+                self.insert(m, s, self.right);
+                self.right -= 1;
             }
         });
     }
@@ -113,8 +113,8 @@ impl MovePickerNew {
                 t.hist_quiet.get_bonus(b.stm, m) + ch
             };
 
-            self.insert(m, s, self.end);
-            self.end += 1;
+            self.insert(m, s, self.left);
+            self.left += 1;
         });
     }
 }

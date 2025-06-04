@@ -36,8 +36,6 @@ impl UCIReader {
     /// Start UCI reader.
     pub fn run(&self) {
         println!("{NAME} v{VERSION} by {}", authors());
-        #[cfg(feature = "tune")]
-        println!("Tuning enabled.");
 
         let stdin = io::stdin().lock();
         for line in stdin.lines().map(Result::unwrap) {
@@ -81,7 +79,7 @@ impl UCIReader {
 impl UCIReader {
     /// uci command.
     pub fn cmd_uci(&self) {
-        println!("id name {NAME}");
+        println!("id name {NAME} v{VERSION}");
         println!("id author {}", authors());
 
         println!("{OPTS}");

@@ -1,4 +1,4 @@
-EXE := Venus
+EXE ?= Venus
 DIR := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))/build
 
 ifeq ($(OS),Windows_NT)

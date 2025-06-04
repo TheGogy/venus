@@ -14,8 +14,8 @@ use super::{OffPV, pv::PVLine};
 
 impl Pos {
     /// Null window search.
-    pub fn null_window_search(&mut self, t: &mut Thread, tt: &TT, pv: &mut PVLine, value: Eval, depth: i16, cutnode: bool) -> Eval {
-        self.pvs::<OffPV>(t, tt, pv, value - 1, value, depth, cutnode)
+    pub fn nwsearch(&mut self, t: &mut Thread, tt: &TT, pv: &mut PVLine, value: Eval, depth: i16, cutnode: bool) -> Eval {
+        self.pvsearch::<OffPV>(t, tt, pv, value - 1, value, depth, cutnode)
     }
 
     /// Stores the search result into the TT.

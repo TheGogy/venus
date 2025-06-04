@@ -16,6 +16,7 @@ use crate::{
     history::{
         conthist::{CONT_NUM, ContHist, PieceTo},
         hist_delta,
+        movebuffer::MoveBuffer,
         noisyhist::NoisyHist,
         quiethist::QuietHist,
     },
@@ -170,16 +171,16 @@ impl Thread {
     }
 
     /// Update the history tables given some quiet and noisy moves.
-    pub fn update_history(&mut self, best: Move, depth: i16, board: &Board, quiets: Vec<Move>, noisies: Vec<Move>) {
+    pub fn update_history(&mut self, best: Move, depth: i16, board: &Board, quiets: &MoveBuffer, noisies: &MoveBuffer) {
         let (bonus, malus) = hist_delta(depth);
-        self.hist_noisy.update(board, best, &noisies, bonus, malus);
+        self.hist_noisy.update(board, best, noisies, bonus, malus);
 
         if best.flag().is_quiet() {
-            self.hist_quiet.update(board.stm, best, &quiets, bonus, malus);
+            self.hist_quiet.update(board.stm, best, quiets, bonus, malus);
 
             for i in 0..CONT_NUM {
                 if let Some(pt) = self.pieceto_at(i + 1) {
-                    self.hist_conts[i].update(best, pt, &quiets, bonus, malus);
+                    self.hist_conts[i].update(best, pt, quiets, bonus, malus);
                 }
             }
         }

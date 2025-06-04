@@ -5,9 +5,9 @@ use chess::{
 
 use crate::threading::thread::Thread;
 
-use super::{MPStage, MovePickerNew};
+use super::{MPStage, MovePicker};
 
-impl MovePickerNew {
+impl MovePicker {
     pub fn next(&mut self, b: &Board, t: &Thread) -> Option<Move> {
         match self.stage {
             // Return TT move.
@@ -23,8 +23,8 @@ impl MovePickerNew {
 
             // Return all winning noisies.
             MPStage::PvNoisyWin | MPStage::QsNoisyAll | MPStage::EvAll => {
-                if self.cur < self.end {
-                    return Some(self.select_upto::<true>(self.end));
+                if self.cur < self.left {
+                    return Some(self.select_upto::<true>(self.left));
                 }
             }
 
@@ -37,8 +37,8 @@ impl MovePickerNew {
 
             // Return all quiets.
             MPStage::PvQuietAll => {
-                if !self.skip_quiets && self.cur < self.end {
-                    return Some(self.select_upto::<true>(self.end));
+                if !self.skip_quiets && self.cur < self.left {
+                    return Some(self.select_upto::<true>(self.left));
                 }
 
                 // Go to the end and work backwards through the losing noisy moves.
@@ -47,8 +47,8 @@ impl MovePickerNew {
 
             // Return all remaining moves.
             MPStage::PvNoisyLoss => {
-                if self.cur > self.noisy_loss_end {
-                    return Some(self.select_upto::<false>(self.noisy_loss_end));
+                if self.cur > self.right {
+                    return Some(self.select_upto::<false>(self.right));
                 }
             }
 

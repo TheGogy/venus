@@ -5,7 +5,7 @@ use chess::{
 
 use crate::{
     position::{
-        movepick::{MovePickerNew, SearchType},
+        movepick::{MovePicker, SearchType},
         pos::Pos,
     },
     threading::thread::Thread,
@@ -82,12 +82,10 @@ impl Pos {
 
         let child_pv = &mut PVLine::default();
 
-        let mut mp = MovePickerNew::new(SearchType::Qs, in_check, tt_move);
+        let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move);
 
         // If we have moves in the position, process them.
         while let Some(m) = mp.next(&self.board, t) {
-            assert!(m.is_valid());
-
             moves_tried += 1;
 
             self.make_move(m, t);

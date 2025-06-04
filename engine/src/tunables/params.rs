@@ -58,8 +58,8 @@ init_tunables! {
     tt_replace_d_min: i16 = 4, 2, 6, 1;
 
     // extensions.
-    ext_d_min: i16 = 9, 6, 11, 1;
-    ext_mult:  i16 = 128, 0, 5, 1;
+    ext_d_min:        i16 = 9, 6, 11, 1;
+    ext_mult:         i16 = 128, 0, 5, 1;
     ext_double_e_min: i16 = 13, 0, 50, 1;
     ext_triple_e_min: i16 = 120, 0, 200, 1;
 

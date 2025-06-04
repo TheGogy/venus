@@ -1,4 +1,5 @@
 pub mod conthist;
+pub mod movebuffer;
 pub mod noisyhist;
 pub mod quiethist;
 
