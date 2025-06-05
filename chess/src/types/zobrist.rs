@@ -14,6 +14,7 @@ use super::{
 /// This is used to get the correct key within the tablebases,
 /// as well as some history metrics.
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default)]
+#[repr(C)]
 pub struct Hash {
     pub key: u64,
     pub pawn_key: u64,

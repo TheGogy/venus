@@ -146,6 +146,7 @@ impl Thread {
     }
 }
 
+/// Histories.
 impl Thread {
     /// Get the piece and square of the move n steps back.
     pub fn pieceto_at(&self, offset: usize) -> Option<PieceTo> {
@@ -183,6 +184,21 @@ impl Thread {
                     self.hist_conts[i].update(best, pt, quiets, bonus, malus);
                 }
             }
+        }
+    }
+
+    /// Get the history score for a given move.
+    pub fn hist_score(&self, b: &Board, m: Move) -> i32 {
+        if m.flag().is_noisy() {
+            self.hist_noisy.get_bonus(b, m)
+        } else {
+            let mut v = self.hist_quiet.get_bonus(b.stm, m);
+            for i in [1, 2, 4] {
+                if let Some(pt) = self.pieceto_at(i) {
+                    v += self.hist_conts[i - 1].get_bonus(m, pt);
+                }
+            }
+            v
         }
     }
 }

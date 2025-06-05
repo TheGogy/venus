@@ -2,8 +2,8 @@ use std::{env, error::Error, fs::File, io::Write, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Generate LMR table.
-    const LMR_BASE: f32 = 0.839;
-    const LMR_MULT: f32 = 1.781;
+    const LMR_BASE: f32 = 839.0 / 1024.0;
+    const LMR_MULT: f32 = 1781.0 / 1024.0;
 
     let mut lmr_table = [[0; 64]; 64];
 

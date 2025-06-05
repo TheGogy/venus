@@ -91,7 +91,7 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: i16, improving: bool, eval: E
 /// Late move reductions.
 /// Reduce the search depth for moves with bad move ordering.
 pub fn can_apply_lmr(depth: i16, moves_tried: usize, is_pv: bool) -> bool {
-    depth >= lmr_d_min() && moves_tried as i16 >= lmr_m_min() + lmr_root_bonus() * is_pv as i16
+    depth >= 2 && moves_tried as i16 > 1 + is_pv as i16
 }
 
 /// Get the late move reduction amount.
@@ -109,8 +109,8 @@ pub fn lmr_reduction(depth: i16, moves_tried: usize) -> i16 {
             return 0;
         }
 
-        let lmr_base = lmr_base() as f32 / 1000.0;
-        let lmr_mult = lmr_mult() as f32 / 1000.0;
+        let lmr_base = lmr_base() as f32 / 1024.0;
+        let lmr_mult = lmr_mult() as f32 / 1024.0;
 
         (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as i16
     }

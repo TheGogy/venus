@@ -46,7 +46,11 @@ init_tunables! {
     hist_malus_base: i16 = 372, 100, 600, 25;
     hist_malus_mult: i16 = 359, 100, 600, 25;
 
-    // Continuation history scales (scaled up x1000).
+    // History divisors.
+    hist_quiet_div: i32 = 8800, 7000, 10000, 150;
+    hist_noisy_div: i32 = 6300, 5000, 8000, 150;
+
+    // Continuation history scales (scaled up x1024).
     ch_scale_0: i32 = 1000, 500, 1500, 50;
     ch_scale_1: i32 = 1000, 500, 1500, 50;
     ch_scale_2: i32 = 1000, 500, 1500, 50;
@@ -59,14 +63,9 @@ init_tunables! {
 
     // extensions.
     ext_d_min:        i16 = 9, 6, 11, 1;
-    ext_mult:         i16 = 128, 0, 5, 1;
+    ext_mult:         i16 = 128, 60, 200, 8;
     ext_double_e_min: i16 = 13, 0, 50, 1;
     ext_triple_e_min: i16 = 120, 0, 200, 1;
-
-    // Late move reductions.
-    lmr_d_min:      i16 = 2, 0, 6, 1;
-    lmr_m_min:      i16 = 1, 0, 6, 1;
-    lmr_root_bonus: i16 = 2, 0, 6, 1;
 
     // Late move reduction parameters (scaled up x1000).
     lmr_base: i32 = 839, 500, 2000, 100;

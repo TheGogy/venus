@@ -161,9 +161,13 @@ impl Pos {
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
 
+            let hist_score = t.hist_score(&self.board, m);
+
+            // -----------------------------------
+            //             Extensions
+            // -----------------------------------
             let mut new_depth = depth - 1;
 
-            // Extensions.
             if ext_possible && m == tt_move {
                 let ext_beta = (tt_value - (depth * ext_mult() / 64)).max(-Eval::INFINITY);
 
@@ -182,12 +186,12 @@ impl Pos {
                     }
                 }
                 // Multi-cut pruning.
-                else if ext_beta >= beta {
-                    return ext_beta;
+                else if v >= beta && !v.is_tb_mate() {
+                    return v;
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
-                    ext = -2 + NT::PV as i16;
+                    ext = -3 + NT::PV as i16;
                 }
                 // Use negative extensions for cutnodes.
                 else if cutnode {
@@ -211,15 +215,16 @@ impl Pos {
             if can_apply_lmr(depth, moves_tried, NT::PV) {
                 let mut r = lmr_reduction(depth, moves_tried);
 
-                // Reduce good moves less.
-                r -= in_check as i16;
+                // Decrease reductions for good moves, increase reductions for bad moves.
                 r -= t.ss().ttpv as i16;
+                r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as i16;
+                r -= in_check as i16;
                 r -= (tt_depth >= depth) as i16;
 
-                // Reduce bad moves more.
                 r += !NT::PV as i16;
+                r += cutnode as i16;
                 r += !improving as i16;
-                r += cutnode as i16 * (2 - t.ss().ttpv as i16);
+                r += tt_move.flag().is_noisy() as i16;
 
                 // We shouldn't extend or drop into qsearch.
                 let lmr_depth = (new_depth - r).clamp(1, new_depth + 1);
