@@ -89,4 +89,8 @@ init_tunables! {
     nmp_improving_margin: i32 = 68, 40, 100, 5;
     nmp_base:             i16 = 5, 2, 7, 1;
     nmp_factor:           i16 = 3, 2, 8, 1;
+
+    // Internal iterative reductions.
+    iir_pv_d_min:  i16 = 5, 3, 7, 1;
+    iir_opv_d_min: i16 = 7, 5, 10, 1;
 }

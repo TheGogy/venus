@@ -24,7 +24,7 @@ impl Pos {
         pv: &mut PVLine,
         mut alpha: Eval,
         mut beta: Eval,
-        depth: i16,
+        mut depth: i16,
         cutnode: bool,
     ) -> Eval {
         // Base case: depth = 0.
@@ -126,10 +126,15 @@ impl Pos {
                 let v = -self.nwsearch(t, tt, child_pv, -(beta - Eval(1)), depth - r, false);
                 self.undo_null(t);
 
-                if v >= beta {
+                if v >= beta && !v.is_tb_mate() {
                     return beta;
                 }
             }
+        }
+
+        // Internal Iterative reductions.
+        if can_apply_iir(depth, tt_move, NT::PV, cutnode) {
+            depth -= 1;
         }
 
         // TODO: Probcut.
@@ -210,7 +215,7 @@ impl Pos {
             // If we have searched enough moves so that we should start
             // reducing our search depth, then we should start with this search.
             if can_apply_lmr(depth, moves_tried, NT::PV) {
-                let mut r = lmr_reduction(depth, moves_tried);
+                let mut r = lmr_base_reduction(depth, moves_tried);
 
                 // Decrease reductions for good moves, increase reductions for bad moves.
                 r -= t.ss().ttpv as i16;

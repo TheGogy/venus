@@ -88,6 +88,13 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: i16, improving: bool, eval: E
         && !b.only_king_pawns_left()
 }
 
+// Internal iterative reductions.
+// For PV nodes without a tt hit, decrease the depth.
+pub fn can_apply_iir(depth: i16, tt_move: Move, is_pv: bool, cutnode: bool) -> bool {
+    let iir_d_min = if is_pv { iir_pv_d_min() } else { iir_opv_d_min() };
+    (is_pv || cutnode) && depth >= iir_d_min && tt_move.is_none()
+}
+
 /// Late move reductions.
 /// Reduce the search depth for moves with bad move ordering.
 pub fn can_apply_lmr(depth: i16, moves_tried: usize, is_pv: bool) -> bool {
@@ -95,7 +102,7 @@ pub fn can_apply_lmr(depth: i16, moves_tried: usize, is_pv: bool) -> bool {
 }
 
 /// Get the late move reduction amount.
-pub fn lmr_reduction(depth: i16, moves_tried: usize) -> i16 {
+pub fn lmr_base_reduction(depth: i16, moves_tried: usize) -> i16 {
     #[cfg(not(feature = "tune"))]
     {
         static LMR_TABLE: [[i16; 64]; 64] = unsafe { std::mem::transmute(*include_bytes!(concat!(env!("OUT_DIR"), "/lmr.bin"))) };
