@@ -184,6 +184,9 @@ impl Pos {
 
         let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
 
+        // Set up margins.
+        let lmp_margin = (depth * depth + lmp_base()) as usize;
+
         while let Some(m) = mp.next(&self.board, t) {
             debug_assert!(m.is_valid());
 
@@ -197,6 +200,14 @@ impl Pos {
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
             let hist_score = t.hist_score(&self.board, m);
+
+            // -----------------------------------
+            //            More Pruning
+            // -----------------------------------
+            // Futility pruning and late move pruning.
+            if is_quiet && !best_eval.is_loss() && !mp.skip_quiets && !in_check {
+                mp.skip_quiets = can_apply_fp(depth, eval, alpha, moves_tried) || can_apply_lmp(depth, moves_tried, lmp_margin);
+            }
 
             // -----------------------------------
             //             Extensions

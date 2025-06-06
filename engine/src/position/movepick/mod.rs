@@ -82,6 +82,8 @@ impl MPStage {
 
 #[derive(Clone, Debug)]
 pub struct MovePicker {
+    pub skip_quiets: bool,
+
     stage: MPStage,
     searchtype: SearchType,
 
@@ -89,8 +91,6 @@ pub struct MovePicker {
 
     // Constant for now, this is for when we implement probcut.
     see_threshold: Eval,
-
-    skip_quiets: bool,
 
     mvs: [Move; MAX_MOVES],
     scs: [i32; MAX_MOVES],

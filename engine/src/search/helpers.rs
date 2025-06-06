@@ -65,11 +65,28 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: i16, improving: bool, eval: E
         && !b.only_king_pawns_left()
 }
 
-// Internal iterative reductions.
-// For PV nodes without a tt hit, decrease the depth.
+/// Internal iterative reductions.
+/// For PV nodes without a tt hit, decrease the depth.
 pub fn can_apply_iir(depth: i16, tt_move: Move, is_pv: bool, cutnode: bool) -> bool {
     let iir_d_min = if is_pv { iir_pv_d_min() } else { iir_opv_d_min() };
     (is_pv || cutnode) && depth >= iir_d_min && tt_move.is_none()
+}
+
+/// Futility pruning.
+/// If our score is significantly below alpha, then this position is probably bad, then we should
+/// skip the quiet moves.
+pub fn can_apply_fp(depth: i16, eval: Eval, alpha: Eval, moves_tried: usize) -> bool {
+    let lmr_depth = depth - lmr_base_reduction(depth, moves_tried);
+    let fp_margin = Eval(fp_base() + (lmr_depth as i32) * fp_mult());
+
+    lmr_depth <= fp_threshold() && eval + fp_margin < alpha
+}
+
+/// Late move pruning.
+/// If we have seen a lot of moves in this position already, and we don't expect something good
+/// from this move, then we should skip the quiet moves.
+pub fn can_apply_lmp(depth: i16, moves_tried: usize, lmp_margin: usize) -> bool {
+    depth <= lmp_d_min() && moves_tried >= lmp_margin
 }
 
 /// Late move reductions.

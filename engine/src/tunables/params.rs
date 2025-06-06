@@ -95,7 +95,16 @@ init_tunables! {
     iir_opv_d_min: i16 = 7, 5, 10, 1;
 
     // Razoring.
-    razoring_d_max: i16 = 6, 2, 10, 1;
-    razoring_e_max: i32 = 2000, 1000, 3000, 100;
+    razoring_d_max:  i16 = 6, 2, 10, 1;
+    razoring_e_max:  i32 = 2000, 1000, 3000, 100;
     razoring_d_mult: i32 = 407, 300, 800, 25;
+
+    // Futility pruning.
+    fp_base:      i32 = 77, 50, 100, 2;
+    fp_mult:      i32 = 52, 30, 80, 2;
+    fp_threshold: i16 = 6, 3, 8, 1;
+
+    // Late move pruning.
+    lmp_base:  i16 = 3, 2, 8, 1;
+    lmp_d_min: i16 = 10, 5, 12, 1;
 }
