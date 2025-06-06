@@ -41,6 +41,12 @@ impl Pos {
     }
 }
 
+/// Razoring.
+/// If our eval is really low, just use qsearch instead of regular search.
+pub fn can_apply_razoring(depth: i16, eval: Eval, alpha: Eval) -> bool {
+    depth <= razoring_d_max() && eval.abs().0 <= razoring_e_max() && eval + (depth as i32 * razoring_d_mult()) < alpha
+}
+
 /// Reverse futility pruning.
 /// If the eval is well above beta, then we assume it will hold above beta.
 pub fn can_apply_rfp(t: &Thread, depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {

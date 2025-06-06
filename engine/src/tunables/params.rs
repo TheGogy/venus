@@ -93,4 +93,9 @@ init_tunables! {
     // Internal iterative reductions.
     iir_pv_d_min:  i16 = 5, 3, 7, 1;
     iir_opv_d_min: i16 = 7, 5, 10, 1;
+
+    // Razoring.
+    razoring_d_max: i16 = 6, 2, 10, 1;
+    razoring_e_max: i32 = 2000, 1000, 3000, 100;
+    razoring_d_mult: i32 = 407, 300, 800, 25;
 }

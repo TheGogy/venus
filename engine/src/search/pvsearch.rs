@@ -11,7 +11,7 @@ use crate::{
     tunables::params::tunables::*,
 };
 
-use super::{NodeType, helpers::*, pv::PVLine};
+use super::{NodeType, OffPV, helpers::*, pv::PVLine};
 
 impl Pos {
     /// Principal variation search function.
@@ -119,12 +119,12 @@ impl Pos {
 
         // If we have already evaluated this position use that instead.
         } else if let Some(tte) = tt_entry {
-            let tt_eval = tte.eval();
-            t.ss_mut().eval = if tt_eval == -Eval::INFINITY { self.evaluate(&mut t.nnue) } else { tt_eval };
+            let e = if tte.eval() == -Eval::INFINITY { self.evaluate(&mut t.nnue) } else { tte.eval() };
+            t.ss_mut().eval = e;
 
             // If the tt eval is a tighter bound than the static eval, use it instead.
             // Otherwise, just use static eval.
-            tte.get_tightest(t.ss().eval, t.ply)
+            tte.get_tightest(e, t.ply)
 
         // If nothing else, evaluate the position from scratch.
         } else {
@@ -142,6 +142,11 @@ impl Pos {
             // Reverse futility pruning (static null move pruning).
             if can_apply_rfp(t, depth, improving, eval, beta) {
                 return beta + (eval - beta) / 3;
+            }
+
+            // Razoring.
+            if can_apply_razoring(depth, eval, alpha) {
+                return self.qsearch::<OffPV>(t, tt, pv, alpha, beta);
             }
 
             // Null move pruning.
