@@ -61,23 +61,38 @@ impl Pos {
         // -----------------------------------
         //            Static Eval
         // -----------------------------------
+        let mut best_eval = if in_check {
+            t.ss_mut().eval = -Eval::INFINITY;
+            -Eval::INFINITY
 
-        let eval = self.static_eval(t, tt_entry, in_check);
+        // If we have already evaluated this position use that instead.
+        } else if let Some(tte) = tt_entry {
+            let tt_eval = tte.eval();
+
+            t.ss_mut().eval = if tt_eval == -Eval::INFINITY { self.evaluate(&mut t.nnue) } else { tt_eval };
+
+            // If the tt eval is a tighter bound than the static eval, use it instead.
+            // Otherwise, just use static eval.
+            tte.get_tightest(t.ss().eval, t.ply)
+
+        // If nothing else, evaluate the position from scratch.
+        } else {
+            // If we used a null move search last iteration, take the eval from that.
+            t.ss_mut().eval = if t.ss_at(1).mov.is_null() { -t.ss_at(1).eval } else { self.evaluate(&mut t.nnue) };
+            t.ss().eval
+        };
 
         // If the static eval is at least beta, return here.
-        if eval >= beta {
-            return (eval + beta) / 2;
+        if best_eval >= beta {
+            return (best_eval + beta) / 2;
         }
 
-        alpha = alpha.max(eval);
+        alpha = alpha.max(best_eval);
 
         // -----------------------------------
         //             Moves loop
         // -----------------------------------
-
-        let mut best_eval = eval;
         let mut best_move = Move::NONE;
-
         let mut moves_tried = 0;
 
         let child_pv = &mut PVLine::default();

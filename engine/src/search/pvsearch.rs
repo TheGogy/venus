@@ -107,11 +107,37 @@ impl Pos {
         // -----------------------------------
         //            Static Eval
         // -----------------------------------
+        let eval = if singular {
+            t.ss().eval
 
-        let eval = if singular { t.ss().eval } else { self.static_eval(t, tt_entry, in_check) };
+        // Don't evaluate positions in check.
+        } else if in_check {
+            // Get the previous eval if possible.
+            let prev_eval = if t.ply >= 2 { t.ss_at(2).eval } else { -Eval::INFINITY };
+            t.ss_mut().eval = prev_eval;
+            prev_eval
+
+        // If we have already evaluated this position use that instead.
+        } else if let Some(tte) = tt_entry {
+            let tt_eval = tte.eval();
+            t.ss_mut().eval = if tt_eval == -Eval::INFINITY { self.evaluate(&mut t.nnue) } else { tt_eval };
+
+            // If the tt eval is a tighter bound than the static eval, use it instead.
+            // Otherwise, just use static eval.
+            tte.get_tightest(t.ss().eval, t.ply)
+
+        // If nothing else, evaluate the position from scratch.
+        } else {
+            let nnue_eval = self.evaluate(&mut t.nnue);
+            t.ss_mut().eval = nnue_eval;
+            nnue_eval
+        };
+
         let improving = t.is_improving(in_check);
 
-        // Pruning
+        // -----------------------------------
+        //              Pruning
+        // -----------------------------------
         if !NT::PV && !in_check && !singular {
             // Reverse futility pruning (static null move pruning).
             if can_apply_rfp(t, depth, improving, eval, beta) {

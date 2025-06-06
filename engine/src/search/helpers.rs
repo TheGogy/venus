@@ -3,10 +3,7 @@ use chess::types::{board::Board, eval::Eval, moves::Move};
 use crate::{
     position::pos::Pos,
     threading::thread::Thread,
-    tt::{
-        entry::{Bound, TTEntry},
-        table::TT,
-    },
+    tt::{entry::Bound, table::TT},
     tunables::params::tunables::*,
 };
 
@@ -41,32 +38,6 @@ impl Pos {
         };
 
         tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, pv);
-    }
-
-    /// Static evaluation of the position.
-    /// We try to get the static eval from previous sources if possible, otherwise evaluate from
-    /// scratch.
-    pub fn static_eval(&self, t: &mut Thread, tt_entry: Option<TTEntry>, in_check: bool) -> Eval {
-        // Don't evaluate positions in check.
-        if in_check {
-            t.ss_mut().eval = -Eval::INFINITY;
-            -Eval::INFINITY
-
-        // If we have already evaluated this position use that instead.
-        } else if let Some(tte) = tt_entry {
-            let tt_eval = tte.eval();
-
-            t.ss_mut().eval = if tt_eval == -Eval::INFINITY { self.evaluate(&mut t.nnue) } else { tt_eval };
-
-            // If the tt eval is a tighter bound than the static eval, use it instead.
-            // Otherwise, just use static eval
-            tte.get_tightest(t.ss().eval, t.ply)
-
-        // If nothing else, evaluate the position from scratch.
-        } else {
-            t.ss_mut().eval = self.evaluate(&mut t.nnue);
-            t.ss().eval
-        }
     }
 }
 
