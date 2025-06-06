@@ -14,6 +14,8 @@ pub struct SearchStackEntry {
     pub eval: Eval,
     pub ttpv: bool,
     pub excluded: Move,
+
+    pub double_exts: usize,
 }
 
 impl Thread {

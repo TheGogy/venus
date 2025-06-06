@@ -160,7 +160,6 @@ impl Pos {
 
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
-
             let hist_score = t.hist_score(&self.board, m);
 
             // -----------------------------------
@@ -179,11 +178,9 @@ impl Pos {
 
                 // Single and double extensions.
                 if v < ext_beta {
-                    ext = if !NT::PV && v < ext_beta - ext_double_e_min() {
-                        2 + (is_quiet && v < ext_beta - ext_triple_e_min()) as i16
-                    } else {
-                        1
-                    }
+                    ext = 1
+                        + (!NT::PV && v < ext_beta - ext_double_e_min()) as i16
+                        + (!NT::PV && is_quiet && v < ext_beta - ext_triple_e_min()) as i16;
                 }
                 // Multi-cut pruning.
                 else if v >= beta && !v.is_tb_mate() {
@@ -191,7 +188,7 @@ impl Pos {
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
-                    ext = -3 + NT::PV as i16;
+                    ext = -3;
                 }
                 // Use negative extensions for cutnodes.
                 else if cutnode {
@@ -217,29 +214,27 @@ impl Pos {
 
                 // Decrease reductions for good moves, increase reductions for bad moves.
                 r -= t.ss().ttpv as i16;
-                r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as i16;
                 r -= in_check as i16;
                 r -= (tt_depth >= depth) as i16;
+                r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as i16;
 
-                r += !NT::PV as i16;
-                r += cutnode as i16;
+                r += (!NT::PV as i16) * 2;
+                r += (cutnode as i16) * 2;
                 r += !improving as i16;
                 r += tt_move.flag().is_noisy() as i16;
 
                 // We shouldn't extend or drop into qsearch.
-                let lmr_depth = (new_depth - r).clamp(1, new_depth + 1);
+                r = r.max(0);
 
-                v = -self.nwsearch(t, tt, child_pv, -alpha, lmr_depth, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r, true);
 
                 // Verification search.
                 // If LMR search succeeds, then do a full search to verify it.
-                if v > alpha && lmr_depth < new_depth {
+                if v > alpha && r > 0 {
                     new_depth += (v > best_eval + lmr_ver_e_min()) as i16;
                     new_depth -= (v < best_eval + new_depth && !NT::RT) as i16;
 
-                    if lmr_depth < new_depth {
-                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
-                    }
+                    v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
                 }
             }
             // If we can't do LMR, then instead do a null window search at full depth.
