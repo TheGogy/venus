@@ -73,6 +73,18 @@ impl Eval {
         Eval(-Self::TB_MATE.0 + ply as i32)
     }
 
+    /// Whether this score implies a win.
+    #[inline(always)]
+    pub const fn is_win(&self) -> bool {
+        self.0 >= Self::LONGEST_MATE.0
+    }
+
+    /// Whether this score implies a loss.
+    #[inline(always)]
+    pub const fn is_loss(&self) -> bool {
+        self.0 <= -Self::LONGEST_MATE.0
+    }
+
     /// Whether this score implies checkmate.
     #[inline(always)]
     pub const fn is_mate(&self) -> bool {
