@@ -107,4 +107,9 @@ init_tunables! {
     // Late move pruning.
     lmp_base:  i16 = 3, 2, 8, 1;
     lmp_d_min: i16 = 10, 5, 12, 1;
+
+    // SEE pruning.
+    sp_noisy_margin: i32 = -13, -40, 0, 5;
+    sp_quiet_margin: i32 = -70, -100, -30, 5;
+    sp_d_min:        i16 = 10, 6, 14, 1;
 }
