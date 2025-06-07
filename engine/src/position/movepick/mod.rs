@@ -83,8 +83,8 @@ impl MPStage {
 #[derive(Clone, Debug)]
 pub struct MovePicker {
     pub skip_quiets: bool,
+    pub stage: MPStage,
 
-    stage: MPStage,
     searchtype: SearchType,
 
     tt_move: Move,

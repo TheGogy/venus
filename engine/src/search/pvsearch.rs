@@ -3,7 +3,7 @@ use chess::types::{eval::Eval, moves::Move};
 use crate::{
     history::movebuffer::MoveBuffer,
     position::{
-        movepick::{MovePicker, SearchType},
+        movepick::{MPStage, MovePicker, SearchType},
         pos::Pos,
     },
     threading::thread::Thread,
@@ -186,6 +186,7 @@ impl Pos {
 
         // Set up margins.
         let lmp_margin = (depth * depth + lmp_base()) as usize;
+        let see_margin = [Eval(sp_noisy_margin() * (depth * depth) as i32), Eval(sp_quiet_margin() * depth as i32)];
 
         while let Some(m) = mp.next(&self.board, t) {
             debug_assert!(m.is_valid());
@@ -207,6 +208,16 @@ impl Pos {
             // Futility pruning and late move pruning.
             if is_quiet && !best_eval.is_loss() && !mp.skip_quiets && !in_check {
                 mp.skip_quiets = can_apply_fp(depth, eval, alpha, moves_tried) || can_apply_lmp(depth, moves_tried, lmp_margin);
+            }
+
+            // SEE pruning.
+            if !best_eval.is_loss()
+                && depth <= sp_d_min()
+                && mp.stage > MPStage::PvNoisyWin
+                && !self.board.see(m, see_margin[is_quiet as usize])
+            {
+                moves_tried += 1;
+                continue;
             }
 
             // -----------------------------------
