@@ -136,7 +136,7 @@ impl Eval {
 impl fmt::Display for Eval {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_mate() {
-            let moves_to_mate = (Self::MATE - self.abs() + 1) / 2;
+            let moves_to_mate = (Self::MATE.0 - self.abs().0 + 1) / 2;
             let sign = if *self > Self::DRAW { "" } else { "-" };
             write!(f, "mate {sign}{moves_to_mate}")
         } else {

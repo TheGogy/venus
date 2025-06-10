@@ -70,11 +70,6 @@ impl FromStr for TimeSettings {
             }
         }
 
-        // Validate the settings
-        if settings.wtime == 0 || settings.btime == 0 {
-            return Err("Missing or invalid time control parameters");
-        }
-
         Ok(settings)
     }
 }
