@@ -104,6 +104,9 @@ init_tunables! {
     fp_mult:      i32 = 52, 30, 80, 2;
     fp_threshold: i16 = 6, 3, 8, 1;
 
+    // Futility pruning for qsearch.
+    fp_qs_base: i32 = 350, 300, 400, 5;
+
     // Late move pruning.
     lmp_base:  i16 = 3, 2, 8, 1;
     lmp_d_min: i16 = 10, 5, 12, 1;
@@ -112,4 +115,5 @@ init_tunables! {
     sp_noisy_margin: i32 = -13, -40, 0, 5;
     sp_quiet_margin: i32 = -70, -100, -30, 5;
     sp_d_min:        i16 = 10, 6, 14, 1;
+    sp_qs_margin: i32 = -32, -10, -50, 2;
 }

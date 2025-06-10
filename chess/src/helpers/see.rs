@@ -14,16 +14,16 @@ use crate::{
     },
 };
 
-const P: i32 = 200;
-const N: i32 = 780;
-const B: i32 = 820;
-const R: i32 = 1300;
-const Q: i32 = 2500;
+const P: i32 = 199;
+const N: i32 = 778;
+const B: i32 = 803;
+const R: i32 = 1297;
+const Q: i32 = 2490;
 
 /// Static exchange evaluation.
 impl Board {
     /// Most Valuable Victim, Least Valuable Attacker.
-    const MVVLVA: [i32; 12] = [P, P, N, N, B, B, R, R, Q, Q, 0, 0];
+    pub const SEE_VALS: [i32; 12] = [P, P, N, N, B, B, R, R, Q, Q, 0, 0];
 
     /// Static Exchange evaluation (SEE).
     /// This determines if we win after all captures are made on a given square.
@@ -40,13 +40,13 @@ impl Board {
 
         // Get the value of the piece that we will use to capture.
         let mut move_val = if flag.is_cap() {
-            if flag == MoveFlag::EnPassant { Self::MVVLVA[0] } else { Self::MVVLVA[self.pc_at(dst).idx()] }
+            if flag == MoveFlag::EnPassant { Self::SEE_VALS[0] } else { Self::SEE_VALS[self.pc_at(dst).idx()] }
         } else {
             0
         };
 
         if flag.is_promo() {
-            move_val += Self::MVVLVA[victim.idx()] - Self::MVVLVA[0];
+            move_val += Self::SEE_VALS[victim.idx()] - Self::SEE_VALS[0];
         }
 
         // Stop if opponent is winning.
@@ -56,7 +56,7 @@ impl Board {
         }
 
         // If balance is in our favor, we can stop now.
-        balance -= Self::MVVLVA[victim.idx()];
+        balance -= Self::SEE_VALS[victim.idx()];
         if balance >= 0 {
             return true;
         }
@@ -98,7 +98,7 @@ impl Board {
             atk &= occ;
 
             stm = !stm;
-            balance = -balance - 1 - Self::MVVLVA[p.idx()];
+            balance = -balance - 1 - Self::SEE_VALS[p.idx()];
             if balance >= 0 {
                 // If our final recapturing piece is a king, and the opponent has another attacker,
                 // then a positive balance should mean a loss.

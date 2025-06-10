@@ -10,6 +10,7 @@ use crate::{
     },
     threading::thread::Thread,
     tt::{entry::Bound, table::TT},
+    tunables::params::tunables::*,
 };
 
 use super::{NodeType, pv::PVLine};
@@ -99,9 +100,24 @@ impl Pos {
 
         let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move);
 
-        // If we have moves in the position, process them.
+        let futility = t.ss().eval + fp_qs_base();
+
         while let Some(m) = mp.next(&self.board, t) {
             moves_tried += 1;
+
+            // -----------------------------------
+            //              Pruning
+            // -----------------------------------
+            if !best_eval.is_loss() {
+                if !self.board.in_check() && futility <= alpha && !self.board.see(m, Eval(1)) {
+                    best_eval = best_eval.max(futility);
+                    continue;
+                }
+
+                if !self.board.see(m, Eval(sp_qs_margin())) {
+                    continue;
+                }
+            }
 
             self.make_move(m, t);
             let v = -self.qsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha);
