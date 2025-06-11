@@ -20,11 +20,21 @@ impl Pos {
     /// We use this to avoid the "horizon" effect, by continuing the search
     /// until all captures have been made.
     pub fn qsearch<NT: NodeType>(&mut self, t: &mut Thread, tt: &TT, pv: &mut PVLine, mut alpha: Eval, beta: Eval) -> Eval {
+        // Check for upcoming repetition.
+        if alpha < Eval::DRAW && self.board.upcoming_repetition(t.ply) {
+            alpha = Eval::dithered_draw(t.nodes as i32);
+            if alpha >= beta {
+                return alpha;
+            }
+        }
+
         // Update seldepth.
         t.seldepth = t.seldepth.max(t.ply);
 
         // Clear PV
-        pv.clear();
+        if NT::PV {
+            pv.clear();
+        }
 
         let in_check = self.board.in_check();
         let old_alpha = alpha;

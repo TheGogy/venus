@@ -100,9 +100,9 @@ init_tunables! {
     razoring_d_mult: i32 = 407, 300, 800, 25;
 
     // Futility pruning.
-    fp_base:      i32 = 77, 50, 100, 2;
-    fp_mult:      i32 = 52, 30, 80, 2;
-    fp_threshold: i16 = 6, 3, 8, 1;
+    fp_base:  i32 = 77, 50, 100, 2;
+    fp_mult:  i32 = 52, 30, 80, 2;
+    fp_d_min: i16 = 6, 3, 8, 1;
 
     // Futility pruning for qsearch.
     fp_qs_base: i32 = 350, 300, 400, 5;

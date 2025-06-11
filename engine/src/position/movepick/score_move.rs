@@ -101,7 +101,6 @@ impl MovePicker {
 
         b.enumerate_moves::<_, MG_ALLMV>(|m| {
             // We've already picked the TT move if it exists.
-            // TODO: Remove this ..?? Further testing required.
             if m == self.tt_move {
                 return;
             }
