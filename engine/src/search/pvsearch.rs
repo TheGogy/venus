@@ -37,6 +37,14 @@ impl Pos {
         t.seldepth = if NT::RT { 0 } else { t.seldepth.max(t.ply) };
 
         if !NT::RT {
+            // Check for upcoming draw.
+            if alpha < Eval::DRAW && self.board.upcoming_repetition(t.ply) {
+                alpha = Eval::dithered_draw(t.nodes as i32);
+                if alpha >= beta {
+                    return alpha;
+                }
+            }
+
             // Check if we should stop here in the search.
             if t.should_stop() {
                 t.stop = true;
@@ -138,7 +146,7 @@ impl Pos {
         // -----------------------------------
         //              Pruning
         // -----------------------------------
-        if !NT::PV && !in_check && !singular {
+        if !NT::PV && !in_check {
             // Reverse futility pruning (static null move pruning).
             if can_apply_rfp(t, depth, improving, eval, beta) {
                 return beta + (eval - beta) / 3;
@@ -150,7 +158,7 @@ impl Pos {
             }
 
             // Null move pruning.
-            if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
+            if !singular && can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
                 let r = (nmp_base() + depth / nmp_factor()).min(depth);
 
                 self.make_null(t);
@@ -206,7 +214,7 @@ impl Pos {
             //            More Pruning
             // -----------------------------------
             // Futility pruning and late move pruning.
-            if is_quiet && !best_eval.is_loss() && !mp.skip_quiets && !in_check {
+            if !NT::RT && is_quiet && !best_eval.is_loss() && !mp.skip_quiets && !in_check {
                 mp.skip_quiets = can_apply_fp(depth, eval, alpha, moves_tried) || can_apply_lmp(depth, moves_tried, lmp_margin);
             }
 

@@ -51,7 +51,7 @@ pub fn can_apply_razoring(depth: i16, eval: Eval, alpha: Eval) -> bool {
 /// If the eval is well above beta, then we assume it will hold above beta.
 pub fn can_apply_rfp(t: &Thread, depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
     let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
-    !t.ss().ttpv && depth <= rfp_d_min() && eval - rfp_margin >= beta && !eval.is_tb_mate()
+    !t.ss().ttpv && depth <= rfp_d_min() && eval - rfp_margin >= beta && !beta.is_loss() && !eval.is_win()
 }
 
 /// Null move pruning.
@@ -79,7 +79,7 @@ pub fn can_apply_fp(depth: i16, eval: Eval, alpha: Eval, moves_tried: usize) -> 
     let lmr_depth = depth - lmr_base_reduction(depth, moves_tried);
     let fp_margin = Eval(fp_base() + (lmr_depth as i32) * fp_mult());
 
-    lmr_depth <= fp_threshold() && eval + fp_margin < alpha
+    lmr_depth <= fp_d_min() && eval + fp_margin < alpha
 }
 
 /// Late move pruning.
