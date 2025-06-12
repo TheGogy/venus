@@ -115,15 +115,16 @@ impl Pos {
         // -----------------------------------
         //            Static Eval
         // -----------------------------------
-        let eval = if singular {
-            t.ss().eval
-
         // Don't evaluate positions in check.
-        } else if in_check {
+        let eval = if in_check {
             // Get the previous eval if possible.
             let prev_eval = if t.ply >= 2 { t.ss_at(2).eval } else { -Eval::INFINITY };
             t.ss_mut().eval = prev_eval;
             prev_eval
+
+        // In singular search, just take the eval of the position that invoked it.
+        } else if singular {
+            t.ss().eval
 
         // If we have already evaluated this position use that instead.
         } else if let Some(tte) = tt_entry {
