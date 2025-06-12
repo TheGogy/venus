@@ -69,8 +69,8 @@ init_tunables! {
     ext_double_max: usize = 5, 1, 8, 1;
 
     // Late move reduction parameters (scaled up x1024).
-    lmr_base: i32 = 888, 500, 2000, 100;
-    lmr_mult: i32 = 2034, 1500, 4000, 100;
+    lmr_base: i32 = 1029, 500, 2000, 100;
+    lmr_mult: i32 = 2873, 1500, 4000, 100;
 
     // Late move reduction verifications.
     lmr_ver_e_min: i32 = 77, 40, 200, 2;

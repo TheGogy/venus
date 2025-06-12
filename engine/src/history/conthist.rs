@@ -22,7 +22,7 @@ impl ContHist {
         (pt.0.idx(), pt.1.idx(), m.src().idx(), m.dst().idx())
     }
 
-    fn add_bonus(&mut self, m: Move, pt: PieceTo, bonus: i16) {
+    pub fn add_bonus(&mut self, m: Move, pt: PieceTo, bonus: i16) {
         let i = Self::idx(m, pt);
         self.0[i.0][i.1][i.2][i.3].gravity::<CONT_MAX>(bonus);
     }

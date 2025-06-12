@@ -15,7 +15,7 @@ use nnue::network::NNUE;
 use crate::{
     history::{
         conthist::{CONT_NUM, ContHist, PieceTo},
-        hist_delta,
+        hist_bonus, hist_malus,
         movebuffer::MoveBuffer,
         noisyhist::NoisyHist,
         quiethist::QuietHist,
@@ -171,9 +171,27 @@ impl Thread {
         pms
     }
 
+    /// Update the continuation history with some bonus.
+    pub fn update_conthists(&mut self, cur: Move, v: Eval, alpha: Eval, beta: Eval, depth: i16) {
+        let bonus = if v <= alpha {
+            -hist_malus(depth)
+        } else if v >= beta {
+            hist_bonus(depth)
+        } else {
+            0
+        };
+
+        for i in [0, 1, 3, 5] {
+            if let Some(pt) = self.pieceto_at(i + 1) {
+                self.hist_conts[i].add_bonus(cur, pt, bonus);
+            }
+        }
+    }
+
     /// Update the history tables given some quiet and noisy moves.
     pub fn update_history(&mut self, best: Move, depth: i16, board: &Board, quiets: &MoveBuffer, noisies: &MoveBuffer) {
-        let (bonus, malus) = hist_delta(depth);
+        let bonus = hist_bonus(depth);
+        let malus = hist_malus(depth);
         self.hist_noisy.update(board, best, noisies, bonus, malus);
 
         if best.flag().is_quiet() {

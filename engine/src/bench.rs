@@ -11,7 +11,6 @@ impl Engine {
         let mut total_time = 0;
 
         for (i, fen) in FENS.iter().enumerate() {
-            println!("{i} - {fen}");
             let tt = TT::default();
             let mut pos: Pos = format!("fen {fen}").parse().unwrap();
             let mut thread = Thread::new(Clock::fixed_depth(BENCH_DEPTH));
@@ -21,6 +20,7 @@ impl Engine {
 
             total_time += start.elapsed().as_micros();
             total_nodes += thread.nodes;
+            println!("{i} - {fen} - {}", thread.nodes);
         }
 
         println!("{total_nodes} nodes {} nps", total_nodes * 1_000_000 / (total_time as u64).max(1))

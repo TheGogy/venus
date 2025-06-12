@@ -280,20 +280,21 @@ impl Pos {
                 let mut r = lmr_base_reduction(depth, moves_tried);
 
                 // Decrease reductions for good moves, increase reductions for bad moves.
-                r -= t.ss().ttpv as i16;
                 r -= in_check as i16;
                 r -= (tt_depth >= depth) as i16;
                 r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as i16;
+                r -= NT::PV as i16;
 
-                r += (!NT::PV as i16) * 2;
+                r += t.ss().ttpv as i16; // This should be negative for short time control.
                 r += (cutnode as i16) * 2;
                 r += !improving as i16;
                 r += tt_move.flag().is_noisy() as i16;
 
                 // We shouldn't extend or drop into qsearch.
                 r = r.max(0);
+                let lmr_depth = new_depth - r;
 
-                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, lmr_depth, true);
 
                 // Verification search.
                 // If LMR search succeeds, then do a full search to verify it.
@@ -301,7 +302,11 @@ impl Pos {
                     new_depth += (v > best_eval + lmr_ver_e_min()) as i16;
                     new_depth -= (v < best_eval + new_depth && !NT::RT) as i16;
 
-                    v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    if lmr_depth < new_depth {
+                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    }
+
+                    t.update_conthists(m, v, alpha, beta, new_depth);
                 }
             }
             // If we can't do LMR, then instead do a null window search at full depth.
