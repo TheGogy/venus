@@ -75,26 +75,32 @@ impl Eval {
 
     /// Whether this score implies a win.
     #[inline(always)]
-    pub const fn is_win(&self) -> bool {
-        self.0 >= Self::LONGEST_MATE.0
+    pub const fn is_win(self) -> bool {
+        self.0 >= Self::LONGEST_TB_MATE.0
     }
 
     /// Whether this score implies a loss.
     #[inline(always)]
-    pub const fn is_loss(&self) -> bool {
-        self.0 <= -Self::LONGEST_MATE.0
+    pub const fn is_loss(self) -> bool {
+        self.0 <= -Self::LONGEST_TB_MATE.0
     }
 
     /// Whether this score implies checkmate.
     #[inline(always)]
-    pub const fn is_mate(&self) -> bool {
+    pub const fn is_mate(self) -> bool {
         self.0.abs() >= Self::LONGEST_MATE.0
     }
 
     /// Whether this score implies checkmate has been found in the tb.
     #[inline(always)]
-    pub const fn is_tb_mate(&self) -> bool {
+    pub const fn is_tb_mate(self) -> bool {
         self.0.abs() >= Self::LONGEST_TB_MATE.0
+    }
+
+    /// Whether this score is valid.
+    #[inline(always)]
+    pub const fn is_valid(&self) -> bool {
+        self.0 != Self::NONE.0
     }
 
     /// Gets the eval from the corrected value stored in the TT.

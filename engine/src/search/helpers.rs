@@ -1,11 +1,6 @@
 use chess::types::{board::Board, eval::Eval, moves::Move};
 
-use crate::{
-    position::pos::Pos,
-    threading::thread::Thread,
-    tt::{entry::Bound, table::TT},
-    tunables::params::tunables::*,
-};
+use crate::{position::pos::Pos, threading::thread::Thread, tt::table::TT, tunables::params::tunables::*};
 
 use super::{OffPV, pv::PVLine};
 
@@ -14,44 +9,20 @@ impl Pos {
     pub fn nwsearch(&mut self, t: &mut Thread, tt: &TT, pv: &mut PVLine, value: Eval, depth: i16, cutnode: bool) -> Eval {
         self.pvsearch::<OffPV>(t, tt, pv, value - 1, value, depth, cutnode)
     }
-
-    /// Stores the search result into the TT.
-    #[allow(clippy::too_many_arguments)]
-    pub fn store_search_result(
-        &self,
-        t: &mut Thread,
-        tt: &TT,
-        best_eval: Eval,
-        alpha: Eval,
-        beta: Eval,
-        old_alpha: Eval,
-        best_move: Move,
-        depth: i16,
-        pv: bool,
-    ) {
-        let bound = if best_eval >= beta {
-            Bound::Lower
-        } else if best_eval > old_alpha {
-            Bound::Exact
-        } else {
-            Bound::Upper
-        };
-
-        tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, pv);
-    }
 }
 
 /// Razoring.
-/// If our eval is really low, just use qsearch instead of regular search.
+/// If our eval is really low - to the point where we can probably only catch up if we capture
+/// something - then do a qsearch.
 pub fn can_apply_razoring(depth: i16, eval: Eval, alpha: Eval) -> bool {
-    depth <= razoring_d_max() && eval.abs().0 <= razoring_e_max() && eval + (depth as i32 * razoring_d_mult()) < alpha
+    depth <= razoring_d_max() && alpha.0 < razoring_e_max() && eval < alpha - razoring_d_mult() * depth as i32
 }
 
 /// Reverse futility pruning.
 /// If the eval is well above beta, then we assume it will hold above beta.
-pub fn can_apply_rfp(t: &Thread, depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
+pub fn can_apply_rfp(depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
     let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
-    !t.ss().ttpv && depth <= rfp_d_min() && eval - rfp_margin >= beta && !beta.is_loss() && !eval.is_win()
+    depth <= rfp_d_max() && eval - rfp_margin >= beta && !beta.is_loss() && !eval.is_win()
 }
 
 /// Null move pruning.
@@ -74,25 +45,15 @@ pub fn can_apply_iir(depth: i16, tt_move: Move, is_pv: bool, cutnode: bool) -> b
 
 /// Futility pruning.
 /// If our score is significantly below alpha, then this position is probably bad, then we should
-/// skip the quiet moves.
-pub fn can_apply_fp(depth: i16, eval: Eval, alpha: Eval, moves_tried: usize) -> bool {
-    let lmr_depth = depth - lmr_base_reduction(depth, moves_tried);
-    let fp_margin = Eval(fp_base() + (lmr_depth as i32) * fp_mult());
-
-    lmr_depth <= fp_d_min() && eval + fp_margin < alpha
-}
-
-/// Late move pruning.
-/// If we have seen a lot of moves in this position already, and we don't expect something good
-/// from this move, then we should skip the quiet moves.
-pub fn can_apply_lmp(depth: i16, moves_tried: usize, lmp_margin: usize) -> bool {
-    depth <= lmp_d_min() && moves_tried >= lmp_margin
+/// only visit a few quiet moves.
+pub fn can_apply_fp(t: &Thread, is_quiet: bool, nb_quiets: usize, lmr_depth: i16, in_check: bool, alpha: Eval) -> bool {
+    is_quiet && nb_quiets >= 1 && lmr_depth <= 10 && !in_check && t.ss().eval + 160 + 134 * lmr_depth <= alpha
 }
 
 /// Late move reductions.
 /// Reduce the search depth for moves with bad move ordering.
-pub fn can_apply_lmr(depth: i16, moves_tried: usize, is_pv: bool) -> bool {
-    depth >= 2 && moves_tried as i16 > 1 + is_pv as i16
+pub fn can_apply_lmr(depth: i16, moves_tried: usize, is_root: bool) -> bool {
+    depth >= 2 && moves_tried as i16 > 1 + is_root as i16
 }
 
 /// Get the late move reduction amount.

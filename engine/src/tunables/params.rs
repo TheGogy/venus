@@ -79,8 +79,14 @@ init_tunables! {
     lmr_quiet_div: i32 = 8568, 6000, 10000, 100;
     lmr_noisy_div: i32 = 5798, 4000, 10000, 100;
 
+    // Move loop pruning.
+    mlp_hist_div: i32 = 3489, 3000, 5000, 100;
+
+    // History pruning.
+    hp_hist_d_mult: i32 = -7000, -8000, -6000, 100;
+
     // Reverse futility pruning.
-    rfp_d_min:            i16 = 8, 5, 12, 1;
+    rfp_d_max:            i16 = 11, 5, 12, 1;
     rfp_mult:             i32 = 85, 40, 120, 5;
     rfp_improving_margin: i32 = 54, 25, 85, 5;
 
@@ -97,7 +103,7 @@ init_tunables! {
     // Razoring.
     razoring_d_max:  i16 = 6, 2, 10, 1;
     razoring_e_max:  i32 = 2000, 1000, 3000, 100;
-    razoring_d_mult: i32 = 407, 300, 800, 25;
+    razoring_d_mult: i32 = 355, 300, 800, 25;
 
     // Futility pruning.
     fp_base:  i32 = 77, 50, 100, 2;
@@ -112,8 +118,8 @@ init_tunables! {
     lmp_d_min: i16 = 10, 5, 12, 1;
 
     // SEE pruning.
-    sp_noisy_margin: i32 = -13, -40, 0, 5;
-    sp_quiet_margin: i32 = -70, -100, -30, 5;
+    sp_noisy_margin: i32 = -35, -40, 0, 5;
+    sp_quiet_margin: i32 = -95, -120, -30, 5;
     sp_d_min:        i16 = 10, 6, 14, 1;
-    sp_qs_margin: i32 = -32, -10, -50, 2;
+    sp_qs_margin: i32 = -32, -50, -10, 2;
 }

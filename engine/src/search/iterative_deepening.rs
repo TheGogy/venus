@@ -34,6 +34,7 @@ impl Pos {
 
     /// Aspiration window. Keep searching until we find something within the window.
     fn asp_window(&mut self, t: &mut Thread, tt: &TT) -> Eval {
+        t.seldepth = 0;
         let mut pv = PVLine::default();
         let mut alpha = -Eval::INFINITY;
         let mut beta = Eval::INFINITY;

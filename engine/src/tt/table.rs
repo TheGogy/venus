@@ -1,12 +1,12 @@
 use crate::tunables::params::tunables::*;
 
-use super::entry::{Bound, CompressedEntry, TTEntry};
+use super::entry::{Bound, PackedTTEntry, TTEntry};
 
 use chess::types::{eval::Eval, moves::Move, zobrist::Hash};
 
 /// Transposition table.
 pub struct TT {
-    entries: Vec<CompressedEntry>,
+    entries: Vec<PackedTTEntry>,
     age: u8,
 }
 
@@ -25,8 +25,8 @@ impl TT {
 
     /// Resize the table to the given size (mb).
     pub fn resize(&mut self, new_size_mb: usize) {
-        let entries_count = (new_size_mb << 20) / size_of::<CompressedEntry>();
-        self.entries.resize_with(entries_count, CompressedEntry::default);
+        let entries_count = (new_size_mb << 20) / size_of::<PackedTTEntry>();
+        self.entries.resize_with(entries_count, PackedTTEntry::default);
     }
 
     /// Get the index for a given hash.
@@ -49,7 +49,7 @@ impl TT {
             use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
             let index = self.idx(hash);
             let entry = self.entries.get_unchecked(index);
-            _mm_prefetch::<_MM_HINT_T0>((entry as *const CompressedEntry).cast());
+            _mm_prefetch::<_MM_HINT_T0>((entry as *const PackedTTEntry).cast());
         }
     }
 
@@ -79,21 +79,21 @@ impl TT {
 
         if should_replace {
             let new_move = if mov.is_null() && same_position { old.mov } else { mov };
-            slot.write(TTEntry::new(hash.key, self.age, depth as u8, bound, new_move, eval, value.to_corrected(ply)));
+            slot.write(TTEntry::new(hash.key, pv, self.age, depth as u8, bound, new_move, eval, value.to_corrected(ply)));
         }
     }
 
     /// Clear the transposition table.
     pub fn clear(&mut self) {
         self.age = 0;
-        self.entries.iter_mut().for_each(|e| *e = CompressedEntry::default());
+        self.entries.iter_mut().for_each(|e| *e = PackedTTEntry::default());
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::tt::{
-        entry::{Bound, CompressedEntry},
+        entry::{Bound, PackedTTEntry},
         table::TT,
     };
     use chess::types::{eval::Eval, moves::Move, zobrist::Hash};
@@ -103,7 +103,7 @@ mod tests {
         let mut tt = TT::default();
         tt.resize(1);
 
-        assert_eq!(16, size_of::<CompressedEntry>());
+        assert_eq!(16, size_of::<PackedTTEntry>());
         assert_eq!(65536, tt.entries.len());
     }
 
