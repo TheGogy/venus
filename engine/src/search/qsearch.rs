@@ -67,8 +67,6 @@ impl Pos {
             }
         };
 
-        t.ss_mut().ttpv = NT::PV;
-
         // -----------------------------------
         //            Static Eval
         // -----------------------------------
@@ -163,7 +161,7 @@ impl Pos {
             best_eval = (best_eval + beta) / 2;
         }
 
-        self.store_search_result(t, tt, best_eval, alpha, beta, old_alpha, best_move, 0, t.ss().ttpv);
+        self.store_search_result(t, tt, best_eval, alpha, beta, old_alpha, best_move, 0, false);
 
         best_eval
     }

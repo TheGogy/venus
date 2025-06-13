@@ -12,7 +12,6 @@ pub struct SearchStackEntry {
 
     pub ply_from_null: usize,
     pub eval: Eval,
-    pub ttpv: bool,
     pub excluded: Move,
 
     pub double_exts: usize,

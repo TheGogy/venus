@@ -106,10 +106,6 @@ impl Pos {
             ext_possible = !NT::RT && depth >= ext_d_min() && !tt_value.is_tb_mate() && tt_bound != Bound::Upper && tt_depth >= depth - 3;
         }
 
-        if !singular {
-            t.ss_mut().ttpv = NT::PV
-        }
-
         // TODO: Tablebases probe.
 
         // -----------------------------------
@@ -149,7 +145,7 @@ impl Pos {
         // -----------------------------------
         if !NT::PV && !in_check {
             // Reverse futility pruning (static null move pruning).
-            if can_apply_rfp(t, depth, improving, eval, beta) {
+            if can_apply_rfp(depth, improving, eval, beta) {
                 return beta + (eval - beta) / 3;
             }
 
@@ -280,18 +276,16 @@ impl Pos {
                 let mut r = lmr_base_reduction(depth, moves_tried);
 
                 // Decrease reductions for good moves, increase reductions for bad moves.
-                r -= t.ss().ttpv as i16;
-                r -= in_check as i16;
+                r -= NT::PV as i16;
+                r -= self.board.in_check() as i16;
                 r -= (tt_depth >= depth) as i16;
                 r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as i16;
 
-                r += (!NT::PV as i16) * 2;
-                r += (cutnode as i16) * 2;
+                r += cutnode as i16;
                 r += !improving as i16;
-                r += tt_move.flag().is_noisy() as i16;
 
                 // We shouldn't extend or drop into qsearch.
-                r = r.max(0);
+                r = r.clamp(1, depth - 1);
 
                 v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r, true);
 

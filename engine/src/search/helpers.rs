@@ -49,9 +49,9 @@ pub fn can_apply_razoring(depth: i16, eval: Eval, alpha: Eval) -> bool {
 
 /// Reverse futility pruning.
 /// If the eval is well above beta, then we assume it will hold above beta.
-pub fn can_apply_rfp(t: &Thread, depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
+pub fn can_apply_rfp(depth: i16, improving: bool, eval: Eval, beta: Eval) -> bool {
     let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
-    !t.ss().ttpv && depth <= rfp_d_min() && eval - rfp_margin >= beta && !beta.is_loss() && !eval.is_win()
+    depth <= rfp_d_min() && eval - rfp_margin >= beta && !beta.is_loss() && !eval.is_win()
 }
 
 /// Null move pruning.
