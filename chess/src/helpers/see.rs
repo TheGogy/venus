@@ -14,11 +14,11 @@ use crate::{
     },
 };
 
-const P: i32 = 199;
-const N: i32 = 778;
-const B: i32 = 803;
-const R: i32 = 1297;
-const Q: i32 = 2490;
+const P: i32 = 170;
+const N: i32 = 445;
+const B: i32 = 465;
+const R: i32 = 709;
+const Q: i32 = 1321;
 
 /// Static exchange evaluation.
 impl Board {

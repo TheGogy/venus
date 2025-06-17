@@ -23,14 +23,14 @@ use crate::init_tunables;
 // mult => The multiplier (combined with a base value).
 init_tunables! {
     // Piece values.
-    val_pawn:   i32 = 199, 150, 250, 5;
-    val_knight: i32 = 778, 700, 900, 10;
-    val_bishop: i32 = 803, 700, 900, 10;
-    val_rook:   i32 = 1297, 1200, 1500, 10;
-    val_queen:  i32 = 2490, 2400, 2600, 10;
+    val_pawn:   i32 = 170, 150, 250, 5;
+    val_knight: i32 = 445, 700, 900, 10;
+    val_bishop: i32 = 465, 700, 900, 10;
+    val_rook:   i32 = 709, 1200, 1500, 10;
+    val_queen:  i32 = 1321, 2400, 2600, 10;
 
     // Material scaling values.
-    mat_scale_base: i32 = 700, 600, 900, 10;
+    mat_scale_base: i32 = 771, 600, 900, 10;
 
     // Aspiration window.
     asp_window_default: i32 = 26, 10, 30, 1;
