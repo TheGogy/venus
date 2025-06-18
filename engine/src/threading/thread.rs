@@ -133,10 +133,8 @@ impl Thread {
     }
 
     /// Whether the current position is improving.
-    pub fn is_improving(&self, in_check: bool) -> bool {
-        if in_check {
-            false
-        } else if self.ply >= 2 && self.ss_at(2).eval != -Eval::INFINITY {
+    pub fn is_improving(&self) -> bool {
+        if self.ply >= 2 && self.ss_at(2).eval != -Eval::INFINITY {
             self.ss().eval > self.ss_at(2).eval
         } else if self.ply >= 4 && self.ss_at(4).eval != -Eval::INFINITY {
             self.ss().eval > self.ss_at(4).eval

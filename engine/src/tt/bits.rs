@@ -4,6 +4,7 @@ use chess::types::moves::Move;
 use crate::tt::entry::Bound;
 
 // Entry data bit positions
+const SHIFT_AGE: u64 = 1;
 const SHIFT_DEPTH: u64 = 7;
 const SHIFT_BOUND: u64 = 14;
 const SHIFT_MOVE: u64 = 16;
@@ -11,7 +12,8 @@ const SHIFT_EVAL: u64 = 32;
 const SHIFT_VALUE: u64 = 48;
 
 // Entry data masks
-const MASK_AGE: u64 = 0x7F;
+const MASK_PV: u64 = 0x1;
+pub const MASK_AGE: u64 = 0x3F;
 const MASK_DEPTH: u64 = 0x7F << SHIFT_DEPTH;
 const MASK_BOUND: u64 = 0x3 << SHIFT_BOUND;
 const MASK_MOVE: u64 = 0xFFFF << SHIFT_MOVE;
@@ -19,6 +21,14 @@ const MASK_EVAL: u64 = 0xFFFF << SHIFT_EVAL;
 const MASK_VALUE: u64 = 0xFFFF << SHIFT_VALUE;
 
 // Helper functions for packing data
+pub const fn pack_pv(pv: bool) -> u64 {
+    pv as u64
+}
+
+pub const fn pack_age(age: u8) -> u64 {
+    (age as u64) << SHIFT_AGE
+}
+
 pub const fn pack_bound(bound: Bound) -> u64 {
     (bound as u64) << SHIFT_BOUND
 }
@@ -40,8 +50,12 @@ pub const fn pack_move(mv: Move) -> u64 {
 }
 
 // Helper functions for unpacking data
+pub const fn unpack_pv(data: u64) -> bool {
+    data & MASK_PV != 0
+}
+
 pub const fn unpack_age(data: u64) -> u8 {
-    (data & MASK_AGE) as u8
+    ((data & MASK_AGE) >> SHIFT_AGE) as u8
 }
 
 pub const fn unpack_bound(data: u64) -> Bound {

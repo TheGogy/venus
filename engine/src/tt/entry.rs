@@ -15,10 +15,22 @@ use super::bits;
 #[repr(u8)]
 pub enum Bound {
     #[default]
-    Upper,
-    Lower,
-    Exact,
-    None,
+    None = 0b00,
+    Upper = 0b01,
+    Lower = 0b10,
+    Exact = 0b11,
+}
+
+impl Bound {
+    /// Whether this bound contains the other bound.
+    pub const fn has(self, other: Bound) -> bool {
+        self as u8 & other as u8 != 0
+    }
+
+    /// Whether the eval e is usable given operand o.
+    pub const fn is_usable(self, e: Eval, o: Eval) -> bool {
+        self.has(if e.0 >= o.0 { Self::Lower } else { Self::Upper })
+    }
 }
 
 /// Entry in the transposition table
@@ -26,7 +38,8 @@ pub enum Bound {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash, Default)]
 pub struct TTEntry {
     pub key: u64,     // 64 bits - Position hash.
-    pub age: u8,      //  7 bits - Search generation.
+    pub pv: bool,     //  1 bit  - Whether this node was pv.
+    pub age: u8,      //  6 bits - Search generation.
     pub depth: u8,    //  7 bits - Search depth.
     pub bound: Bound, //  2 bits - Type of bound.
     pub mov: Move,    // 16 bits - Best move found.
@@ -43,13 +56,15 @@ pub struct CompressedEntry {
 
 impl TTEntry {
     /// Make a new TT entry.
-    pub const fn new(key: u64, age: u8, depth: u8, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
-        Self { key, age, depth, bound, mov, eval: eval.0 as i16, value: value.0 as i16 }
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(key: u64, pv: bool, age: u8, depth: u8, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
+        Self { key, pv, age, depth, bound, mov, eval: eval.0 as i16, value: value.0 as i16 }
     }
 
     /// Compress this TT entry.
     pub const fn compress(self) -> (u64, u64) {
-        let data = (self.age as u64)
+        let data = bits::pack_pv(self.pv)
+            | bits::pack_age(self.age)
             | bits::pack_depth(self.depth)
             | bits::pack_bound(self.bound)
             | bits::pack_move(self.mov)
@@ -63,6 +78,7 @@ impl TTEntry {
     pub const fn from_compressed(key: u64, data: u64) -> Self {
         Self {
             key: key ^ data, // Recover original key
+            pv: bits::unpack_pv(data),
             age: bits::unpack_age(data),
             depth: bits::unpack_depth(data),
             bound: bits::unpack_bound(data),
@@ -70,6 +86,11 @@ impl TTEntry {
             eval: bits::unpack_eval(data),
             value: bits::unpack_value(data),
         }
+    }
+
+    /// Get whether this was a pv node.
+    pub const fn pv(self) -> bool {
+        self.pv
     }
 
     /// Get the depth.

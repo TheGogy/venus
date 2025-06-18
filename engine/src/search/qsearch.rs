@@ -13,13 +13,13 @@ use crate::{
     tunables::params::tunables::*,
 };
 
-use super::{NodeType, pv::PVLine};
+use super::NodeType;
 
 impl Pos {
     /// Quiescence search.
     /// We use this to avoid the "horizon" effect, by continuing the search
     /// until all captures have been made.
-    pub fn qsearch<NT: NodeType>(&mut self, t: &mut Thread, tt: &TT, pv: &mut PVLine, mut alpha: Eval, beta: Eval) -> Eval {
+    pub fn qsearch<NT: NodeType>(&mut self, t: &mut Thread, tt: &TT, mut alpha: Eval, beta: Eval) -> Eval {
         // Check for upcoming repetition.
         if alpha < Eval::DRAW && self.board.upcoming_repetition(t.ply) {
             alpha = Eval::dithered_draw(t.nodes as i32);
@@ -30,11 +30,6 @@ impl Pos {
 
         // Update seldepth.
         t.seldepth = t.seldepth.max(t.ply);
-
-        // Clear PV
-        if NT::PV {
-            pv.clear();
-        }
 
         let in_check = self.board.in_check();
         let old_alpha = alpha;
@@ -61,8 +56,8 @@ impl Pos {
 
             match entry.bound() {
                 Bound::Exact => return tt_value,
-                Bound::Lower if !NT::PV && !in_check && tt_value >= beta => return beta,
-                Bound::Upper if !NT::PV && !in_check && tt_value <= alpha => return alpha,
+                Bound::Lower if tt_value >= beta => return beta,
+                Bound::Upper if tt_value <= alpha => return alpha,
                 _ => tt_move = entry.mov(),
             }
         };
@@ -106,8 +101,6 @@ impl Pos {
         let mut best_move = Move::NONE;
         let mut moves_tried = 0;
 
-        let child_pv = &mut PVLine::default();
-
         let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move);
 
         let futility = t.ss().eval + fp_qs_base();
@@ -130,7 +123,7 @@ impl Pos {
             }
 
             self.make_move(m, t);
-            let v = -self.qsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha);
+            let v = -self.qsearch::<NT::Next>(t, tt, -beta, -alpha);
             self.undo_move(m, t);
 
             // Update best
@@ -139,11 +132,6 @@ impl Pos {
 
                 if v > alpha {
                     best_move = m;
-
-                    if NT::PV {
-                        pv.clear();
-                        pv.update(m, child_pv);
-                    }
 
                     if v < beta {
                         alpha = v;

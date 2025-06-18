@@ -54,7 +54,7 @@ impl MovePicker {
 
             for i in 0..CONT_NUM {
                 if let Some(pt) = prev_piecetos[i] {
-                    s += (t.hist_conts[i].get_bonus(m, pt) * ch_scale[i]) / 1000;
+                    s += (t.hist_conts[i].get_bonus(m, pt) * ch_scale[i]) / 1024;
                 }
             }
 
