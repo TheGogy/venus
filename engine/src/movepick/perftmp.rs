@@ -1,10 +1,10 @@
 use chess::{MAX_MOVES, types::moves::Move};
 
-use crate::{position::pos::Pos, threading::thread::Thread};
+use crate::{position::Position, threading::thread::Thread};
 
 use super::{MovePicker, SearchType};
 
-impl Pos {
+impl Position {
     /// Counts all the legal positions up to a given depth using the move picker.
     pub fn perftmp<const PRINT: bool>(&mut self, depth: usize) -> usize {
         let t = Thread::placeholder();
@@ -44,7 +44,7 @@ impl Pos {
 
 #[cfg(test)]
 mod tests {
-    use crate::position::pos::Pos;
+    use crate::position::Position;
 
     #[test]
     fn test_perftmp() {
@@ -70,7 +70,7 @@ mod tests {
         ];
 
         for (fen, correct_count, depth) in PERFT_TESTS {
-            let mut board: Pos = format!("fen {fen}").parse().unwrap();
+            let mut board: Position = format!("fen {fen}").parse().unwrap();
             println!("{fen}");
             let nodes = board.perftmp::<true>(*depth);
             assert_eq!(nodes, *correct_count);

@@ -24,6 +24,7 @@ mod fallback {
     /// Flatten the accumulator using the given weights. (fallback: non-vectorized)
     pub fn flatten(acc: &SideAccumulator, weights: &SideAccumulator) -> i32 {
         let mut sum = 0;
+        println!("FALLBACK");
 
         for (&x, &w) in acc.0.iter().zip(&weights.0) {
             sum += screlu(x) * w as i32;
@@ -33,6 +34,7 @@ mod fallback {
     }
 }
 
+#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
 mod simdvec {
     use crate::{
         accumulator::SideAccumulator,

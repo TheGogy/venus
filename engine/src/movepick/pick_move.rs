@@ -1,11 +1,11 @@
-use chess::{
-    MAX_MOVES,
-    types::{board::Board, moves::Move},
-};
+use chess::types::{board::Board, moves::Move};
 
 use crate::threading::thread::Thread;
 
-use super::{MPStage, MovePicker};
+use super::{
+    MPStage, MovePicker,
+    move_list::{LEFT, RIGHT},
+};
 
 impl MovePicker {
     pub fn next(&mut self, b: &Board, t: &Thread) -> Option<Move> {
@@ -23,8 +23,8 @@ impl MovePicker {
 
             // Return all winning noisies.
             MPStage::PvNoisyWin | MPStage::QsNoisyAll | MPStage::EvAll => {
-                if self.cur < self.left {
-                    return Some(self.select_upto::<true>(self.left));
+                if self.move_list.has_moves::<LEFT>() {
+                    return Some(self.move_list.select_upto::<LEFT>());
                 }
             }
 
@@ -37,18 +37,18 @@ impl MovePicker {
 
             // Return all quiets.
             MPStage::PvQuietAll => {
-                if !self.skip_quiets && self.cur < self.left {
-                    return Some(self.select_upto::<true>(self.left));
+                if !self.skip_quiets && self.move_list.has_moves::<LEFT>() {
+                    return Some(self.move_list.select_upto::<LEFT>());
                 }
 
-                // Go to the end and work backwards through the losing noisy moves.
-                self.cur = MAX_MOVES - 1;
+                // Get ready to go over losing noisy moves.
+                self.move_list.prepare_bad_moves();
             }
 
             // Return all remaining moves.
             MPStage::PvNoisyLoss => {
-                if self.cur > self.right {
-                    return Some(self.select_upto::<false>(self.right));
+                if self.move_list.has_moves::<RIGHT>() {
+                    return Some(self.move_list.select_upto::<RIGHT>());
                 }
             }
 

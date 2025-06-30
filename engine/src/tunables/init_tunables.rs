@@ -8,7 +8,7 @@
 ///
 /// # Example
 ///
-/// //  name:      type = min, max, val, step;
+/// //  name:      type = val, min, max, step;
 /// init_tunables! {
 ///     val_pawn:   i32 = 200, 150, 250, 5;
 ///     val_knight: i32 = 780, 700, 900, 10;

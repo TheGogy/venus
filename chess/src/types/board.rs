@@ -29,7 +29,6 @@ pub struct BoardState {
     // Used to unmake moves.
     pub mov: Move,
     pub cap: CPiece,
-    pub mvp: CPiece,
 
     // Bitboards for movegen.
     pub attacked: Bitboard,

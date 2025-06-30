@@ -1,8 +1,9 @@
 use std::time::Instant;
 
-use crate::{interface::Engine, position::pos::Pos, threading::thread::Thread, timeman::clock::Clock, tt::table::TT};
+use crate::{interface::Engine, position::Position, threading::thread::Thread, time_management::timemanager::TimeManager, tt::table::TT};
 
-const BENCH_DEPTH: i16 = 20;
+// NOTE:  Make sure that bench depth is at least as high as the highest of any min depths in tuning.
+const BENCH_DEPTH: i16 = 14;
 
 impl Engine {
     /// Runs a benchmark of the engine on a number of positions.
@@ -10,11 +11,10 @@ impl Engine {
         let mut total_nodes = 0;
         let mut total_time = 0;
 
-        for (i, fen) in FENS.iter().enumerate() {
-            println!("{i} - {fen}");
+        for fen in FENS {
             let tt = TT::default();
-            let mut pos: Pos = format!("fen {fen}").parse().unwrap();
-            let mut thread = Thread::new(Clock::fixed_depth(BENCH_DEPTH));
+            let mut pos: Position = format!("fen {fen}").parse().unwrap();
+            let mut thread = Thread::new(TimeManager::fixed_depth(BENCH_DEPTH));
 
             let start = Instant::now();
             pos.iterative_deepening::<false>(&mut thread, &tt);

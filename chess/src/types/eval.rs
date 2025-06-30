@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{MAX_DEPTH, impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
+use crate::{MAX_PLY, impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
 
 /// Represents the evaluation within a game.
 ///
@@ -21,8 +21,8 @@ impl Eval {
     pub const INFINITY: Eval = Eval(32001);
     pub const NONE: Eval = Eval(32002);
 
-    pub const LONGEST_MATE: Eval = Eval(Self::MATE.0 - MAX_DEPTH as i32);
-    pub const LONGEST_TB_MATE: Eval = Eval(Self::TB_MATE.0 - MAX_DEPTH as i32);
+    pub const LONGEST_MATE: Eval = Eval(Self::MATE.0 - MAX_PLY as i32);
+    pub const LONGEST_TB_MATE: Eval = Eval(Self::TB_MATE.0 - MAX_PLY as i32);
 
     /// Gets the absolute value of the Eval.
     #[inline(always)]
@@ -75,26 +75,38 @@ impl Eval {
 
     /// Whether this score implies a win.
     #[inline(always)]
-    pub const fn is_win(&self) -> bool {
+    pub const fn is_win(self) -> bool {
         self.0 >= Self::LONGEST_MATE.0
     }
 
     /// Whether this score implies a loss.
     #[inline(always)]
-    pub const fn is_loss(&self) -> bool {
+    pub const fn is_loss(self) -> bool {
         self.0 <= -Self::LONGEST_MATE.0
     }
 
     /// Whether this score implies checkmate.
     #[inline(always)]
-    pub const fn is_mate(&self) -> bool {
+    pub const fn is_mate(self) -> bool {
         self.0.abs() >= Self::LONGEST_MATE.0
     }
 
     /// Whether this score implies checkmate has been found in the tb.
     #[inline(always)]
-    pub const fn is_tb_mate(&self) -> bool {
+    pub const fn is_tb_mate(self) -> bool {
         self.0.abs() >= Self::LONGEST_TB_MATE.0
+    }
+
+    /// Whether this score implies that the game has not been confirmed as mate.
+    #[inline(always)]
+    pub const fn nonterminal(self) -> bool {
+        !self.is_tb_mate()
+    }
+
+    /// Whether or not this is a valid score.
+    #[inline(always)]
+    pub const fn is_valid(&self) -> bool {
+        self.0.abs() <= Self::INFINITY.0
     }
 
     /// Gets the eval from the corrected value stored in the TT.

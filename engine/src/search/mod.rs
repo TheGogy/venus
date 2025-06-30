@@ -1,9 +1,7 @@
 pub mod iterative_deepening;
-
 pub mod pv;
-pub mod stack;
 
-mod helpers;
+mod pruning;
 mod pvsearch;
 mod qsearch;
 
@@ -17,9 +15,9 @@ pub trait NodeType {
     type Next: NodeType;
 }
 
-struct Root; // Root node.
-struct OnPV; // PV node (non-null search window)
-struct OffPV; // Non-PV node (null search window)
+pub struct Root; // Root node.
+pub struct OnPV; // PV node (non-null search window).
+pub struct OffPV; // Non-PV node (null search window).
 
 impl NodeType for Root {
     const PV: bool = true;

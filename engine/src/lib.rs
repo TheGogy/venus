@@ -1,8 +1,9 @@
 mod history;
+mod movepick;
 mod position;
 mod search;
 mod threading;
-mod timeman;
+mod time_management;
 mod tt;
 
 pub mod bench;
