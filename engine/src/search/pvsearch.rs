@@ -309,7 +309,7 @@ impl Position {
                 r += !improving as Depth;
                 r += tt_move.flag().is_noisy() as Depth;
 
-                r = r.clamp(-1, depth - 1);
+                r = r.clamp(0, depth - 1);
 
                 // Try reduced depth first.
                 v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r, true);
