@@ -309,10 +309,10 @@ impl Position {
                 r += !improving as Depth;
                 r += tt_move.flag().is_noisy() as Depth;
 
-                r = r.clamp(1, depth - 1);
+                r = r.clamp(-1, depth - 1);
 
                 // Try reduced depth first.
-                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth + 1 - r, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r, true);
 
                 // Re-search at full depth if the reduced search suggests the move is good.
                 if v > alpha && r > 1 {
