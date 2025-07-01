@@ -92,6 +92,7 @@ impl Position {
         let mut tt_value = Eval::NONE;
         let mut tt_bound = Bound::None;
         let mut tt_depth = -1;
+        let mut tt_pv = NT::PV;
 
         if !singular && let Some(tte) = tt.probe(self.board.state.hash) {
             tt_move = tte.mov();
@@ -99,6 +100,7 @@ impl Position {
             tt_value = tte.value(t.ply);
             tt_bound = tte.bound();
             tt_depth = tte.depth();
+            tt_pv |= tte.pv();
         }
 
         // TT cutoff.
@@ -269,8 +271,8 @@ impl Position {
                     1
                 }
                 // Negative extensions.
-                else if tt_value >= beta {
-                    -2 + NT::PV as Depth
+                else if tt_value >= beta && v.is_valid() {
+                    -3 + NT::PV as Depth
                 } else if cutnode {
                     -2
                 }
@@ -392,7 +394,7 @@ impl Position {
         // If we have searched all moves and have an exact score, then use an exact bound.
         // If all moves have failed low (i.e best_move was never updated) then the position is at most alpha.
         let bound = if NT::PV && best_move.is_valid() { Bound::Exact } else { Bound::Upper };
-        tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, NT::PV);
+        tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, tt_pv);
 
         alpha
     }
