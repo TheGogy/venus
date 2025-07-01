@@ -92,6 +92,7 @@ impl Position {
         let mut tt_value = Eval::NONE;
         let mut tt_bound = Bound::None;
         let mut tt_depth = -1;
+        let mut tt_pv = NT::PV;
 
         if !singular && let Some(tte) = tt.probe(self.board.state.hash) {
             tt_move = tte.mov();
@@ -99,6 +100,7 @@ impl Position {
             tt_value = tte.value(t.ply);
             tt_bound = tte.bound();
             tt_depth = tte.depth();
+            tt_pv |= tte.pv();
         }
 
         // TT cutoff.
@@ -298,13 +300,12 @@ impl Position {
                 let mut r = lmr_base_reduction(depth, moves_tried);
 
                 // Decrease reductions for good moves.
-                r -= in_check as Depth;
                 r -= self.board.in_check() as Depth;
                 r -= (tt_depth >= depth) as Depth;
                 r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as Depth;
+                r -= NT::PV as Depth + tt_pv as Depth;
 
                 // Increase reductions for bad moves.
-                r += !NT::PV as Depth;
                 r += cutnode as Depth;
                 r += !improving as Depth;
                 r += tt_move.flag().is_noisy() as Depth;
