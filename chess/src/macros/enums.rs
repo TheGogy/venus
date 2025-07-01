@@ -18,6 +18,7 @@ macro_rules! impl_from_type {
         impl $t {
             pub const fn from_index(i: usize) -> Self {
                 if i >= $max {
+                    debug_assert!(false);
                     // SAFETY: will only ever be used on valid input.
                     unsafe { std::hint::unreachable_unchecked() }
                 }
@@ -26,6 +27,7 @@ macro_rules! impl_from_type {
 
             pub const fn from_raw(i: $inner) -> Self {
                 if (i as usize) >= $max {
+                    debug_assert!(false);
                     // SAFETY: will only ever be used on valid input.
                     unsafe { std::hint::unreachable_unchecked() }
                 }
@@ -53,6 +55,7 @@ macro_rules! impl_lists {
                 debug_assert!(idx < Self::NUM);
                 // Safety: caller guarantees idx is always < NUM.
                 if idx >= Self::NUM {
+                    debug_assert!(false);
                     unsafe { std::hint::unreachable_unchecked() }
                 }
                 idx

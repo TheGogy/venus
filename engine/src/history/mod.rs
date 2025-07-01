@@ -1,9 +1,11 @@
+use chess::Depth;
+
+use crate::tunables::params::tunables::*;
+
 pub mod conthist;
 pub mod movebuffer;
 pub mod noisyhist;
 pub mod quiethist;
-
-use crate::tunables::params::tunables::*;
 
 /// Entry within a history table.
 #[derive(Clone, Copy, Debug, Default)]
@@ -22,9 +24,8 @@ impl HistEntry {
 }
 
 /// Get the bonus and malus for history at a given depth.
-pub fn hist_delta(depth: i16) -> (i16, i16) {
+pub fn hist_delta(depth: Depth) -> (i16, i16) {
     let bonus = hist_bonus_max().min(hist_bonus_mult() * depth - hist_bonus_base());
     let malus = hist_malus_max().min(hist_malus_mult() * depth - hist_malus_base());
-
     (bonus, malus)
 }

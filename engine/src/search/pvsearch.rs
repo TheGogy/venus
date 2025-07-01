@@ -1,19 +1,25 @@
-use chess::types::{eval::Eval, moves::Move};
+use chess::{
+    Depth,
+    types::{eval::Eval, moves::Move},
+};
 
 use crate::{
     history::movebuffer::MoveBuffer,
-    position::{
-        movepick::{MPStage, MovePicker, SearchType},
-        pos::Pos,
-    },
+    movepick::{MPStage, MovePicker, SearchType},
+    position::Position,
     threading::thread::Thread,
     tt::{entry::Bound, table::TT},
     tunables::params::tunables::*,
 };
 
-use super::{NodeType, OffPV, helpers::*, pv::PVLine};
+use super::{NodeType, OffPV, pruning::*, pv::PVLine};
 
-impl Pos {
+impl Position {
+    /// Null window search.
+    pub fn nwsearch(&mut self, t: &mut Thread, tt: &TT, pv: &mut PVLine, value: Eval, depth: Depth, cutnode: bool) -> Eval {
+        self.pvsearch::<OffPV>(t, tt, pv, value - 1, value, depth, cutnode)
+    }
+
     /// Principal variation search function.
     /// This performs the majority of the searching, then drops into qsearch at the end.
     #[allow(clippy::too_many_arguments)]
@@ -24,17 +30,28 @@ impl Pos {
         pv: &mut PVLine,
         mut alpha: Eval,
         mut beta: Eval,
-        mut depth: i16,
+        mut depth: Depth,
         cutnode: bool,
     ) -> Eval {
-        // Base case: depth = 0.
-        if depth <= 0 {
-            return self.qsearch::<NT::Next>(t, tt, pv, alpha, beta);
+        // Check if we should stop here in the search.
+        if t.should_stop() {
+            t.stop = true;
+            return Eval::DRAW;
         }
 
-        pv.clear();
+        // Base case: depth = 0.
+        if depth <= 0 {
+            return self.qsearch::<NT::Next>(t, tt, alpha, beta);
+        }
 
-        t.seldepth = if NT::RT { 0 } else { t.seldepth.max(t.ply) };
+        if NT::PV {
+            // Clear invalid moves from PV.
+            pv.clear();
+
+            // Update seldepth.
+            // Seldepth counts from 1.
+            t.seldepth = t.seldepth.max(t.ply + 1);
+        }
 
         if !NT::RT {
             // Check for upcoming draw.
@@ -45,10 +62,9 @@ impl Pos {
                 }
             }
 
-            // Check if we should stop here in the search.
-            if t.should_stop() {
-                t.stop = true;
-                return Eval::DRAW;
+            // Check for immediate draw.
+            if self.board.is_draw(t.ply_from_null) {
+                return Eval::dithered_draw(t.nodes as i32);
             }
 
             // Mate distance pruning.
@@ -60,54 +76,38 @@ impl Pos {
             if alpha >= beta {
                 return alpha;
             }
-
-            // Check for immediate draw.
-            if self.board.is_draw(t.ply_from_null) {
-                return Eval::dithered_draw(t.nodes as i32);
-            }
         }
 
         let in_check = self.board.in_check();
         let excluded = t.ss().excluded;
-        let singular = !excluded.is_null();
+        let singular = excluded.is_some();
         let child_pv = &mut PVLine::default();
-        let mut ext_possible = false;
 
         // -----------------------------------
         //             TT lookup
         // -----------------------------------
-        let tt_entry = tt.probe(self.board.state.hash);
+
         let mut tt_move = Move::NONE;
+        let mut tt_eval = Eval::NONE;
+        let mut tt_value = Eval::NONE;
+        let mut tt_bound = Bound::None;
         let mut tt_depth = -1;
-        let mut tt_value = Eval::DRAW;
 
-        if let Some(tte) = tt_entry {
-            tt_depth = tte.depth();
-            let tt_bound = tte.bound();
-
-            tt_value = tte.value(t.ply);
-
-            // TT cutoff.
-            if !NT::PV
-                && !singular
-                && tt_depth >= depth
-                && match tt_bound {
-                    Bound::Lower => tt_value >= beta,
-                    Bound::Upper => tt_value <= alpha,
-                    Bound::Exact => true,
-                    _ => false,
-                }
-            {
-                return tt_value;
-            }
-
+        if !singular && let Some(tte) = tt.probe(self.board.state.hash) {
             tt_move = tte.mov();
-
-            ext_possible = !NT::RT && depth >= ext_d_min() && !tt_value.is_tb_mate() && tt_bound != Bound::Upper && tt_depth >= depth - 3;
+            tt_eval = tte.eval();
+            tt_value = tte.value(t.ply);
+            tt_bound = tte.bound();
+            tt_depth = tte.depth();
         }
 
-        if !singular {
-            t.ss_mut().ttpv = NT::PV
+        // TT cutoff.
+        // In a non-PV node, if the TT lookup gives us a better position evaluation, use it instead.
+        // We can only trust the TT value if:
+        // - The stored depth is at least as deep as our current search depth.
+        // - The bound type is compatible with our current alpha-beta window.
+        if !NT::PV && tt_value.is_valid() && tt_depth >= depth && tt_bound.is_usable(tt_value, beta) {
+            return tt_value;
         }
 
         // TODO: Tablebases probe.
@@ -117,63 +117,65 @@ impl Pos {
         // -----------------------------------
         // Don't evaluate positions in check.
         let eval = if in_check {
-            // Get the previous eval if possible.
-            let prev_eval = if t.ply >= 2 { t.ss_at(2).eval } else { -Eval::INFINITY };
-            t.ss_mut().eval = prev_eval;
-            prev_eval
-
+            t.ss_mut().eval = -Eval::INFINITY;
+            -Eval::INFINITY
+        }
         // In singular search, just take the eval of the position that invoked it.
-        } else if singular {
+        else if singular {
             t.ss().eval
+        }
+        // Otherwise try to get eval from the tt if the position has been evaluated and the bound
+        // is tighter. If we can't do that, then just evaluate the position from scratch.
+        else {
+            let mut e = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
 
-        // If we have already evaluated this position use that instead.
-        } else if let Some(tte) = tt_entry {
-            let e = if tte.eval() == -Eval::INFINITY { self.evaluate(&mut t.nnue) } else { tte.eval() };
             t.ss_mut().eval = e;
 
-            // If the tt eval is a tighter bound than the static eval, use it instead.
-            // Otherwise, just use static eval.
-            tte.get_tightest(e, t.ply)
+            // If we have a TT hit with a tighter bound than our static eval, use the TT value.
+            if tt_value.is_valid() && tt_bound.is_usable(tt_value, e) {
+                e = tt_value
+            }
 
-        // If nothing else, evaluate the position from scratch.
-        } else {
-            let nnue_eval = self.evaluate(&mut t.nnue);
-            t.ss_mut().eval = nnue_eval;
-            nnue_eval
+            e
         };
 
-        let improving = t.is_improving(in_check);
+        let improving = t.is_improving();
 
         // -----------------------------------
         //              Pruning
         // -----------------------------------
-        if !NT::PV && !in_check {
+        if !NT::PV && !in_check && !singular {
             // Reverse futility pruning (static null move pruning).
-            if can_apply_rfp(t, depth, improving, eval, beta) {
-                return beta + (eval - beta) / 3;
+            if can_apply_rfp(depth, improving, eval, beta) {
+                return beta;
             }
 
             // Razoring.
             if can_apply_razoring(depth, eval, alpha) {
-                return self.qsearch::<OffPV>(t, tt, pv, alpha, beta);
+                let v = self.qsearch::<OffPV>(t, tt, alpha, beta);
+                // If the qsearch still can't catch up, cut this node.
+                if v <= alpha {
+                    return v;
+                }
             }
 
             // Null move pruning.
-            if !singular && can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
+            if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
                 let r = (nmp_base() + depth / nmp_factor()).min(depth);
 
                 self.make_null(t);
-                let v = -self.nwsearch(t, tt, child_pv, -(beta - Eval(1)), depth - r, false);
+                let value = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, !cutnode);
                 self.undo_null(t);
 
-                if v >= beta && !v.is_tb_mate() {
+                // cutoff above beta
+                if value >= beta {
                     return beta;
                 }
             }
         }
 
         // Internal Iterative reductions.
-        if can_apply_iir(depth, tt_move, NT::PV, cutnode) {
+        if can_apply_iir(depth, tt_move, NT::RT, singular) {
             depth -= 1;
         }
 
@@ -182,85 +184,100 @@ impl Pos {
         // -----------------------------------
         //             Moves loop
         // -----------------------------------
-        let mut best_eval = -Eval::INFINITY;
-        let mut best_move = Move::NONE;
+        let mut best_move = Move::NULL;
+        let mut best_value = -Eval::INFINITY;
 
         let mut caps_tried = MoveBuffer::default();
         let mut quiets_tried = MoveBuffer::default();
-        let mut moves_tried = 0;
 
-        let old_alpha = alpha;
+        let mut moves_tried = 0;
+        let mut moves_exist = false;
+
+        let lmp_margin = ((depth * depth + lmp_base()) / (2 - improving as i16)) as usize;
+        let see_margins = [sp_noisy_margin() * (depth * depth) as i32, sp_quiet_margin() * depth as i32];
 
         let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
-
-        // Set up margins.
-        let lmp_margin = (depth * depth + lmp_base()) as usize;
-        let see_margin = [Eval(sp_noisy_margin() * (depth * depth) as i32), Eval(sp_quiet_margin() * depth as i32)];
-
         while let Some(m) = mp.next(&self.board, t) {
             debug_assert!(m.is_valid());
+            moves_exist = true;
 
             // Ignore excluded move.
-            if m == excluded {
-                continue;
-            }
-
-            moves_tried += 1;
-
-            let start_nodes = t.nodes;
-            let is_quiet = m.flag().is_quiet();
-            let hist_score = t.hist_score(&self.board, m);
-
-            // -----------------------------------
-            //            More Pruning
-            // -----------------------------------
-            // Futility pruning and late move pruning.
-            if !NT::RT && is_quiet && !best_eval.is_loss() && !mp.skip_quiets && !in_check {
-                mp.skip_quiets = can_apply_fp(depth, eval, alpha, moves_tried) || can_apply_lmp(depth, moves_tried, lmp_margin);
-            }
-
-            // SEE pruning.
-            if !best_eval.is_loss()
-                && depth <= sp_d_min()
-                && mp.stage > MPStage::PvNoisyWin
-                && !self.board.see(m, see_margin[is_quiet as usize])
-            {
+            if excluded == Some(m) {
                 moves_tried += 1;
                 continue;
             }
 
+            let start_nodes = t.nodes;
+            let is_quiet = m.flag().is_quiet();
+            let hist_score = t.hist_score(&self.board, m);
+            let mut new_depth = depth - 1;
+
+            // -----------------------------------
+            //          Move loop pruning
+            // -----------------------------------
+            if !NT::PV && !in_check && !mp.skip_quiets && best_value.nonterminal() {
+                // History pruning.
+                if can_apply_hp(depth, is_quiet, hist_score) {
+                    mp.skip_quiets = true;
+                }
+
+                // Late move pruning.
+                if can_apply_lmp(depth, moves_tried, lmp_margin) {
+                    mp.skip_quiets = true;
+                }
+
+                // Futility pruning.
+                if can_apply_fp(depth, eval, alpha, moves_tried) {
+                    mp.skip_quiets = true;
+                }
+            }
+
+            // SEE pruning.
+            // If all captures happen on this move and we lose, prune this move.
+            if depth <= sp_d_min()
+                && best_value.nonterminal()
+                && mp.stage > MPStage::PvNoisyWin
+                && !self.board.see(m, Eval(see_margins[is_quiet as usize]))
+            {
+                moves_tried += 1;
+                continue;
+            };
+
             // -----------------------------------
             //             Extensions
             // -----------------------------------
-            let mut new_depth = depth - 1;
 
-            if ext_possible && m == tt_move {
-                let ext_beta = (tt_value - (depth * ext_mult() / 64)).max(-Eval::INFINITY);
+            // Singular extensions: if the TT move is significantly better than all alternatives,
+            // extend the search depth for this move as it's likely critical.
+            if !NT::RT
+                && depth >= ext_d_min()
+                && !singular
+                && m == tt_move
+                && !tt_value.is_tb_mate()
+                && tt_bound.has(Bound::Lower)
+                && tt_depth >= depth - 3
+            {
+                let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::INFINITY);
 
-                t.ss_mut().excluded = m;
-                let v = self.nwsearch(t, tt, pv, ext_beta, new_depth / 2, cutnode);
-                t.ss_mut().excluded = Move::NULL;
+                // Search all moves except the TT move at reduced depth.
+                t.ss_mut().excluded = Some(m);
+                let v = self.nwsearch(t, tt, child_pv, ext_beta, new_depth / 2, cutnode);
+                t.ss_mut().excluded = None;
 
-                let mut ext = 0;
-
-                // Single and double extensions.
-                if v < ext_beta {
-                    ext = 1
-                        + (!NT::PV && v < ext_beta - ext_double_e_min()) as i16
-                        + (!NT::PV && is_quiet && v < ext_beta - ext_triple_e_min()) as i16;
-                }
-                // Multi-cut pruning.
-                else if v >= beta && !v.is_tb_mate() {
-                    return v;
+                // If no other move can reach the TT move's value, extend this move.
+                let ext = if v < ext_beta {
+                    1
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
-                    ext = -3;
+                    -2 + NT::PV as Depth
+                } else if cutnode {
+                    -2
                 }
-                // Use negative extensions for cutnodes.
-                else if cutnode {
-                    ext = -2
-                }
+                // Otherwise, don't extend.
+                else {
+                    0
+                };
 
                 new_depth += ext;
             }
@@ -274,44 +291,42 @@ impl Pos {
             let mut v = -Eval::INFINITY;
 
             // Late move reductions.
-            // If we have searched enough moves so that we should start
-            // reducing our search depth, then we should start with this search.
+            // If we have already searched a lot of moves in this position, then we have probably
+            // already looked at the best moves. We reduce the depth that we search the other moves
+            // at accordingly.
             if can_apply_lmr(depth, moves_tried, NT::PV) {
                 let mut r = lmr_base_reduction(depth, moves_tried);
 
-                // Decrease reductions for good moves, increase reductions for bad moves.
-                r -= t.ss().ttpv as i16;
-                r -= in_check as i16;
-                r -= (tt_depth >= depth) as i16;
-                r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as i16;
+                // Decrease reductions for good moves.
+                r -= in_check as Depth;
+                r -= self.board.in_check() as Depth;
+                r -= (tt_depth >= depth) as Depth;
+                r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as Depth;
 
-                r += (!NT::PV as i16) * 2;
-                r += (cutnode as i16) * 2;
-                r += !improving as i16;
-                r += tt_move.flag().is_noisy() as i16;
+                // Increase reductions for bad moves.
+                r += !NT::PV as Depth;
+                r += cutnode as Depth;
+                r += !improving as Depth;
+                r += tt_move.flag().is_noisy() as Depth;
 
-                // We shouldn't extend or drop into qsearch.
-                r = r.max(0);
+                r = r.clamp(1, depth - 1);
 
-                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r, true);
+                // Try reduced depth first.
+                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth + 1 - r, true);
 
-                // Verification search.
-                // If LMR search succeeds, then do a full search to verify it.
-                if v > alpha && r > 0 {
-                    new_depth += (v > best_eval + lmr_ver_e_min()) as i16;
-                    new_depth -= (v < best_eval + new_depth && !NT::RT) as i16;
-
+                // Re-search at full depth if the reduced search suggests the move is good.
+                if v > alpha && r > 1 {
                     v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
                 }
             }
-            // If we can't do LMR, then instead do a null window search at full depth.
-            else if !NT::PV || moves_tried > 1 {
+            // For moves that can't be reduced, or first move in non-PV, do null-window search
+            else if !NT::PV || moves_tried > 0 {
                 v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
-            }
+            };
 
-            // For the first move of each node, do a full depth, full window search.
-            // We should also do that if the score breaks the upper bound.
-            if NT::PV && (moves_tried == 1 || v > alpha) {
+            // For the first move in a PV node, or any move that beats alpha,
+            // do a full-window search to get the exact score.
+            if NT::PV && (moves_tried == 0 || v > alpha) {
                 v = -self.pvsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
             }
 
@@ -322,43 +337,62 @@ impl Pos {
             }
 
             if NT::RT {
-                t.clock.update_node_count(m, t.nodes - start_nodes);
+                t.tm.update_nodes(m, t.nodes - start_nodes);
             }
 
-            if v > best_eval {
-                best_eval = v;
+            // Update best move and alpha if we found a better move.
+            if v > best_value {
+                best_value = v;
 
                 if v > alpha {
                     best_move = m;
-                    alpha = best_eval;
 
                     if NT::PV {
                         pv.update(m, child_pv);
                     }
-                }
 
-                if v >= beta {
-                    alpha = beta;
-                    t.update_history(m, depth, &self.board, &quiets_tried, &caps_tried);
-                    break;
+                    // Beta cutoff: this position is too good, opponent won't allow it.
+                    if v >= beta {
+                        break;
+                    }
+
+                    alpha = v;
                 }
             }
 
-            // Add move to history
+            // Add move to history.
             if is_quiet {
                 quiets_tried.push(m);
             } else if m.flag().is_cap() {
                 caps_tried.push(m);
             }
+
+            moves_tried += 1;
         }
 
-        // No moves tried: check or checkmate.
-        if moves_tried == 0 {
+        // No legal moves: checkmate or stalemate.
+        if !moves_exist {
             return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };
         }
 
+        // Beta cutoff.
+        // We have found a move strong enough that our opponent will play to avoid it.
+        if best_value >= beta {
+            // Update move ordering histories with a malus for moves that didn't cause beta cutoff, and a bonus for the move that did.
+            t.update_history(best_move, depth, &self.board, &quiets_tried, &caps_tried);
+
+            // Insert this position in at a lower bound.
+            // We stopped searching after the beta cutoff, as we proved the position is too good.
+            // We don't know the exact value of the position, we just know it's at least beta.
+            tt.insert(self.board.state.hash, Bound::Lower, best_move, t.ss().eval, beta, depth, t.ply, NT::PV);
+            return beta;
+        }
+
         // Store the result in the TT.
-        self.store_search_result(t, tt, best_eval, alpha, beta, old_alpha, best_move, depth, NT::PV);
+        // If we have searched all moves and have an exact score, then use an exact bound.
+        // If all moves have failed low (i.e best_move was never updated) then the position is at most alpha.
+        let bound = if NT::PV && best_move.is_valid() { Bound::Exact } else { Bound::Upper };
+        tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, NT::PV);
 
         alpha
     }

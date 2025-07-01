@@ -28,9 +28,6 @@ impl Board {
         state.fullmoves = self.state.fullmoves + self.stm.idx();
         state.halfmoves = self.state.halfmoves + 1;
 
-        // Set moved piece.
-        state.mvp = self.pc_at(src);
-
         // Set move.
         state.mov = m;
 
@@ -367,18 +364,10 @@ mod tests {
     }
 
     #[test]
-    fn test_moved_piece() {
-        let mut b = Board::default();
-        b.make_move(Move::new(Square::E2, Square::E4, MoveFlag::Normal));
-        assert_eq!(b.state.mvp, CPiece::WPawn);
-    }
-
-    #[test]
     fn test_null_move() {
         let mut b = Board::default();
         b.make_null();
         assert_eq!(b.state.mov, Move::NULL);
-        assert_eq!(b.state.mvp, CPiece::None);
 
         let mut b: Board = "rnbqkbnr/pp2pp1p/8/2pP2p1/8/2P5/PP1P1PPP/RNBQKBNR w KQkq g6 1 4".parse().unwrap();
         b.make_null();

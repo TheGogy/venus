@@ -40,13 +40,7 @@ impl CastlingRights {
 
     /// The index of the current castling rights.
     pub const fn idx(self) -> usize {
-        let idx = self.0 as usize;
-        debug_assert!(idx < Self::NUM);
-        // Safety: caller guarantees idx is always < NUM
-        if idx >= Self::NUM {
-            unsafe { std::hint::unreachable_unchecked() }
-        }
-        idx
+        self.0 as usize
     }
 
     /// The index into the rooks list for these castling rights.

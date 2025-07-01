@@ -1,16 +1,17 @@
 use chess::types::eval::Eval;
 
-use crate::{position::pos::Pos, threading::thread::Thread, tt::table::TT, tunables::params::tunables::*};
+use crate::{position::Position, threading::thread::Thread, tt::table::TT, tunables::params::tunables::*};
 
 use super::{Root, pv::PVLine};
 
-impl Pos {
+impl Position {
     /// Iterative deepening loop.
     /// Search at increasing depth until we should stop.
     pub fn iterative_deepening<const MAIN: bool>(&mut self, t: &mut Thread, tt: &TT) {
         while t.should_start_iter() {
             let eval = self.asp_window(t, tt);
 
+            // If search was stopped (time limit or manually), don't use the incomplete result.
             if t.stop {
                 break;
             }
@@ -25,7 +26,7 @@ impl Pos {
                     t.seldepth,
                     t.eval,
                     tt.hashfull(),
-                    t.clock,
+                    t.tm,
                     t.pv.to_uci(&self.board.castlingmask)
                 );
             }
@@ -42,7 +43,8 @@ impl Pos {
         let full_depth = t.depth + 1;
         let mut search_depth = t.depth + 1;
 
-        // Setup aspiration window once we are over the min depth.
+        // Setup aspiration window once we have a reliable evaluation from previous iterations.
+        // At very shallow depths, the evaluation can be too unstable.
         if search_depth >= asp_window_d_min() {
             alpha = (t.eval - delta).max(-Eval::INFINITY);
             beta = (t.eval + delta).min(Eval::INFINITY);
@@ -56,18 +58,25 @@ impl Pos {
                 return -Eval::INFINITY;
             }
 
-            // Search failed low: reset depth and close window.
+            // Search failed low (fell below alpha).
+            // This means the position is worse than we thought.
+            // Move beta towards alpha to narrow the window from above, and
+            // expand alpha downward to catch the actual value.
             if v <= alpha {
-                alpha = (alpha - delta).max(-Eval::INFINITY);
                 beta = (alpha + beta) / 2;
+                alpha = (v - delta).max(-Eval::INFINITY);
                 search_depth = full_depth;
             }
-            // Search failed high: reduce depth, open window.
+            // Search failed high (exceeded beta).
+            // This means the position is better than we thought.
+            // Expand beta upward to catch the actual value, and save the PV.
             else if v >= beta {
-                beta = (beta + delta).min(Eval::INFINITY);
+                beta = (v + delta).min(Eval::INFINITY);
                 t.pv = pv.clone();
 
-                if search_depth > 1 && v.abs() < Eval::LONGEST_TB_MATE {
+                // Depth reduction on fail-high.
+                // When we fail high, we often don't need full depth to prove the position is good.
+                if search_depth > 1 && v.nonterminal() {
                     search_depth -= 1;
                 }
             }
@@ -77,7 +86,9 @@ impl Pos {
                 return v;
             }
 
-            // Expand search window.
+            // Gradually expand the aspiration window for the next attempt.
+            // If we keep failing outside the window, it means the position's value
+            // has changed significantly, so we need a wider search window.
             delta += delta / 2;
         }
     }

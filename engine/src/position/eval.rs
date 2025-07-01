@@ -1,18 +1,17 @@
+use crate::tunables::params::tunables::*;
+
+use super::Position;
 use chess::types::{eval::Eval, piece::Piece};
-use nnue::network::NNUE;
-
-use crate::{
-    tunables::params::tunables::*,
-};
-
-use super::pos::Pos;
 
 /// Evaluation.
-impl Pos {
+impl Position {
     /// Evaluates the position using the NNUE.
-    pub fn evaluate(&self, nnue: &mut NNUE) -> Eval {
-        let mut v = nnue.update_and_evaluate(&self.board);
+    pub fn evaluate(&mut self) -> Eval {
+        let mut v = self.nnue.update_and_evaluate(&self.board);
 
+        // Scale by the amount of material on the board.
+        // This helps us to incentivise trading down when the positional value is worse, or keep
+        // material on the board when we might be winning.
         v = (v * self.material_scale()) / 1024;
 
         v
@@ -21,12 +20,12 @@ impl Pos {
     /// Get the material scale for the position.
     #[rustfmt::skip]
     fn material_scale(&self) -> i32 {
-        let total_material = 
-            self.board.p_bb(Piece::Knight).nbits() as i32 * val_knight() +
-            self.board.p_bb(Piece::Bishop).nbits() as i32 * val_bishop() +
-            self.board.p_bb(Piece::Rook).nbits() as i32 * val_rook() +
-            self.board.p_bb(Piece::Queen).nbits() as i32 * val_queen();
+        let total_material =
+            self.board.p_bb(Piece::Knight).nbits() as i32 * ms_knight() +
+            self.board.p_bb(Piece::Bishop).nbits() as i32 * ms_bishop() +
+            self.board.p_bb(Piece::Rook).nbits()   as i32 * ms_rook() +
+            self.board.p_bb(Piece::Queen).nbits()  as i32 * ms_queen();
 
-        mat_scale_base() + (total_material / 32)
+        ms_base() + (total_material / 32)
     }
 }

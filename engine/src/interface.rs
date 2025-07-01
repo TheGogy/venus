@@ -8,18 +8,16 @@ use std::{
     time::Instant,
 };
 
-use nnue::network::NNUE;
-
-use crate::{position::pos::Pos, threading::threadpool::ThreadPool, timeman::time_control::TimeControl, tt::table::TT};
-
 #[cfg(feature = "tune")]
 use crate::tunables::params::tunables;
+
+use crate::{position::Position, threading::threadpool::ThreadPool, time_management::timecontrol::TimeControl, tt::table::TT};
 
 /// Engine struct.
 /// This contains the thread pool,
 /// the current position, and everything that stays constant between moves.
 pub struct Engine {
-    pub pos: Pos,
+    pub pos: Position,
     pub pool: ThreadPool,
     pub tt: TT,
 }
@@ -36,7 +34,7 @@ pub struct EngineInterface {
 pub enum EngineCommand {
     NewGame,
     SetOpt(String, String),
-    Position(Box<Pos>),
+    Position(Box<Position>),
     Go(TimeControl),
     Perft(usize),
     PerftMp(usize),
@@ -70,7 +68,7 @@ impl EngineInterface {
 impl Engine {
     /// Run the engine.
     fn run(rx: mpsc::Receiver<EngineCommand>, stop: Arc<AtomicBool>) {
-        let mut controller = Self { pos: Pos::default(), pool: ThreadPool::new(stop), tt: TT::default() };
+        let mut controller = Self { pos: Position::default(), pool: ThreadPool::new(stop), tt: TT::default() };
 
         for c in rx {
             controller.handle_command(c);
@@ -98,7 +96,7 @@ impl Engine {
 impl Engine {
     /// Handle newgame command.
     fn handle_newgame(&mut self) {
-        self.pos = Pos::default();
+        self.pos = Position::default();
         self.pool.reset();
         self.tt.clear();
     }
@@ -124,9 +122,8 @@ impl Engine {
     }
 
     /// Handle eval command.
-    fn handle_eval(&self) {
-        let mut nnue = NNUE::default();
-        println!("{}", self.pos.evaluate(&mut nnue));
+    fn handle_eval(&mut self) {
+        println!("{}", self.pos.evaluate());
     }
 
     /// Handle setopt command.
@@ -162,8 +159,8 @@ impl Engine {
 
             #[cfg(feature = "tune")]
             _ => {
-                if let Err(e) = tunables::set_tunable(&n, &v) {
-                    eprintln!("Unsupported option: {n} ({e})");
+                if tunables::set_tunable(&n, &v).is_err() {
+                    eprintln!("Unsupported option: {n}!");
                 }
             }
 

@@ -199,12 +199,12 @@ impl Board {
                 doubles &= self.state.checkmask;
             }
 
-            singles.bitloop(|s| {
-                receiver(Move::new(s.sub_dir(up), s, MoveFlag::Normal));
-            });
-
             doubles.bitloop(|s| {
                 receiver(Move::new(s.sub_dir(up).sub_dir(up), s, MoveFlag::DoublePush));
+            });
+
+            singles.bitloop(|s| {
+                receiver(Move::new(s.sub_dir(up), s, MoveFlag::Normal));
             });
         }
 

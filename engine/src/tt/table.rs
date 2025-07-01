@@ -1,8 +1,14 @@
-use crate::tunables::params::tunables::*;
+use crate::tunables::params::tunables::tt_replace_d_min;
 
-use super::entry::{Bound, CompressedEntry, TTEntry};
+use super::{
+    bits::MASK_AGE,
+    entry::{Bound, CompressedEntry, TTEntry},
+};
 
-use chess::types::{eval::Eval, moves::Move, zobrist::Hash};
+use chess::{
+    Depth,
+    types::{eval::Eval, moves::Move, zobrist::Hash},
+};
 
 /// Transposition table.
 pub struct TT {
@@ -55,7 +61,7 @@ impl TT {
 
     /// Increment the table age.
     pub const fn increment_age(&mut self) {
-        self.age = (self.age + 1) & 0x7F;
+        self.age = (self.age + 1) & MASK_AGE as u8;
     }
 
     /// Calculate table utilization (0 - 1000).
@@ -65,21 +71,17 @@ impl TT {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn insert(&self, hash: Hash, bound: Bound, mov: Move, eval: Eval, value: Eval, depth: i16, ply: usize, pv: bool) {
-        let index = self.idx(hash);
-        let slot = unsafe { self.entries.get_unchecked(index) };
+    pub fn insert(&self, hash: Hash, bound: Bound, mov: Move, eval: Eval, value: Eval, depth: Depth, ply: usize, pv: bool) {
+        let slot = unsafe { self.entries.get_unchecked(self.idx(hash)) };
         let old = slot.read_unchecked();
 
-        let same_position = hash.key == old.key;
-
-        let should_replace = self.age != old.age ||         // Always replace older entries
-            !same_position ||                               // Always replace different positions
-            bound == Bound::Exact ||                        // Always replace with exact scores
-            depth + tt_replace_d_min() + 2 * pv as i16 > old.depth as i16; // Replace if deeper
-
-        if should_replace {
-            let new_move = if mov.is_null() && same_position { old.mov } else { mov };
-            slot.write(TTEntry::new(hash.key, self.age, depth as u8, bound, new_move, eval, value.to_corrected(ply)));
+        if self.age != old.age        // Always replace older entries
+            || hash.key != old.key    // Always replace different positions
+            || bound == Bound::Exact  // Always replace with exact scores
+            || depth + tt_replace_d_min() + 2 * pv as Depth > old.depth()
+        {
+            let new_move = if !mov.is_valid() && hash.key == old.key { old.mov } else { mov };
+            slot.write(TTEntry::new(hash.key, pv, self.age, depth as u8, bound, new_move, eval, value.to_corrected(ply)));
         }
     }
 

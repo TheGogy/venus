@@ -11,8 +11,8 @@ use std::{
 use chess::types::moves::Move;
 
 use crate::{
-    position::pos::Pos,
-    timeman::{clock::Clock, time_control::TimeControl},
+    position::Position,
+    time_management::{timecontrol::TimeControl, timemanager::TimeManager},
     tt::table::TT,
 };
 
@@ -54,7 +54,7 @@ impl ThreadPool {
 /// Searching.
 impl ThreadPool {
     /// Starts searching the given position.
-    pub fn go(&mut self, pos: &mut Pos, tc: TimeControl, tt: &TT) -> Move {
+    pub fn go(&mut self, pos: &mut Position, tc: TimeControl, tt: &TT) -> Move {
         self.setup_threads(pos, tc);
         self.deploy_threads(pos, tt);
 
@@ -62,15 +62,15 @@ impl ThreadPool {
     }
 
     /// Sets up the threads.
-    fn setup_threads(&mut self, pos: &mut Pos, tc: TimeControl) {
+    fn setup_threads(&mut self, pos: &mut Position, tc: TimeControl) {
         let halfmoves = pos.board.state.halfmoves;
 
-        self.main.clock = Clock::new(self.global_stop.clone(), self.global_nodes.clone(), tc, pos.board.stm);
+        self.main.tm = TimeManager::new(self.global_stop.clone(), self.global_nodes.clone(), tc, pos.board.stm);
 
-        // Prepare main thread
+        // Prepare main thread.
         self.main.prepare_search(halfmoves);
 
-        // Prepare workers
+        // Prepare workers.
         self.workers.iter_mut().for_each(|t| t.prepare_search(halfmoves));
 
         // Store limits.
@@ -79,7 +79,7 @@ impl ThreadPool {
     }
 
     /// Deploys all threads searching in the given position.
-    fn deploy_threads(&mut self, pos: &mut Pos, tt: &TT) {
+    fn deploy_threads(&mut self, pos: &mut Position, tt: &TT) {
         thread::scope(|scope| {
             for worker in &mut self.workers {
                 let mut worker_pos = pos.clone();
@@ -108,6 +108,6 @@ impl ThreadPool {
         );
 
         // Select the move with the highest count.
-        move_counts.into_iter().max_by_key(|&(_, count)| count).map(|(mv, _)| mv).unwrap_or(Move::NULL)
+        move_counts.into_iter().max_by_key(|&(_, count)| count).map(|(mv, _)| mv).unwrap_or(Move::NONE)
     }
 }

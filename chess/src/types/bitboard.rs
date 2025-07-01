@@ -61,7 +61,7 @@ impl Bitboard {
         self.0.count_ones()
     }
 
-    /// Iterates over each set bit in the bitboard, calling the provided closure with the square index
+    /// Performs the given function for each square set in the bitboard.
     pub fn bitloop<F>(&self, mut f: F)
     where
         F: FnMut(Square),

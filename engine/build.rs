@@ -1,9 +1,8 @@
 use std::{env, error::Error, fs::File, io::Write, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Generate LMR table.
-    const LMR_BASE: f32 = 888.0 / 1024.0;
-    const LMR_MULT: f32 = 2034.0 / 1024.0;
+    const LMR_BASE: f32 = 768.0 / 1024.0;
+    const LMR_MULT: f32 = 2048.0 / 1024.0;
 
     let mut lmr_table = [[0; 64]; 64];
 
@@ -15,10 +14,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let lmr = unsafe { std::slice::from_raw_parts::<u8>(lmr_table.as_ptr().cast::<u8>(), 64 * 64 * std::mem::size_of::<i16>()) };
 
+    // Write to file in the output directory.
     let out_dir = env::var("OUT_DIR")?;
     let out_path = PathBuf::from(out_dir).join("lmr.bin");
-
-    // Write to file in the output directory
     File::create(out_path)?.write_all(lmr)?;
 
     Ok(())

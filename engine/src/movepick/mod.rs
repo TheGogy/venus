@@ -1,13 +1,11 @@
+pub mod move_list;
 pub mod perftmp;
-pub mod utils;
 
 mod pick_move;
 mod score_move;
 
-use chess::{
-    MAX_MOVES,
-    types::{eval::Eval, moves::Move},
-};
+use chess::types::{eval::Eval, moves::Move};
+use move_list::MoveList;
 
 // ------------------------------------------------------------------------------------------------
 //
@@ -92,13 +90,7 @@ pub struct MovePicker {
     // Constant for now, this is for when we implement probcut.
     see_threshold: Eval,
 
-    mvs: [Move; MAX_MOVES],
-    scs: [i32; MAX_MOVES],
-
-    cur: usize,
-
-    left: usize,
-    right: usize,
+    move_list: MoveList,
 }
 
 impl MovePicker {
@@ -112,27 +104,33 @@ impl MovePicker {
             MPStage::QsTT
         };
 
-        let ttm = tt_move.is_valid_or(|| {
+        let tt_move = tt_move.is_valid_or(|| {
             stage = stage.next();
             Move::NONE
         });
 
-        assert!(![MPStage::PvTT, MPStage::QsTT, MPStage::EvTT].contains(&stage) || !ttm.is_none());
+        Self { stage, searchtype, tt_move, see_threshold: Eval::DRAW, skip_quiets: false, move_list: MoveList::default() }
+    }
+}
 
-        Self {
-            stage,
-            searchtype,
-            tt_move: ttm,
-            see_threshold: Eval::DRAW,
-            skip_quiets: false,
+#[cfg(test)]
+mod tests {
+    use chess::types::{moves::MoveFlag, square::Square};
 
-            mvs: [Move::NONE; MAX_MOVES],
-            scs: [0; MAX_MOVES],
+    use super::*;
 
-            cur: 0,
+    #[test]
+    fn test_movepick_construction() {
+        let mp = MovePicker::new(SearchType::Pv, false, Move::new(Square::E2, Square::E4, MoveFlag::Normal));
+        assert_eq!(mp.stage, MPStage::PvTT);
 
-            right: MAX_MOVES - 1,
-            left: 0,
-        }
+        let mp = MovePicker::new(SearchType::Pv, false, Move::NONE);
+        assert_eq!(mp.stage, MPStage::PvNoisyGen);
+
+        let mp = MovePicker::new(SearchType::Pv, true, Move::NONE);
+        assert_eq!(mp.stage, MPStage::EvGen);
+
+        let mp = MovePicker::new(SearchType::Qs, false, Move::NONE);
+        assert_eq!(mp.stage, MPStage::QsNoisyGen);
     }
 }

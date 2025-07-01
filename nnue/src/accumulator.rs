@@ -45,7 +45,6 @@ impl Accumulator {
             debug_assert!(idx + L1 <= NNUE_EMBEDDED.feature_weights.len());
 
             // Enough bounds checking already rust, it works, we have the assertion!
-            // This change increases nps from ~2.6m to ~4.4m. (69% increase, nice)
             // SAFETY: length of acc is L1, length of `idx..idx + L1` is L1, and all indices are in
             // range.
             unsafe {

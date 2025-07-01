@@ -185,4 +185,11 @@ mod tests {
         assert!(!MoveFlag::PromoQ.is_underpromo());
         assert!(!MoveFlag::Normal.is_underpromo());
     }
+
+    #[test]
+    fn test_move_valid() {
+        assert!(Move::new(Square::A1, Square::A2, MoveFlag::Normal).is_valid());
+        assert!(!Move::NULL.is_valid());
+        assert!(!Move::NONE.is_valid());
+    }
 }

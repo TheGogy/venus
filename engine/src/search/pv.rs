@@ -1,5 +1,5 @@
 use chess::{
-    MAX_DEPTH,
+    MAX_PLY,
     types::{castling::CastlingMask, moves::Move},
 };
 
@@ -7,31 +7,24 @@ use chess::{
 /// This allows us to keep track of the current PV.
 #[derive(Clone, Debug)]
 pub struct PVLine {
-    pub moves: [Move; MAX_DEPTH],
+    pub moves: [Move; MAX_PLY],
     length: usize,
 }
 
 impl Default for PVLine {
     fn default() -> Self {
-        Self { moves: [Move::NULL; MAX_DEPTH], length: 0 }
+        Self { moves: [Move::NULL; MAX_PLY], length: 0 }
     }
 }
 
 impl PVLine {
     /// Update the PV line with a child line.
     pub fn update(&mut self, m: Move, child: &Self) {
-        debug_assert!(child.length < MAX_DEPTH);
+        debug_assert!(child.length < MAX_PLY);
 
         self.length = child.length + 1;
         self.moves[0] = m;
-
-        // SAFETY: We've asserted that child.length < MAX_DEPTH,
-        // so child.length is a valid index, and the slice is valid.
-        unsafe {
-            let src = child.moves.get_unchecked(..child.length);
-            let dst = self.moves.get_unchecked_mut(1..=child.length);
-            dst.copy_from_slice(src);
-        }
+        self.moves[1..=child.length].copy_from_slice(&child.moves[..child.length]);
     }
 
     /// Clear the PV line.
