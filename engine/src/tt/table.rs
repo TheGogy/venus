@@ -49,6 +49,7 @@ impl TT {
     }
 
     /// Prefetch an entry into the cache.
+    #[allow(unused_variables)]
     pub fn prefetch(&self, hash: Hash) {
         #[cfg(target_arch = "x86_64")]
         unsafe {

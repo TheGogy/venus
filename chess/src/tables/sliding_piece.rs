@@ -10,17 +10,17 @@ use crate::types::{
 /// Runs before main.
 #[ctor]
 fn init() {
-    init_pext_lookups();
+    init_attack_lookups();
 }
 
 /// Get all bishop attacks from a square given some occupancy.
 pub fn bishop_atk(s: Square, occ: Bitboard) -> Bitboard {
-    unsafe { BISHOP_PEXT_TABLE[s.idx()].attacks(occ) }
+    unsafe { BISHOP_DATA[BISHOP_OFFSET_TABLE[s.idx()].attack_offset(occ)] }
 }
 
 /// Get all rook attacks from a square given some occupancy.
 pub fn rook_atk(s: Square, occ: Bitboard) -> Bitboard {
-    unsafe { ROOK_PEXT_TABLE[s.idx()].attacks(occ) }
+    unsafe { ROOK_DATA[ROOK_OFFSET_TABLE[s.idx()].attack_offset(occ)] }
 }
 
 /// Get all squares in the line between two squares.
@@ -100,34 +100,49 @@ pub static BETWEEN_TABLE: [[Bitboard; 64]; 64] = {
 
 /// Entry within pext lookup table.
 #[derive(Clone, Copy)]
-struct PextEntry {
-    mask: Bitboard,
-    data: *mut Bitboard,
+struct SquareEntry {
+    mask: u64,
+    base_idx: usize,
+
+    #[cfg(not(target_arch = "x86_64"))]
+    magic: u64,
+    #[cfg(not(target_arch = "x86_64"))]
+    shift: u64,
 }
 
-impl PextEntry {
-    /// Get the attacks for this PEXT entry.
-    pub fn attacks(&self, occ: Bitboard) -> Bitboard {
-        // Safety: The data pointer is valid and points to the static arrays.
-        unsafe { *self.data.add(pext(occ.0, self.mask.0) as usize) }
+impl SquareEntry {
+    /// Get the attacks for this square entry.
+    pub fn attack_offset(&self, occ: Bitboard) -> usize {
+        #[cfg(target_arch = "x86_64")]
+        {
+            use std::arch::x86_64::_pext_u64;
+            unsafe { self.base_idx + _pext_u64(occ.0, self.mask) as usize }
+        }
+
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            self.base_idx + (((occ.0 & self.mask).wrapping_mul(self.magic)) >> self.shift) as usize
+        }
     }
 
     const fn empty() -> Self {
-        Self { mask: Bitboard(0), data: std::ptr::null_mut() }
-    }
-}
+        #[cfg(target_arch = "x86_64")]
+        {
+            Self { mask: 0, base_idx: 0 }
+        }
 
-/// Parallel bit extract wrapper.
-fn pext(a: u64, b: u64) -> u64 {
-    use std::arch::x86_64::_pext_u64;
-    unsafe { _pext_u64(a, b) }
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            Self { mask: 0, base_idx: 0, magic: 0, shift: 0 }
+        }
+    }
 }
 
 const ROOK_TABLE_SIZE: usize = 0x19000;
 const BISHOP_TABLE_SIZE: usize = 0x1480;
 
-static mut ROOK_PEXT_TABLE: [PextEntry; 64] = [PextEntry::empty(); 64];
-static mut BISHOP_PEXT_TABLE: [PextEntry; 64] = [PextEntry::empty(); 64];
+static mut ROOK_OFFSET_TABLE: [SquareEntry; 64] = [SquareEntry::empty(); 64];
+static mut BISHOP_OFFSET_TABLE: [SquareEntry; 64] = [SquareEntry::empty(); 64];
 static mut ROOK_DATA: [Bitboard; ROOK_TABLE_SIZE] = [Bitboard(0); ROOK_TABLE_SIZE];
 static mut BISHOP_DATA: [Bitboard; BISHOP_TABLE_SIZE] = [Bitboard(0); BISHOP_TABLE_SIZE];
 
@@ -139,65 +154,108 @@ const fn sliding_atk_init(pt: Piece, s: Square, bb: Bitboard) -> Bitboard {
     }
 }
 
-fn init_pext_table<const N: usize>(
+fn init_attack_table<const N: usize>(
     piece: Piece,
     s: Square,
-    pext_table: &mut [PextEntry; 64],
-    data: &mut [Bitboard; N],
-    prev_size: &mut usize,
-) -> usize {
+    pext_table: &mut [SquareEntry; 64],
+    table: &mut [Bitboard; N],
+    cur_size: &mut usize,
+) {
     let edges = Bitboard::edge_mask(s);
-
-    // Calculate the data pointer offset
-    let data_ptr = if s == Square::A1 {
-        data.as_mut_ptr()
-    } else {
-        unsafe {
-            let prev_entry = &pext_table[s.idx() - 1];
-            prev_entry.data.add(*prev_size)
-        }
-    };
 
     // Initialize the entry
     let entry = &mut pext_table[s.idx()];
-    entry.mask = sliding_atk_init(piece, s, Bitboard::EMPTY) & !edges;
-    entry.data = data_ptr;
-
-    let mut size = 0;
+    entry.mask = (sliding_atk_init(piece, s, Bitboard::EMPTY) & !edges).0;
+    entry.base_idx = *cur_size;
 
     // Generate the attack table
     let mut occ = Bitboard::EMPTY;
     loop {
-        unsafe {
-            *entry.data.add(pext(occ.0, entry.mask.0) as usize) = sliding_atk_init(piece, s, occ);
-        }
+        assert!(*cur_size < N);
 
-        size += 1;
+        table[entry.attack_offset(occ)] = sliding_atk_init(piece, s, occ);
+        *cur_size += 1;
 
-        occ.0 = (occ.0.wrapping_sub(entry.mask.0)) & entry.mask.0;
+        occ.0 = (occ.0.wrapping_sub(entry.mask)) & entry.mask;
         if occ.0 == 0 {
             break;
         }
     }
-
-    *prev_size = size;
-    size
 }
 
 /// Must be run as soon as possible when starting program.
 /// This initializes the PEXT lookup tables for all pieces.
 #[allow(static_mut_refs)]
-pub fn init_pext_lookups() {
+pub fn init_attack_lookups() {
     let mut bishop_size = 0;
     let mut rook_size = 0;
 
     unsafe {
         for s in Square::iter() {
-            init_pext_table(Piece::Bishop, s, &mut BISHOP_PEXT_TABLE, &mut BISHOP_DATA, &mut bishop_size);
-            init_pext_table(Piece::Rook, s, &mut ROOK_PEXT_TABLE, &mut ROOK_DATA, &mut rook_size);
+            #[cfg(not(target_arch = "x86_64"))]
+            {
+                ROOK_OFFSET_TABLE[s.idx()].magic = ROOK_MAGICS[s.idx()];
+                ROOK_OFFSET_TABLE[s.idx()].shift = ROOK_SHIFTS[s.idx()];
+                BISHOP_OFFSET_TABLE[s.idx()].magic = BISHOP_MAGICS[s.idx()];
+                BISHOP_OFFSET_TABLE[s.idx()].shift = BISHOP_SHIFTS[s.idx()];
+            }
+            init_attack_table(Piece::Rook, s, &mut ROOK_OFFSET_TABLE, &mut ROOK_DATA, &mut rook_size);
+            init_attack_table(Piece::Bishop, s, &mut BISHOP_OFFSET_TABLE, &mut BISHOP_DATA, &mut bishop_size);
         }
     }
 }
+
+#[cfg(not(target_arch = "x86_64"))]
+#[rustfmt::skip]
+const ROOK_MAGICS: [u64; 64] = [
+    0x0a8002c000108020u64,  0x06c00049b0002001u64,  0x0100200010090040u64,  0x02480041000800801u64, 0x0280028004000800u64,  0x0900410008040022u64,  0x0280020001001080u64,   0x02880002041000080u64,
+    0x0a000800080400034u64, 0x0004808020004000u64,  0x02290802004801000u64, 0x0411000d00100020u64,  0x00402800800040080u64, 0x000b000401004208u64,  0x02409000100040200u64,  0x0001002100004082u64,
+    0x0022878001e24000u64,  0x01090810021004010u64, 0x0801030040200012u64,  0x00500808008001000u64, 0x0a08018014000880u64,  0x08000808004000200u64, 0x0201008080010200u64,   0x0801020000441091u64,
+    0x000800080204005u64,   0x01040200040100048u64, 0x000120200402082u64,   0x0d14880480100080u64,  0x012040280080080u64,   0x0100040080020080u64,  0x09020010080800200u64,  0x0813241200148449u64,
+    0x0491604001800080u64,  0x0100401000402001u64,  0x04820010021001040u64, 0x00400402202000812u64, 0x0209009005000802u64,  0x0810800601800400u64,  0x04301083214000150u64,  0x0204026458e001401u64,
+    0x00040204000808000u64, 0x08001008040010020u64, 0x08410820820420010u64, 0x01003001000090020u64, 0x00804040008008080u64, 0x00012000810020004u64, 0x01000100200040208u64,  0x0430000a044020001u64,
+    0x00280009023410300u64, 0x00e0100040002240u64,  0x000200100401700u64,   0x02244100408008080u64, 0x0008000400801980u64,  0x0002000810040200u64,  0x08010100228810400u64,  0x02000009044210200u64,
+    0x04080008040102101u64, 0x0040002080411d01u64,  0x02005524060000901u64, 0x0502001008400422u64,  0x0489a000810200402u64, 0x0001004400080a13u64,  0x04000011008020084u64,  0x026002114058042u64,
+];
+
+#[cfg(not(target_arch = "x86_64"))]
+#[rustfmt::skip]
+const BISHOP_MAGICS: [u64; 64] = [
+    0x089a1121896040240u64, 0x02004844802002010u64, 0x02068080051921000u64, 0x062880a0220200808u64, 0x0004042004000000u64,  0x0100822020200011u64,  0x0c00444222012000au64,   0x0028808801216001u64,
+    0x00400492088408100u64, 0x0201c401040c0084u64,  0x0840800910a0010u64,   0x00082080240060u64,    0x02000840504006000u64, 0x030010c4108405004u64, 0x01008005410080802u64,  0x08144042209100900u64,
+    0x00208081020014400u64, 0x004800201208ca00u64,  0x00f18140408012008u64, 0x01004002802102001u64, 0x0841000820080811u64,  0x0040200200a42008u64,  0x0000800054042000u64,   0x088010400410c9000u64,
+    0x0520040470104290u64,  0x01004040051500081u64, 0x02002081833080021u64, 0x000400c00c010142u64,  0x0941408200c002000u64, 0x0658810000806011u64,  0x0188071040440a00u64,   0x04800404002011c00u64,
+    0x00104442040404200u64, 0x0511080202091021u64,  0x0004022401120400u64,  0x080c0040400080120u64, 0x08040010040820802u64, 0x0480810700020090u64,  0x0102008e00040242u64,   0x0809005202050100u64,
+    0x08002024220104080u64, 0x0431008804142000u64,  0x019001802081400u64,   0x0200014208040080u64,  0x03308082008200100u64, 0x041010500040c020u64,  0x04012020c04210308u64,  0x0208220a202004080u64,
+    0x0111040120082000u64,  0x06803040141280a00u64, 0x02101004202410000u64, 0x08200000041108022u64, 0x00021082088000u64,    0x002410204010040u64,   0x0040100400809000u64,   0x0822088220820214u64,
+    0x0040808090012004u64,  0x000910224040218c9u64, 0x0402814422015008u64,  0x0090014004842410u64,  0x0001000042304105u64,  0x010008830412a00u64,   0x02520081090008908u64,  0x040102000a0a60140u64,
+];
+
+#[cfg(not(target_arch = "x86_64"))]
+#[rustfmt::skip]
+const BISHOP_SHIFTS: [u64; 64] = [
+    58, 59, 59, 59, 59, 59, 59, 58,
+    59, 59, 59, 59, 59, 59, 59, 59,
+    59, 59, 57, 57, 57, 57, 59, 59,
+    59, 59, 57, 55, 55, 57, 59, 59,
+    59, 59, 57, 55, 55, 57, 59, 59,
+    59, 59, 57, 57, 57, 57, 59, 59,
+    59, 59, 59, 59, 59, 59, 59, 59,
+    58, 59, 59, 59, 59, 59, 59, 58,
+];
+
+#[cfg(not(target_arch = "x86_64"))]
+#[rustfmt::skip]
+const ROOK_SHIFTS: [u64; 64] = [
+    52, 53, 53, 53, 53, 53, 53, 52,
+    53, 54, 54, 54, 54, 54, 54, 53,
+    53, 54, 54, 54, 54, 54, 54, 53,
+    53, 54, 54, 54, 54, 54, 54, 53,
+    53, 54, 54, 54, 54, 54, 54, 53,
+    53, 54, 54, 54, 54, 54, 54, 53,
+    53, 54, 54, 54, 54, 54, 54, 53,
+    52, 53, 53, 53, 53, 53, 53, 52,
+];
 
 #[cfg(test)]
 mod tests {
@@ -225,8 +283,8 @@ mod tests {
     fn test_rook_blocking_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::E6); // Blocker two squares up
-        blockers.set_bit(Square::G4); // Blocker two squares right
+        blockers.set_bit(Square::E6);
+        blockers.set_bit(Square::G4);
 
         let attacks = rook_atk(pos, blockers);
 
@@ -237,8 +295,8 @@ mod tests {
     fn test_rook_ignore_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::B6); // Random square
-        blockers.set_bit(Square::G7); // Random square
+        blockers.set_bit(Square::B6);
+        blockers.set_bit(Square::G7);
 
         let attacks = rook_atk(pos, blockers);
 
@@ -266,8 +324,8 @@ mod tests {
     fn test_bishop_blocking_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::G6); // Blocker two squares up-right
-        blockers.set_bit(Square::C2); // Blocker two squares down-left
+        blockers.set_bit(Square::G6);
+        blockers.set_bit(Square::C2);
 
         let attacks = bishop_atk(pos, blockers);
 
@@ -278,8 +336,8 @@ mod tests {
     fn test_bishop_ignore_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::B6); // Random square
-        blockers.set_bit(Square::G7); // Random square
+        blockers.set_bit(Square::B6);
+        blockers.set_bit(Square::G7);
 
         let attacks = bishop_atk(pos, blockers);
 
@@ -302,18 +360,12 @@ mod tests {
     }
 
     #[test]
-    fn test_pext_initialization() {
-        unsafe {
-            // Test that tables are properly initialized
-            // And that masks are properly set
-            for r in ROOK_PEXT_TABLE {
-                assert!(!r.data.is_null());
-                assert!(r.mask.0 != 0);
-            }
-            for b in BISHOP_PEXT_TABLE {
-                assert!(!b.data.is_null());
-                assert!(b.mask.0 != 0);
-            }
+    fn test_table_initialization() {
+        let occ = Square::A3.bb() | Square::C2.bb() | Square::E5.bb() | Square::F2.bb() | Square::F5.bb();
+
+        for s in Square::iter() {
+            assert_bitboard_eq!(bishop_atk(s, occ), Bitboard(bishop_atk_init(s.idx(), occ.0)));
+            assert_bitboard_eq!(rook_atk(s, occ), Bitboard(rook_atk_init(s.idx(), occ.0)));
         }
     }
 }
