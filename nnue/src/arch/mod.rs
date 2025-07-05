@@ -16,7 +16,7 @@ pub const SCALE: i32 = 400;
 // Layer sizes.
 // These should ideally be divisible by Simd::CHUNK_SIZE.
 pub const FEATURES: usize = 768;
-pub const L1: usize = 1024;
+pub const L1: usize = 1536;
 
 /// Weights and biases for the NNUE.
 #[repr(C)]
