@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let evalfile_rel = env::var("EVALFILE").unwrap_or_else(|_| "data/nnue".to_string());
+    let evalfile_rel = env::var("EVALFILE").unwrap_or_else(|_| "data/voyager-archv1-1536.bin".to_string());
 
     let evalfile_path = if Path::new(&evalfile_rel).is_absolute() {
         PathBuf::from(&evalfile_rel)
