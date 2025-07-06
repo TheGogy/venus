@@ -194,8 +194,7 @@ impl Position {
                 Bound::Upper
             };
 
-            let tt_depth = if in_check { 1 } else { 0 };
-            tt.insert(self.board.state.hash, tt_flag, best_move, t.ss().eval, best_eval, tt_depth, t.ply, tt_pv);
+            tt.insert(self.board.state.hash, tt_flag, best_move, t.ss().eval, best_eval, 0, t.ply, tt_pv);
         }
         best_eval
     }
