@@ -3,8 +3,6 @@ use ::utils::Align64;
 pub mod propagate;
 pub mod utils;
 
-mod flatten;
-
 // Quantization factors.
 pub const QA: i32 = 255;
 pub const QB: i32 = 64;

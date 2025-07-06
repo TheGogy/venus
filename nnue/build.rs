@@ -2,13 +2,14 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 fn main() {
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let cwd = env::current_dir().expect("Failed to get current working directory");
     let evalfile_rel = env::var("EVALFILE").unwrap_or_else(|_| "data/voyager-archv1-1536.bin".to_string());
 
+    // Resolve relative to where the user ran make from.
     let evalfile_path = if Path::new(&evalfile_rel).is_absolute() {
         PathBuf::from(&evalfile_rel)
     } else {
-        manifest_dir.join(&evalfile_rel)
+        cwd.join(&evalfile_rel)
     };
 
     if !evalfile_path.exists() {
@@ -16,5 +17,6 @@ fn main() {
     }
 
     let canonical = evalfile_path.canonicalize().expect("Failed to canonicalize EVALFILE path");
+
     println!("cargo:rustc-env=NNUE_EVALFILE={}", canonical.display());
 }
