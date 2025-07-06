@@ -384,15 +384,19 @@ impl Position {
             // Insert this position in at a lower bound.
             // We stopped searching after the beta cutoff, as we proved the position is too good.
             // We don't know the exact value of the position, we just know it's at least beta.
-            tt.insert(self.board.state.hash, Bound::Lower, best_move, t.ss().eval, beta, depth, t.ply, NT::PV);
+            if !singular {
+                tt.insert(self.board.state.hash, Bound::Lower, best_move, t.ss().eval, beta, depth, t.ply, NT::PV);
+            }
             return beta;
         }
 
         // Store the result in the TT.
         // If we have searched all moves and have an exact score, then use an exact bound.
         // If all moves have failed low (i.e best_move was never updated) then the position is at most alpha.
-        let bound = if NT::PV && best_move.is_valid() { Bound::Exact } else { Bound::Upper };
-        tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, NT::PV);
+        if !singular {
+            let bound = if NT::PV && best_move.is_valid() { Bound::Exact } else { Bound::Upper };
+            tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, NT::PV);
+        }
 
         alpha
     }
