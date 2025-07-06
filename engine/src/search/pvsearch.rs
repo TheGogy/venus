@@ -93,7 +93,7 @@ impl Position {
         let mut tt_bound = Bound::None;
         let mut tt_depth = -1;
 
-        if !singular && let Some(tte) = tt.probe(self.board.state.hash) {
+        if let Some(tte) = tt.probe(self.board.state.hash) {
             tt_move = tte.mov();
             tt_eval = tte.eval();
             tt_value = tte.value(t.ply);
@@ -103,10 +103,7 @@ impl Position {
 
         // TT cutoff.
         // In a non-PV node, if the TT lookup gives us a better position evaluation, use it instead.
-        // We can only trust the TT value if:
-        // - The stored depth is at least as deep as our current search depth.
-        // - The bound type is compatible with our current alpha-beta window.
-        if !NT::PV && tt_value.is_valid() && tt_depth >= depth && tt_bound.is_usable(tt_value, beta) {
+        if !NT::PV && !singular && tt_value.is_valid() && tt_depth >= depth && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
 
@@ -384,15 +381,19 @@ impl Position {
             // Insert this position in at a lower bound.
             // We stopped searching after the beta cutoff, as we proved the position is too good.
             // We don't know the exact value of the position, we just know it's at least beta.
-            tt.insert(self.board.state.hash, Bound::Lower, best_move, t.ss().eval, beta, depth, t.ply, NT::PV);
+            if !singular && !t.stop {
+                tt.insert(self.board.state.hash, Bound::Lower, best_move, t.ss().eval, beta, depth, t.ply, NT::PV);
+            }
             return beta;
         }
 
         // Store the result in the TT.
         // If we have searched all moves and have an exact score, then use an exact bound.
         // If all moves have failed low (i.e best_move was never updated) then the position is at most alpha.
-        let bound = if NT::PV && best_move.is_valid() { Bound::Exact } else { Bound::Upper };
-        tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, NT::PV);
+        if !singular && !t.stop {
+            let bound = if NT::PV && best_move.is_valid() { Bound::Exact } else { Bound::Upper };
+            tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, NT::PV);
+        }
 
         alpha
     }
