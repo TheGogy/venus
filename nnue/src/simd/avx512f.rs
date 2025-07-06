@@ -29,7 +29,7 @@ pub mod vi16 {
         unsafe { _mm512_madd_epi16(x, y) }
     }
 
-    /// Adds two vectors together.
+    /// Adds two vectors together in i32 space.
     pub fn add(x: Vec, y: Vec) -> Vec {
         unsafe { _mm512_add_epi32(x, y) }
     }

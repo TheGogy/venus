@@ -29,9 +29,9 @@ pub mod vi16 {
         unsafe { _mm256_madd_epi16(x, y) }
     }
 
-    /// Adds two vectors together.
+    /// Adds two vectors together in i32 space.
     pub fn add(x: Vec, y: Vec) -> Vec {
-        unsafe { _mm256_add_epi16(x, y) }
+        unsafe { _mm256_add_epi32(x, y) }
     }
 
     /// Clamps a vector between two values.
@@ -44,11 +44,14 @@ pub mod vi16 {
         unsafe {
             let hi = _mm256_extracti128_si256::<1>(v);
             let lo = _mm256_castsi256_si128(v);
+
             let sum128 = _mm_add_epi32(hi, lo);
-            let shuf64 = _mm_unpackhi_epi64(sum128, sum128);
+
+            let shuf64 = _mm_shuffle_epi32::<0b01_00_11_10>(sum128);
             let sum64 = _mm_add_epi32(shuf64, sum128);
             let shuf32 = _mm_shuffle_epi32::<0b00_00_00_01>(sum64);
             let final_sum = _mm_add_epi32(sum64, shuf32);
+
             _mm_cvtsi128_si32(final_sum)
         }
     }
