@@ -313,6 +313,9 @@ impl Position {
 
                 // Re-search at full depth if the reduced search suggests the move is good.
                 if v > alpha && r > 1 {
+                    new_depth += (v > best_value + lmr_ver_e_min()) as Depth;
+                    new_depth -= (v < best_value + new_depth && !NT::RT) as Depth;
+
                     v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
                 }
             }
