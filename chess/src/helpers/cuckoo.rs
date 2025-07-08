@@ -132,3 +132,32 @@ static CUCKOO: CuckooTable = {
 
     ct
 };
+
+#[cfg(test)]
+mod tests {
+    use crate::helpers::cuckoo::CUCKOO;
+
+    #[test]
+    fn test_cuckoo_table_initialization() {
+        let mut found_entries = 0;
+        let mut valid_moves = 0;
+
+        for i in 0..8192 {
+            if CUCKOO.keys[i] != 0 {
+                found_entries += 1;
+
+                let mov = CUCKOO.moves[i];
+                if !mov.is_none() {
+                    valid_moves += 1;
+
+                    // Verify the move is valid
+                    assert!(mov.is_valid());
+                    assert_ne!(mov.src(), mov.dst());
+                }
+            }
+        }
+
+        assert_eq!(found_entries, valid_moves);
+        assert_eq!(found_entries, 3668);
+    }
+}
