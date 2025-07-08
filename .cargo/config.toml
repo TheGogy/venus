@@ -1,4 +1,4 @@
 # Use native CPU optimizations.
-# This helps with the handwritten SIMD for NNUEs..
+# This helps with the handwritten SIMD for NNUEs.
 [build]
 rustflags = ["-C", "target-cpu=native"]

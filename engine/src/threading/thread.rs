@@ -204,32 +204,3 @@ impl Thread {
         }
     }
 }
-
-impl Thread {
-    pub fn score_cap_hist(&self, m: Move, board: &Board) -> i32 {
-        self.hist_noisy.get_bonus(board, m)
-    }
-
-    pub fn assign_history_scores(&self, side: Color, moves: &[Move], scores: &mut [i32]) {
-        for i in 0..moves.len() {
-            scores[i] = self.hist_quiet.get_bonus(side, moves[i]);
-        }
-
-        for i in 0..CONT_NUM {
-            if let Some(entry) = self.get_previous_entry(1 + i) {
-                let pt = entry.pieceto.unwrap();
-                for j in 0..moves.len() {
-                    scores[j] += self.hist_conts[i].get_bonus(moves[j], pt);
-                }
-            }
-        }
-    }
-
-    fn get_previous_entry(&self, rollback: usize) -> Option<SearchStackEntry> {
-        if self.ply >= rollback && self.ss_at(rollback).pieceto.is_some() {
-            Some(*self.ss_at(rollback))
-        } else {
-            None
-        }
-    }
-}

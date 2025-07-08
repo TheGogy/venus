@@ -184,18 +184,16 @@ impl Position {
         }
 
         // Save to TT.
-        if !t.stop {
-            let tt_flag = if best_eval >= beta {
-                // Position is at least as good as beta.
-                Bound::Lower
-            } else {
-                // All moves failed to raise alpha.
-                Bound::Upper
-            };
-
-            let tt_depth = if in_check { 1 } else { 0 };
-            tt.insert(self.board.state.hash, tt_flag, best_move, t.ss().eval, best_eval, tt_depth, t.ply, tt_pv);
-        }
+        // If our eval is at least beta:
+        //   We stopped searching after the beta cutoff, as we proved the position is too good.
+        //   We don't know the exact value of the position, we just know it's at least beta.
+        //
+        // Otherwise, best eval < alpha (alpha did not improve):
+        //   We searched all the moves we wanted to and none of them could improve our position.
+        //   This means the best our position could be is best_eval.
+        let tt_flag = if best_eval >= beta { Bound::Lower } else { Bound::Upper };
+        let tt_depth = if in_check { 1 } else { 0 };
+        tt.insert(self.board.state.hash, tt_flag, best_move, t.ss().eval, best_eval, tt_depth, t.ply, tt_pv);
 
         best_eval
     }
