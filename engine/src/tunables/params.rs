@@ -63,8 +63,7 @@ init_tunables! {
     lmr_m_min: usize = 2, 1, 4, 1;
 
     // Late move reduction verifications.
-    lmr_ver_e_min: i32 = 60, 40, 200, 2;
-    lmr_ver_e_depth_scale: i32 = 10, 5, 20, 1;
+    lmr_ver_e_min: i32 = 42, 30, 50, 2;
 
     // Reduction history metrics.
     lmr_quiet_div: i32 = 8568, 6000, 10000, 100;
