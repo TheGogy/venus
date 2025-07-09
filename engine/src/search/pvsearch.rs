@@ -307,15 +307,20 @@ impl Position {
                 r += tt_move.flag().is_noisy() as Depth;
 
                 r = r.clamp(1, depth - 1);
+                let reduced_depth = new_depth - (r - 1);
 
                 // Try reduced depth first.
-                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth + 1 - r, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, reduced_depth, true);
 
                 // Re-search at full depth if the reduced search suggests the move is good.
-                if v > alpha && r > 1 {
+                if v > alpha && new_depth > reduced_depth {
                     new_depth += (v > best_value + lmr_ver_e_min() + 2 * new_depth as i32) as Depth;
                     new_depth -= (v < best_value + new_depth) as Depth;
-                    v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+
+                    // Only re-search if we're actually increasing the depth.
+                    if new_depth > reduced_depth {
+                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    }
                 }
             }
             // For moves that can't be reduced, or first move in non-PV, do null-window search
