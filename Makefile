@@ -9,12 +9,14 @@ else
 	NAME := $(EXE)
 endif
 
-FEATURES_ARG := $(if $(strip $(FEATURES)),--features $(FEATURES),)
+FEATURES_ARG :=
+ifneq ($(strip $(features)),)
+FEATURES_ARG := --features $(features)
+endif
 
 RUSTFLAGS_BASE := -C target-cpu=$(ARCH)
 RUSTFLAGS_PGO_GEN := $(RUSTFLAGS_BASE) -C profile-generate=$(DIR)
 RUSTFLAGS_PGO_USE := $(RUSTFLAGS_BASE) -C profile-use=$(DIR)/merged.profdata -C target-feature=+crt-static
-RUSTFLAGS_TUNED := -Z tune-cpu=$(ARCH)
 
 .PHONY: rule dir clean release
 
