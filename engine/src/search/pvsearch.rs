@@ -172,9 +172,9 @@ impl Position {
         }
 
         // Internal Iterative reductions.
-        // if can_apply_iir(depth, tt_move, NT::RT, singular) {
-        //     depth -= 1;
-        // }
+        if can_apply_iir(depth, NT::PV, cutnode, tt_move) {
+            depth -= 1;
+        }
 
         // TODO: Probcut.
 
