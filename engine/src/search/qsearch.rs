@@ -81,6 +81,7 @@ impl Position {
             // When in check, we must search all evasions - can't stand pat
             best_eval = -Eval::INFINITY;
             futility = -Eval::INFINITY;
+            t.ss_mut().eval = -Eval::INFINITY;
         } else {
             // "Stand pat" evaluation: assume we can choose not to make any move
             // This is the key insight of qsearch - we can always choose to not capture.
@@ -89,7 +90,7 @@ impl Position {
 
             // Futility pruning threshold for qsearch.
             // If our position + a reasonable bonus still can't reach alpha,
-            // we can prune captures that don't improve the position significantly.
+            // we can prune captures that don't improve the position significantly>
             futility = v + fp_qs_base();
 
             // Use TT score if it's more accurate than static eval.
@@ -115,7 +116,7 @@ impl Position {
         // -----------------------------------
         //             Moves loop
         // -----------------------------------
-        let mut best_move = Move::NONE;
+        let mut best_move = Move::NULL;
         let mut moves_exist = false;
 
         let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move);

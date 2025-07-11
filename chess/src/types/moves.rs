@@ -15,6 +15,10 @@ impl Move {
     /// This represents a move that is yet to be populated.
     pub const NONE: Self = Self(0x00);
 
+    /// Null.
+    /// This represents a move that will not be populated.
+    pub const NULL: Self = Self(0x41);
+
     /// Construct a move.
     pub const fn new(src: Square, dst: Square, flag: MoveFlag) -> Self {
         Move((src as u16) << 6 | (dst as u16) | (flag as u16) << 12)
@@ -185,6 +189,7 @@ mod tests {
     #[test]
     fn test_move_valid() {
         assert!(Move::new(Square::A1, Square::A2, MoveFlag::Normal).is_valid());
+        assert!(!Move::NULL.is_valid());
         assert!(!Move::NONE.is_valid());
     }
 }

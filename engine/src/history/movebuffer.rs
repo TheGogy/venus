@@ -9,7 +9,7 @@ pub struct MoveBuffer {
 
 impl Default for MoveBuffer {
     fn default() -> Self {
-        Self { mvs: [Move::NONE; MAX_MOVES], len: 0 }
+        Self { mvs: [Move::NULL; MAX_MOVES], len: 0 }
     }
 }
 

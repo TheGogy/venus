@@ -172,7 +172,7 @@ impl Position {
         }
 
         // Internal Iterative reductions.
-        if can_apply_iir(depth, NT::PV, cutnode, tt_move, tt_bound) {
+        if can_apply_iir(depth, tt_move, NT::RT, singular) {
             depth -= 1;
         }
 
@@ -181,7 +181,7 @@ impl Position {
         // -----------------------------------
         //             Moves loop
         // -----------------------------------
-        let mut best_move = Move::NONE;
+        let mut best_move = Move::NULL;
         let mut best_value = -Eval::INFINITY;
 
         let mut caps_tried = MoveBuffer::default();
