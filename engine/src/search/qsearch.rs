@@ -89,7 +89,7 @@ impl Position {
 
             // Futility pruning threshold for qsearch.
             // If our position + a reasonable bonus still can't reach alpha,
-            // we can prune captures that don't improve the position significantly>
+            // we can prune captures that don't improve the position significantly.
             futility = v + fp_qs_base();
 
             // Use TT score if it's more accurate than static eval.
