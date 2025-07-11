@@ -116,7 +116,7 @@ impl Position {
         // -----------------------------------
         //             Moves loop
         // -----------------------------------
-        let mut best_move = Move::NULL;
+        let mut best_move = Move::NONE;
         let mut moves_exist = false;
 
         let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move);
