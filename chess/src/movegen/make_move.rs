@@ -185,10 +185,7 @@ impl Board {
         // Unset ep square from hash.
         state.hash.toggle_ep(self.state.epsq);
 
-        // Add null move
-        state.mov = Move::NULL;
-
-        // Update stm
+        // Update side to move.
         self.stm = !self.stm;
         state.hash.toggle_color();
 
@@ -364,11 +361,7 @@ mod tests {
     }
 
     #[test]
-    fn test_null_move() {
-        let mut b = Board::default();
-        b.make_null();
-        assert_eq!(b.state.mov, Move::NULL);
-
+    fn test_null_move_ep() {
         let mut b: Board = "rnbqkbnr/pp2pp1p/8/2pP2p1/8/2P5/PP1P1PPP/RNBQKBNR w KQkq g6 1 4".parse().unwrap();
         b.make_null();
         assert_eq!(b.state.epsq, Square::Invalid);

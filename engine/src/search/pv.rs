@@ -13,7 +13,7 @@ pub struct PVLine {
 
 impl Default for PVLine {
     fn default() -> Self {
-        Self { moves: [Move::NULL; MAX_PLY], length: 0 }
+        Self { moves: [Move::NONE; MAX_PLY], length: 0 }
     }
 }
 
