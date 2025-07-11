@@ -81,7 +81,6 @@ impl Position {
             // When in check, we must search all evasions - can't stand pat
             best_eval = -Eval::INFINITY;
             futility = -Eval::INFINITY;
-            t.ss_mut().eval = -Eval::INFINITY;
         } else {
             // "Stand pat" evaluation: assume we can choose not to make any move
             // This is the key insight of qsearch - we can always choose to not capture.
