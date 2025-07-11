@@ -35,7 +35,7 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval:
 // If we don't have a good move from the TT, reduce depth slightly
 // to avoid spending too much time on potentially uninteresting positions.
 pub fn can_apply_iir(depth: Depth, tt_move: Move, is_rt: bool, singular: bool) -> bool {
-    !is_rt && !singular && depth >= iir_d_min() && tt_move.is_none()
+    !is_rt && !singular && depth >= iir_d_min() && !tt_move.is_valid()
 }
 
 /// History Pruning.
