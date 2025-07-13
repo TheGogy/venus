@@ -374,29 +374,31 @@ impl Position {
             return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };
         }
 
-        // Beta cutoff.
-        // We have found a move strong enough that our opponent will play to avoid it.
-        if best_value >= beta {
+        let bound = if best_value >= beta {
+            // We stopped searching after the beta cutoff, as we proved the position is so strong
+            // that the opponent will play to avoid it.
+            // We don't know the exact value of the position, we just know it's at least beta.
+            best_value = beta;
+
             // Update move ordering histories with a malus for moves that didn't cause beta cutoff, and a bonus for the move that did.
             t.update_history(best_move, depth, &self.board, &quiets_tried, &caps_tried);
 
-            // Insert this position in at a lower bound.
-            // We stopped searching after the beta cutoff, as we proved the position is too good.
-            // We don't know the exact value of the position, we just know it's at least beta.
-            if !singular {
-                tt.insert(self.board.state.hash, Bound::Lower, best_move, t.ss().eval, beta, depth, t.ply, NT::PV);
-            }
-            return beta;
-        }
+            Bound::Lower
+        } else if !NT::PV || !best_move.is_valid() {
+            // If we never updated the best move, then none of the moves were better than alpha - so at best, the position is equal to alpha.
+            best_value = alpha;
+            Bound::Upper
+        } else {
+            // We have searched all the moves and have an exact bound for the score.
+            // This means we can trust best_value.
+            Bound::Exact
+        };
 
         // Store the result in the TT.
-        // If we have searched all moves and have an exact score, then use an exact bound.
-        // If all moves have failed low (i.e best_move was never updated) then the position is at most alpha.
         if !singular {
-            let bound = if NT::PV && best_move.is_valid() { Bound::Exact } else { Bound::Upper };
-            tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, alpha, depth, t.ply, NT::PV);
+            tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, best_value, depth, t.ply, NT::PV);
         }
 
-        alpha
+        best_value
     }
 }
