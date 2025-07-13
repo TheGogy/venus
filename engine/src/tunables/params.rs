@@ -47,6 +47,10 @@ init_tunables! {
     hist_quiet_div: i32 = 8867, 7000, 10000, 150;
     hist_noisy_div: i32 = 6329, 5000, 8000, 150;
 
+    // Correction history weights. (scaled up x1024).
+    hist_corr_pawn: i32 = 80, 60, 100, 2;
+    hist_corr_other: i32 = 100, 80, 120, 2;
+
     // transposition table.
     tt_replace_d_min: i16 = 5, 2, 6, 1;
 

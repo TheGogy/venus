@@ -1,4 +1,4 @@
-use crate::tunables::params::tunables::*;
+use crate::{threading::thread::Thread, tunables::params::tunables::*};
 
 use super::Position;
 use chess::types::{eval::Eval, piece::Piece};
@@ -14,7 +14,21 @@ impl Position {
         // material on the board when we might be winning.
         v = (v * self.material_scale()) / 1024;
 
-        v
+        // Clamp eval to non-terminal range.
+        v.clamped()
+    }
+
+    /// Adjust the evaluation according to correction history and 50 move rule scaling.
+    pub fn adjust_eval(&mut self, t: &mut Thread, mut v: Eval) -> Eval {
+        // Scale down the eval if we're just shuffling pieces back and forth and not making
+        // progress.
+        v = v * Eval(200 - self.board.state.halfmoves as i32) / Eval(200);
+
+        // Add correction history.
+        v += t.correction_score(&self.board);
+
+        // Clamp eval to non-terminal range.
+        v.clamped()
     }
 
     /// Get the material scale for the position.

@@ -3,8 +3,8 @@ use chess::{MAX_MOVES, types::moves::Move};
 /// Temporary buffer to hold the moves in so we can add them to the history.
 #[derive(Debug)]
 pub struct MoveBuffer {
-    pub mvs: [Move; MAX_MOVES],
-    pub len: usize,
+    mvs: [Move; MAX_MOVES],
+    len: usize,
 }
 
 impl Default for MoveBuffer {
@@ -16,10 +16,9 @@ impl Default for MoveBuffer {
 impl MoveBuffer {
     /// Add a move to the buffer.
     pub const fn push(&mut self, m: Move) {
-        if self.len < MAX_MOVES {
-            self.mvs[self.len] = m;
-            self.len += 1;
-        }
+        assert!(self.len < MAX_MOVES);
+        self.mvs[self.len] = m;
+        self.len += 1;
     }
 }
 

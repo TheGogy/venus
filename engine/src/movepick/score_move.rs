@@ -8,7 +8,7 @@ use chess::{
     },
 };
 
-use crate::{history::noisyhist::NOISY_MAX, movepick::move_list::LEFT, threading::thread::Thread};
+use crate::{history::capturehist::CAP_HIST_MAX, movepick::move_list::LEFT, threading::thread::Thread};
 
 use super::{MovePicker, SearchType, move_list::RIGHT};
 
@@ -55,8 +55,8 @@ impl MovePicker {
             #[rustfmt::skip]
             let s = match m.flag() {
                 // Regular queen promotions give us a queen for a pawn: best MVV trade.
-                MoveFlag::PromoQ  => NOISY_MAX + MVV[Piece::Queen.idx()] + 1,
-                MoveFlag::CPromoQ => NOISY_MAX + MVV[Piece::Queen.idx()] + capture_value(b, m),
+                MoveFlag::PromoQ  => CAP_HIST_MAX + MVV[Piece::Queen.idx()] + 1,
+                MoveFlag::CPromoQ => CAP_HIST_MAX + MVV[Piece::Queen.idx()] + capture_value(b, m),
 
                 // Underpromotions are usually bad - we should probably promote to a queen.
                 // (though these are captures).

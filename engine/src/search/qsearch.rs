@@ -34,7 +34,12 @@ impl Position {
         // Prevent infinite search.
         // If we're at maximum depth, we must return something reasonable.
         if t.ply >= MAX_PLY {
-            return if in_check { Eval::DRAW } else { self.evaluate() };
+            return if in_check {
+                Eval::DRAW
+            } else {
+                let raw = self.evaluate();
+                self.adjust_eval(t, raw)
+            };
         }
 
         // Stop searching if position is ruled as a draw.
@@ -74,42 +79,45 @@ impl Position {
         //            Static Eval
         // -----------------------------------
 
-        let mut best_eval;
+        let mut best_value;
+        let raw_value;
         let futility;
 
         if in_check {
             // When in check, we must search all evasions - can't stand pat
-            best_eval = -Eval::INFINITY;
+            best_value = -Eval::INFINITY;
+            raw_value = -Eval::INFINITY;
             futility = -Eval::INFINITY;
         } else {
-            // "Stand pat" evaluation: assume we can choose not to make any move
-            // This is the key insight of qsearch - we can always choose to not capture.
-            let mut v = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
-            t.ss_mut().eval = v;
+            // Stand pat evaluation: assume we can choose not to make any move.
+            raw_value = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
+
+            // Adjust evaluation with correction history.
+            best_value = self.adjust_eval(t, raw_value);
+
+            t.ss_mut().eval = best_value;
 
             // Futility pruning threshold for qsearch.
             // If our position + a reasonable bonus still can't reach alpha,
             // we can prune captures that don't improve the position significantly.
-            futility = v + fp_qs_base();
+            futility = best_value + fp_qs_base();
 
             // Use TT score if it's more accurate than static eval.
-            if tt_value.is_valid() && tt_bound.is_usable(tt_value, v) {
-                v = tt_value
+            if tt_value.is_valid() && tt_bound.is_usable(tt_value, best_value) {
+                best_value = tt_value
             }
 
             // Beta cutoff from stand pat.
             // If our current position is already good enough to cause a beta cutoff,
             // we don't need to search any captures.
-            if v >= beta {
+            if best_value >= beta {
                 // Return average of static eval and beta to avoid returning
                 // values that are too far from the "true" evaluation.
-                return (v + beta) / 2;
+                return (best_value + beta) / 2;
             }
 
             // Raise alpha if our stand pat evaluation is better.
-            alpha = alpha.max(v);
-
-            best_eval = v;
+            alpha = alpha.max(best_value);
         };
 
         // -----------------------------------
@@ -125,12 +133,12 @@ impl Position {
             // -----------------------------------
             //              Pruning
             // -----------------------------------
-            if !best_eval.is_loss() {
+            if !best_value.is_loss() {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
                 if !self.board.in_check() && futility <= alpha && !self.board.see(m, Eval(1)) {
-                    best_eval = best_eval.max(futility);
+                    best_value = best_value.max(futility);
                     continue;
                 }
 
@@ -154,8 +162,8 @@ impl Position {
             }
 
             // Update best move and alpha if we found an improvement.
-            if v > best_eval {
-                best_eval = v;
+            if v > best_value {
+                best_value = v;
 
                 if v > alpha {
                     best_move = m;
@@ -178,8 +186,8 @@ impl Position {
 
         // Adjust beta cutoff values to be more conservative.
         // This prevents qsearch from returning overly optimistic evaluations.
-        if best_eval >= beta && best_eval.nonterminal() {
-            best_eval = (best_eval + beta) / 2
+        if best_value >= beta && best_value.nonterminal() {
+            best_value = (best_value + beta) / 2
         }
 
         // Save to TT.
@@ -190,10 +198,12 @@ impl Position {
         // Otherwise, best eval < alpha (alpha did not improve):
         //   We searched all the moves we wanted to and none of them could improve our position.
         //   This means the best our position could be is best_eval.
-        let tt_flag = if best_eval >= beta { Bound::Lower } else { Bound::Upper };
+        //
+        // We can't use an exact bound as we don't know if we've searched all the moves.
+        let bound = if best_value >= beta { Bound::Lower } else { Bound::Upper };
         let tt_depth = if in_check { 1 } else { 0 };
-        tt.insert(self.board.state.hash, tt_flag, best_move, t.ss().eval, best_eval, tt_depth, t.ply, tt_pv);
+        tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, tt_depth, t.ply, tt_pv);
 
-        best_eval
+        best_value
     }
 }
