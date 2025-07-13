@@ -1,12 +1,12 @@
-use chess::Depth;
-
-use crate::tunables::params::tunables::*;
-
+pub mod capturehist;
 pub mod conthist;
 pub mod corrhist;
 pub mod movebuffer;
-pub mod noisyhist;
 pub mod quiethist;
+
+use chess::Depth;
+
+use crate::tunables::params::tunables::*;
 
 /// Entry within a history table.
 #[derive(Clone, Copy, Debug, Default)]

@@ -2,7 +2,10 @@ use chess::types::{color::Color, moves::Move, square::Square};
 
 use super::{HistEntry, movebuffer::MoveBuffer};
 
-/// [color][from][to]
+/// Quiet history.
+///
+/// This is used to record the value of quiet moves during the search,
+/// in order to help with move ordering.
 #[derive(Clone, Debug)]
 pub struct QuietHist([[[HistEntry; Square::NUM]; Square::NUM]; Color::NUM]);
 
@@ -17,6 +20,7 @@ pub const QUIET_MAX: i32 = 8192;
 
 impl QuietHist {
     /// The index into this QuietHist.
+    /// [color][from][to]
     const fn idx(c: Color, m: Move) -> (usize, usize, usize) {
         (c.idx(), m.src().idx(), m.dst().idx())
     }

@@ -2,6 +2,12 @@ use chess::types::{board::Board, moves::Move, piece::CPiece, square::Square};
 
 use super::{HistEntry, movebuffer::MoveBuffer};
 
+const CONT_HIST_MAX: i32 = 16384;
+pub const CONT_NUM: usize = 2;
+
+/// Continuation history.
+///
+/// This records the history of combinations of the current move and the move `n` plies ago.
 #[derive(Clone, Debug)]
 pub struct ContHist(Box<[[[HistEntry; Square::NUM]; Square::NUM]; PieceTo::NUM]>);
 
@@ -12,11 +18,9 @@ impl Default for ContHist {
     }
 }
 
-const CONT_MAX: i32 = 16384;
-pub const CONT_NUM: usize = 2;
-
 impl ContHist {
     /// The index into this ContHist.
+    /// [pieceto][from][to]
     fn idx(m: Move, pt: PieceTo) -> (usize, usize, usize) {
         (pt.idx(), m.src().idx(), m.dst().idx())
     }
@@ -24,7 +28,7 @@ impl ContHist {
     /// Add a bonus to the given move pair.
     fn add_bonus(&mut self, m: Move, pt: PieceTo, bonus: i16) {
         let i = Self::idx(m, pt);
-        self.0[i.0][i.1][i.2].gravity::<CONT_MAX>(bonus);
+        self.0[i.0][i.1][i.2].gravity::<CONT_HIST_MAX>(bonus);
     }
 
     /// Get a bonus from the given move pair.
