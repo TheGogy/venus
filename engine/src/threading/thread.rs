@@ -14,6 +14,7 @@ use chess::{
 use crate::{
     history::{
         conthist::{CONT_NUM, ContHist, PieceTo},
+        corrhist::{CorrHist, correction_bonus},
         hist_delta,
         movebuffer::MoveBuffer,
         noisyhist::NoisyHist,
@@ -21,6 +22,7 @@ use crate::{
     },
     search::pv::PVLine,
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
+    tunables::params::tunables::{hist_corr_other, hist_corr_pawn},
 };
 
 use super::stack::SearchStackEntry;
@@ -45,6 +47,9 @@ pub struct Thread {
     pub hist_quiet: QuietHist,
     pub hist_noisy: NoisyHist,
     pub hist_conts: [ContHist; CONT_NUM],
+    pub hist_corr_pawn: CorrHist,
+    pub hist_corr_major_w: CorrHist,
+    pub hist_corr_major_b: CorrHist,
 }
 
 impl Thread {
@@ -66,6 +71,10 @@ impl Thread {
             hist_quiet: QuietHist::default(),
             hist_noisy: NoisyHist::default(),
             hist_conts: array::from_fn(|_| ContHist::default()),
+
+            hist_corr_pawn: CorrHist::default(),
+            hist_corr_major_w: CorrHist::default(),
+            hist_corr_major_b: CorrHist::default(),
         }
     }
 
@@ -202,5 +211,27 @@ impl Thread {
             }
             v
         }
+    }
+
+    #[rustfmt::skip]
+    /// Get the correction score for a given board position according to our correction history.
+    pub fn correction_score(&self, b: &Board) -> Eval {
+        let key = b.state.hash;
+
+        Eval (
+            hist_corr_pawn()  * self.hist_corr_pawn.get_bonus(key.pawn_key, b.stm)                            / 1024 +
+            hist_corr_other() * self.hist_corr_major_w.get_bonus(key.non_pawn_key[Color::White.idx()], b.stm) / 1024 +
+            hist_corr_other() * self.hist_corr_major_b.get_bonus(key.non_pawn_key[Color::Black.idx()], b.stm) / 1024
+        )
+    }
+
+    /// Update the correction history.
+    pub fn update_corrhist(&mut self, b: &Board, best_value: Eval, depth: Depth) {
+        let key = b.state.hash;
+        let bonus = correction_bonus(best_value, self.ss().eval, depth);
+
+        self.hist_corr_pawn.add_bonus(key.pawn_key, b.stm, bonus);
+        self.hist_corr_major_w.add_bonus(key.non_pawn_key[Color::White.idx()], b.stm, bonus);
+        self.hist_corr_major_b.add_bonus(key.non_pawn_key[Color::Black.idx()], b.stm, bonus);
     }
 }

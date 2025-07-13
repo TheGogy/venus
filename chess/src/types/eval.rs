@@ -137,10 +137,16 @@ impl Eval {
     /// TODO: Calculate proper normalized pawn value.
     /// https://github.com/official-stockfish/WDL_model
     #[inline(always)]
-    pub const fn normalized(self) -> Eval {
+    pub const fn normalized(self) -> i32 {
         const NORMALIZE_PAWN_VALUE: i32 = 199;
 
-        if self.is_mate() { self } else { Eval((self.0 * 100) / NORMALIZE_PAWN_VALUE) }
+        if self.is_mate() { self.0 } else { (self.0 * 100) / NORMALIZE_PAWN_VALUE }
+    }
+
+    /// Clamps eval to the valid (non-terminal) range.
+    #[inline(always)]
+    pub fn clamped(self) -> Eval {
+        Eval(self.0.clamp(-Self::LONGEST_TB_MATE.0 + 1, Self::LONGEST_TB_MATE.0 - 1))
     }
 }
 
@@ -152,7 +158,7 @@ impl fmt::Display for Eval {
             let sign = if *self > Self::DRAW { "" } else { "-" };
             write!(f, "mate {sign}{moves_to_mate}")
         } else {
-            write!(f, "cp {}", self.normalized().0)
+            write!(f, "cp {}", self.normalized())
         }
     }
 }

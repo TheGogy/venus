@@ -3,6 +3,7 @@ use chess::Depth;
 use crate::tunables::params::tunables::*;
 
 pub mod conthist;
+pub mod corrhist;
 pub mod movebuffer;
 pub mod noisyhist;
 pub mod quiethist;
@@ -19,7 +20,7 @@ impl HistEntry {
         // Do calculations as i32
         let x = self.0 as i32;
         let b = bonus as i32;
-        self.0 = (x + b - (x * b.abs()) / MAX) as i16
+        self.0 += (b - x * b.abs() / MAX) as i16
     }
 }
 

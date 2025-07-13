@@ -12,7 +12,7 @@ impl Default for ContHist {
     }
 }
 
-pub const CONT_MAX: i32 = 16384;
+const CONT_MAX: i32 = 16384;
 pub const CONT_NUM: usize = 2;
 
 impl ContHist {

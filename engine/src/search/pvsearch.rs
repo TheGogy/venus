@@ -112,6 +112,8 @@ impl Position {
         // -----------------------------------
         //            Static Eval
         // -----------------------------------
+        let mut raw_value = -Eval::INFINITY;
+
         // Don't evaluate positions in check.
         let eval = if in_check {
             t.ss_mut().eval = -Eval::INFINITY;
@@ -119,13 +121,15 @@ impl Position {
         }
         // In singular search, just take the eval of the position that invoked it.
         else if singular {
+            raw_value = t.ss().eval;
             t.ss().eval
         }
         // Otherwise try to get eval from the tt if the position has been evaluated and the bound
         // is tighter. If we can't do that, then just evaluate the position from scratch.
         else {
-            let mut e = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
+            raw_value = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
 
+            let mut e = self.adjust_eval(t, raw_value);
             t.ss_mut().eval = e;
 
             // If we have a TT hit with a tighter bound than our static eval, use the TT value.
@@ -375,6 +379,7 @@ impl Position {
         }
 
         let bound = if best_value >= beta {
+            // Insert this position in at a lower bound.
             // We stopped searching after the beta cutoff, as we proved the position is so strong
             // that the opponent will play to avoid it.
             // We don't know the exact value of the position, we just know it's at least beta.
@@ -385,18 +390,24 @@ impl Position {
 
             Bound::Lower
         } else if !NT::PV || !best_move.is_valid() {
+            // Insert this position in at an upper bound.
             // If we never updated the best move, then none of the moves were better than alpha - so at best, the position is equal to alpha.
             best_value = alpha;
             Bound::Upper
         } else {
             // We have searched all the moves and have an exact bound for the score.
-            // This means we can trust best_value.
+            // This means we can trust best_value, so insert at exact bound.
             Bound::Exact
         };
 
+        // Update correction history.
+        if !best_move.flag().is_cap() && !in_check && bound.is_usable(best_value, t.ss().eval) {
+            t.update_corrhist(&self.board, best_value, depth);
+        }
+
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, t.ss().eval, best_value, depth, t.ply, NT::PV);
+            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, NT::PV);
         }
 
         best_value
