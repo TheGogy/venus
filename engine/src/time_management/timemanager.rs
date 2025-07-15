@@ -76,7 +76,7 @@ impl TimeManager {
 
             // Time related time controls (opt and max set).
             _ => {
-                let scale = if best_move.is_valid() && nodes != 0 {
+                let scale = if !best_move.is_none() && nodes != 0 {
                     let f = self.move_nodes[best_move.src().idx()][best_move.dst().idx()] as f64 / nodes as f64;
 
                     (0.4 + (1.0 - f) * 2.0).max(0.5)

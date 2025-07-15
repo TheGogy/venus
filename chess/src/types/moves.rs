@@ -36,30 +36,20 @@ impl Move {
         MoveFlag::from_raw(((self.0 & TYPE) >> 12) as u8)
     }
 
-    /// Whether the move is null.
-    pub const fn is_null(&self) -> bool {
-        self.0 == 0x41
-    }
-
     /// Whether the move is none.
     pub const fn is_none(&self) -> bool {
         self.0 == 0x00
     }
 
-    /// Whether the move is valid (not null or none).
-    pub const fn is_valid(&self) -> bool {
-        !(self.is_none() || self.is_null())
-    }
-
     /// Returns self if valid, otherwise evaluates `f` and returns the result.
-    pub fn is_valid_or<F: FnOnce() -> Move>(self, f: F) -> Move {
-        if self.is_valid() { self } else { f() }
+    pub fn is_some_or<F: FnOnce() -> Move>(self, f: F) -> Move {
+        if self.is_none() { f() } else { self }
     }
 
     /// Display the move according to UCI format.
     pub fn to_uci(self, cm: &CastlingMask) -> String {
         // Invalid moves.
-        if !self.is_valid() {
+        if self.is_none() {
             return "0000".to_owned();
         }
 
@@ -180,11 +170,5 @@ mod tests {
         assert!(MoveFlag::PromoR.is_underpromo());
         assert!(!MoveFlag::PromoQ.is_underpromo());
         assert!(!MoveFlag::Normal.is_underpromo());
-    }
-
-    #[test]
-    fn test_move_valid() {
-        assert!(Move::new(Square::A1, Square::A2, MoveFlag::Normal).is_valid());
-        assert!(!Move::NONE.is_valid());
     }
 }

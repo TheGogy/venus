@@ -104,7 +104,7 @@ impl MovePicker {
             MPStage::QsTT
         };
 
-        let tt_move = tt_move.is_valid_or(|| {
+        let tt_move = tt_move.is_some_or(|| {
             stage = stage.next();
             Move::NONE
         });

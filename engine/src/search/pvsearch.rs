@@ -199,7 +199,7 @@ impl Position {
 
         let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
         while let Some(m) = mp.next(&self.board, t) {
-            debug_assert!(m.is_valid());
+            debug_assert!(!m.is_none());
             moves_exist = true;
 
             // Ignore excluded move.
@@ -389,7 +389,7 @@ impl Position {
             t.update_history(best_move, depth, &self.board, &quiets_tried, &caps_tried);
 
             Bound::Lower
-        } else if !NT::PV || !best_move.is_valid() {
+        } else if !NT::PV || best_move.is_none() {
             // Insert this position in at an upper bound.
             // If we never updated the best move, then none of the moves were better than alpha - so at best, the position is equal to alpha.
             best_value = alpha;

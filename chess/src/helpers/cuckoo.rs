@@ -151,7 +151,7 @@ mod tests {
                     valid_moves += 1;
 
                     // Verify the move is valid
-                    assert!(mov.is_valid());
+                    assert!(!mov.is_none());
                     assert_ne!(mov.src(), mov.dst());
                 }
             }

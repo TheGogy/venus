@@ -9,7 +9,7 @@ use crate::types::{
 impl Board {
     /// Make a move in the current position.
     pub fn make_move(&mut self, m: Move) {
-        assert!(m.is_valid());
+        assert!(!m.is_none());
 
         let flag = m.flag();
         let (src, dst) = (m.src(), m.dst());

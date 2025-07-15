@@ -76,12 +76,12 @@ impl TT {
         let slot = unsafe { self.entries.get_unchecked(self.idx(hash)) };
         let old = slot.read_unchecked();
 
-        if self.age != old.age        // Always replace older entries
-            || hash.key != old.key    // Always replace different positions
-            || bound == Bound::Exact  // Always replace with exact scores
+        if self.age != old.age        // Always replace older entries.
+            || hash.key != old.key    // Always replace different positions.
+            || bound == Bound::Exact  // Always replace with exact scores.
             || depth + tt_replace_d_min() + 2 * pv as Depth > old.depth()
         {
-            let new_move = if !mov.is_valid() && hash.key == old.key { old.mov } else { mov };
+            let new_move = if mov.is_none() && hash.key == old.key { old.mov } else { mov };
             slot.write(TTEntry::new(hash.key, pv, self.age, depth as u8, bound, new_move, eval, value.to_corrected(ply)));
         }
     }
