@@ -73,6 +73,16 @@ impl Square {
     pub fn iter() -> impl Iterator<Item = Square> {
         (0..64).map(Square::from_raw)
     }
+
+    /// Flip horizontal.
+    pub const fn fliph(self) -> Self {
+        Self::from_raw(self as u8 ^ 7)
+    }
+
+    /// Flip vertical.
+    pub const fn flipv(self) -> Self {
+        Self::from_raw(self as u8 ^ 56)
+    }
 }
 
 impl_lists! {Square, 64}

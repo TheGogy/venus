@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     let cwd = env::current_dir().expect("Failed to get current working directory");
-    let evalfile_rel = env::var("EVALFILE").unwrap_or_else(|_| "data/voyager-archv1-1536.bin".to_string());
+    let evalfile_rel = env::var("EVALFILE").unwrap_or_else(|_| "data/zephyr-ft0.bin".to_string());
 
     // Resolve relative to where the user ran make from.
     let evalfile_path = if Path::new(&evalfile_rel).is_absolute() {
