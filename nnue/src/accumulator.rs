@@ -3,7 +3,7 @@ use utils::Align64;
 
 use crate::{
     NNUE_EMBEDDED,
-    arch::{L1, utils::feature_idx},
+    arch::{L1, utils::ft_idx},
 };
 
 /// Accumulator for each side.
@@ -60,6 +60,10 @@ impl Accumulator {
 
     /// Update features and cache to match the current board.
     pub fn update(&mut self, b: &Board) {
+        // King squares for each color.
+        let wksq = b.ksq(Color::White);
+        let bksq = b.ksq(Color::Black);
+
         // Update features.
         for c in 0..Color::NUM {
             let co = self.colors[c];
@@ -71,12 +75,12 @@ impl Accumulator {
 
                 // Toggle new weights on.
                 (new & !old).bitloop(|s| {
-                    self.toggle_features::<true>(feature_idx(c, p, s.idx()));
+                    self.toggle_features::<true>(ft_idx(c, p, wksq, bksq, s));
                 });
 
                 // Toggle old weights off.
                 (old & !new).bitloop(|s| {
-                    self.toggle_features::<false>(feature_idx(c, p, s.idx()));
+                    self.toggle_features::<false>(ft_idx(c, p, wksq, bksq, s));
                 });
             }
         }
