@@ -42,7 +42,7 @@ pub fn can_apply_iir(depth: Depth, is_pv: bool, cutnode: bool, tt_move: Move, tt
 /// If the current node has a bad history (and because of move sorting all subsequent moves will be
 /// worse) then ignore quiet moves.
 pub fn can_apply_hp(depth: Depth, is_quiet: bool, hist_score: i32) -> bool {
-    is_quiet && depth <= hp_d_min() && hist_score < hp_s_min()
+    is_quiet && depth <= hp_d_min() && hist_score < -hp_s_min()
 }
 
 /// Late move pruning.

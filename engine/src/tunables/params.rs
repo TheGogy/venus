@@ -94,7 +94,7 @@ init_tunables! {
 
     // History pruning.
     hp_d_min: i16 = 2, 1, 5, 1;
-    hp_s_min: i32 = -5000, -6000, -3500, -100;
+    hp_s_min: i32 = 5000, 3500, 6000, 100;
 
     // Futility pruning.
     fp_base:  i32 = 80, 50, 100, 2;
