@@ -183,11 +183,11 @@ impl Position {
         // -----------------------------------
         //              Probcut
         // -----------------------------------
-        let pc_beta = beta + pc_beta_base() + (!improving as i32 * pc_beta_non_improving());
+        let pc_beta = beta + pc_beta_base();
 
         if !NT::PV && beta.nonterminal() && depth >= pc_min_depth() && !(tt_value.is_valid() && tt_value < pc_beta) {
             let mut mp = MovePicker::new(SearchType::Pc, in_check, tt_move, pc_beta - t.ss().eval);
-            let pc_depth = depth - pc_min_depth() - 1;
+            let pc_depth = depth - pc_min_depth() + 1;
 
             while let Some(m) = mp.next(&self.board, t) {
                 // Ignore excluded move.
