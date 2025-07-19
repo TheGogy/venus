@@ -1,4 +1,7 @@
-use chess::{MAX_MOVES, types::moves::Move};
+use chess::{
+    MAX_MOVES,
+    types::{eval::Eval, moves::Move},
+};
 
 use crate::{position::Position, threading::thread::Thread};
 
@@ -16,7 +19,7 @@ impl Position {
 
         let mut ml = [Move::NONE; MAX_MOVES];
         let mut nb_moves = 0;
-        let mut mp = MovePicker::new(SearchType::Pv, self.board.in_check(), Move::NONE);
+        let mut mp = MovePicker::new(SearchType::Pv, self.board.in_check(), Move::NONE, Eval::NONE);
         while let Some(m) = mp.next(&self.board, t) {
             ml[nb_moves] = m;
             nb_moves += 1;
