@@ -180,7 +180,42 @@ impl Position {
             depth -= 1;
         }
 
-        // TODO: Probcut.
+        // -----------------------------------
+        //              Probcut
+        // -----------------------------------
+        let pc_beta = beta + pc_beta_base() + (!improving as i32 * pc_beta_non_improving());
+
+        if !NT::PV && beta.nonterminal() && depth >= pc_min_depth() && !(tt_value.is_valid() && tt_value < pc_beta) {
+            let mut mp = MovePicker::new(SearchType::Pc, in_check, tt_move, pc_beta - t.ss().eval);
+            let pc_depth = depth - pc_min_depth() - 1;
+
+            while let Some(m) = mp.next(&self.board, t) {
+                // Ignore excluded move.
+                if excluded == Some(m) {
+                    continue;
+                }
+
+                self.make_move(m, t);
+
+                // Do a quick qsearch to see if the move is worth looking at.
+                let mut v = -self.qsearch::<OffPV>(t, tt, -pc_beta, -pc_beta + 1);
+
+                // If it is, then do the full search.
+                if v >= pc_beta && pc_depth > 0 {
+                    v = -self.nwsearch(t, tt, pv, -pc_beta + 1, pc_depth, !cutnode)
+                }
+
+                self.undo_move(m, t);
+
+                if v >= pc_beta {
+                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, NT::PV);
+
+                    if v.nonterminal() {
+                        return v - (pc_beta - beta);
+                    }
+                }
+            }
+        }
 
         // -----------------------------------
         //             Moves loop
@@ -197,7 +232,7 @@ impl Position {
         let lmp_margin = ((depth * depth + lmp_base()) / (2 - improving as i16)) as usize;
         let see_margins = [sp_noisy_margin() * (depth * depth) as i32, sp_quiet_margin() * depth as i32];
 
-        let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
+        let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move, Eval::DRAW);
         while let Some(m) = mp.next(&self.board, t) {
             debug_assert!(!m.is_none());
             moves_exist = true;

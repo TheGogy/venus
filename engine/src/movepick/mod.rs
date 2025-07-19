@@ -60,6 +60,12 @@ pub enum MPStage {
     EvGen,
     EvAll,
     EvEnd,
+
+    // Probcut starts here.
+    PcTT,
+    PcNoisyGen,
+    PcNoisyAll,
+    PcEnd,
 }
 
 /// Search type.
@@ -68,12 +74,13 @@ pub enum MPStage {
 pub enum SearchType {
     Pv,
     Qs,
+    Pc,
 }
 
 impl MPStage {
     /// Get the next move pick stage.
     pub fn next(self) -> Self {
-        assert!(![MPStage::PvEnd, MPStage::QsEnd, MPStage::EvEnd].contains(&self));
+        assert!(!matches!(&self, MPStage::PvEnd | MPStage::QsEnd | MPStage::EvEnd | MPStage::PcEnd));
         unsafe { std::mem::transmute(self as u8 + 1) }
     }
 }
@@ -87,7 +94,6 @@ pub struct MovePicker {
 
     tt_move: Move,
 
-    // Constant for now, this is for when we implement probcut.
     see_threshold: Eval,
 
     move_list: MoveList,
@@ -95,13 +101,15 @@ pub struct MovePicker {
 
 impl MovePicker {
     /// Construct a new move picker for the position.
-    pub fn new(searchtype: SearchType, in_check: bool, tt_move: Move) -> Self {
+    pub fn new(searchtype: SearchType, in_check: bool, tt_move: Move, see_threshold: Eval) -> Self {
         let mut stage = if in_check {
             MPStage::EvTT
-        } else if searchtype == SearchType::Pv {
-            MPStage::PvTT
         } else {
-            MPStage::QsTT
+            match searchtype {
+                SearchType::Pv => MPStage::PvTT,
+                SearchType::Qs => MPStage::QsTT,
+                SearchType::Pc => MPStage::PcTT,
+            }
         };
 
         let tt_move = tt_move.is_some_or(|| {
@@ -109,7 +117,7 @@ impl MovePicker {
             Move::NONE
         });
 
-        Self { stage, searchtype, tt_move, see_threshold: Eval::DRAW, skip_quiets: false, move_list: MoveList::default() }
+        Self { stage, searchtype, tt_move, see_threshold, skip_quiets: false, move_list: MoveList::default() }
     }
 }
 
@@ -121,16 +129,16 @@ mod tests {
 
     #[test]
     fn test_movepick_construction() {
-        let mp = MovePicker::new(SearchType::Pv, false, Move::new(Square::E2, Square::E4, MoveFlag::Normal));
+        let mp = MovePicker::new(SearchType::Pv, false, Move::new(Square::E2, Square::E4, MoveFlag::Normal), Eval::DRAW);
         assert_eq!(mp.stage, MPStage::PvTT);
 
-        let mp = MovePicker::new(SearchType::Pv, false, Move::NONE);
+        let mp = MovePicker::new(SearchType::Pv, false, Move::NONE, Eval::DRAW);
         assert_eq!(mp.stage, MPStage::PvNoisyGen);
 
-        let mp = MovePicker::new(SearchType::Pv, true, Move::NONE);
+        let mp = MovePicker::new(SearchType::Pv, true, Move::NONE, Eval::DRAW);
         assert_eq!(mp.stage, MPStage::EvGen);
 
-        let mp = MovePicker::new(SearchType::Qs, false, Move::NONE);
+        let mp = MovePicker::new(SearchType::Qs, false, Move::NONE, Eval::DRAW);
         assert_eq!(mp.stage, MPStage::QsNoisyGen);
     }
 }

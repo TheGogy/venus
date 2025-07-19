@@ -16,8 +16,16 @@ impl MovePicker {
                 return Some(self.tt_move);
             }
 
+            // For probcut, we also want to make sure the TT move has a SEE over the threshold.
+            MPStage::PcTT => {
+                self.stage = self.stage.next();
+                if self.tt_move.flag().is_noisy() && b.see(self.tt_move, self.see_threshold) {
+                    return Some(self.tt_move);
+                }
+            }
+
             // Generate and score noisies, and get ready to return noisy moves.
-            MPStage::PvNoisyGen | MPStage::QsNoisyGen => {
+            MPStage::PvNoisyGen | MPStage::QsNoisyGen | MPStage::PcNoisyGen => {
                 self.gen_score_noisies(b, t);
             }
 
@@ -57,8 +65,18 @@ impl MovePicker {
                 self.gen_score_evasions(b, t);
             }
 
+            // Return all moves over the given SEE threshold.
+            MPStage::PcNoisyAll => {
+                if self.move_list.has_moves::<LEFT>() {
+                    let m = self.move_list.select_upto::<LEFT>();
+                    if b.see(m, self.see_threshold) {
+                        return Some(m);
+                    }
+                }
+            }
+
             // No more moves to play: end here.
-            MPStage::PvEnd | MPStage::QsEnd | MPStage::EvEnd => {
+            MPStage::PvEnd | MPStage::QsEnd | MPStage::EvEnd | MPStage::PcEnd => {
                 return None;
             }
         }

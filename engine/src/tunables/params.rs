@@ -54,6 +54,11 @@ init_tunables! {
     // transposition table.
     tt_replace_d_min: i16 = 5, 2, 6, 1;
 
+    // Probcut.
+    pc_beta_base:          i32 = 150, 120, 200, 5;
+    pc_beta_non_improving: i32 = 50, 30, 80, 4;
+    pc_min_depth:          i16 = 5, 3, 7, 1;
+
     // extensions.
     ext_d_min: i16 = 8, 5, 10, 1;
     ext_mult:  i16 = 2, 1, 4, 1;
@@ -112,5 +117,5 @@ init_tunables! {
     sp_noisy_margin: i32 = -17, -40, 0, 5;
     sp_quiet_margin: i32 = -70, -120, -30, 5;
     sp_d_min:        i16 = 10, 6, 14, 1;
-    sp_qs_margin: i32 = -33, -50, -10, 2;
+    sp_qs_margin:    i32 = -33, -50, -10, 2;
 }
