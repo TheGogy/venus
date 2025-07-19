@@ -183,7 +183,7 @@ impl Position {
         // -----------------------------------
         //              Probcut
         // -----------------------------------
-        let pc_beta = beta + pc_beta_base();
+        let pc_beta = beta + pc_beta_base() + (!improving as i32 * pc_beta_non_improving());
 
         if !NT::PV && beta.nonterminal() && depth >= pc_min_depth() && !(tt_value.is_valid() && tt_value < pc_beta) {
             let mut mp = MovePicker::new(SearchType::Pc, in_check, tt_move, pc_beta - t.ss().eval);
@@ -211,7 +211,7 @@ impl Position {
                     tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, NT::PV);
 
                     if v.nonterminal() {
-                        return v - (pc_beta - beta);
+                        return v;
                     }
                 }
             }
