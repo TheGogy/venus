@@ -92,6 +92,7 @@ impl Position {
         let mut tt_value = Eval::NONE;
         let mut tt_bound = Bound::None;
         let mut tt_depth = -1;
+        let mut tt_pv = NT::PV;
 
         if let Some(tte) = tt.probe(self.board.state.hash) {
             tt_move = tte.mov();
@@ -99,6 +100,7 @@ impl Position {
             tt_value = tte.value(t.ply);
             tt_bound = tte.bound();
             tt_depth = tte.depth();
+            tt_pv |= tte.pv;
         }
 
         // TT cutoff.
@@ -183,7 +185,7 @@ impl Position {
         // -----------------------------------
         //              Probcut
         // -----------------------------------
-        let pc_beta = beta + pc_beta_base() - (improving as i32 * pc_beta_non_improving());
+        let pc_beta = beta + pc_beta_base() + (!improving as i32 * pc_beta_non_improving());
 
         if !NT::PV && beta.nonterminal() && depth >= 5 && !(tt_depth >= depth - 3 && tt_value < pc_beta) {
             let mut mp = MovePicker::new(SearchType::Pc, in_check, tt_move, pc_beta - t.ss().eval);
@@ -208,7 +210,7 @@ impl Position {
                 self.undo_move(m, t);
 
                 if v >= pc_beta {
-                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, NT::PV);
+                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
                     if v.nonterminal() {
                         return v;
@@ -442,7 +444,7 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, NT::PV);
+            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
         }
 
         best_value

@@ -55,8 +55,8 @@ init_tunables! {
     tt_replace_d_min: i16 = 5, 2, 6, 1;
 
     // Probcut.
-    pc_beta_base:          i32 = 200, 150, 250, 10;
-    pc_beta_non_improving: i32 = 60, 30, 80, 4;
+    pc_beta_base:          i32 = 143, 120, 200, 5;
+    pc_beta_non_improving: i32 = 55, 30, 80, 4;
 
     // extensions.
     ext_d_min: i16 = 8, 5, 10, 1;
