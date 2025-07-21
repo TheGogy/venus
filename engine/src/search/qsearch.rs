@@ -126,7 +126,7 @@ impl Position {
         let mut best_move = Move::NONE;
         let mut moves_exist = false;
 
-        let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move);
+        let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move, Eval::DRAW);
         while let Some(m) = mp.next(&self.board, t) {
             moves_exist = true;
 

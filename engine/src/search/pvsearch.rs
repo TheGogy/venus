@@ -92,6 +92,7 @@ impl Position {
         let mut tt_value = Eval::NONE;
         let mut tt_bound = Bound::None;
         let mut tt_depth = -1;
+        let mut tt_pv = NT::PV;
 
         if let Some(tte) = tt.probe(self.board.state.hash) {
             tt_move = tte.mov();
@@ -99,6 +100,7 @@ impl Position {
             tt_value = tte.value(t.ply);
             tt_bound = tte.bound();
             tt_depth = tte.depth();
+            tt_pv |= tte.pv;
         }
 
         // TT cutoff.
@@ -180,7 +182,42 @@ impl Position {
             depth -= 1;
         }
 
-        // TODO: Probcut.
+        // -----------------------------------
+        //              Probcut
+        // -----------------------------------
+        let pc_beta = beta + pc_beta_base() + (!improving as i32 * pc_beta_non_improving());
+
+        if !NT::PV && beta.nonterminal() && depth >= 5 && !(tt_depth >= depth - 3 && tt_value < pc_beta) {
+            let mut mp = MovePicker::new(SearchType::Pc, in_check, tt_move, pc_beta - t.ss().eval);
+            let pc_depth = depth - 4;
+
+            while let Some(m) = mp.next(&self.board, t) {
+                // Ignore excluded move.
+                if excluded == Some(m) {
+                    continue;
+                }
+
+                self.make_move(m, t);
+
+                // Do a quick qsearch to see if the move is worth looking at.
+                let mut v = -self.qsearch::<OffPV>(t, tt, -pc_beta, -pc_beta + 1);
+
+                // If it is, then do the full search.
+                if v >= pc_beta {
+                    v = -self.nwsearch(t, tt, pv, -pc_beta + 1, pc_depth, !cutnode)
+                }
+
+                self.undo_move(m, t);
+
+                if v >= pc_beta {
+                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
+
+                    if v.nonterminal() {
+                        return v;
+                    }
+                }
+            }
+        }
 
         // -----------------------------------
         //             Moves loop
@@ -197,7 +234,7 @@ impl Position {
         let lmp_margin = ((depth * depth + lmp_base()) / (2 - improving as i16)) as usize;
         let see_margins = [sp_noisy_margin() * (depth * depth) as i32, sp_quiet_margin() * depth as i32];
 
-        let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move);
+        let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move, Eval::DRAW);
         while let Some(m) = mp.next(&self.board, t) {
             debug_assert!(!m.is_none());
             moves_exist = true;
@@ -407,7 +444,7 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, NT::PV);
+            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
         }
 
         best_value
