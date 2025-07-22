@@ -426,16 +426,14 @@ impl Position {
             // We stopped searching after the beta cutoff, as we proved the position is so strong
             // that the opponent will play to avoid it.
             // We don't know the exact value of the position, we just know it's at least beta.
-            best_value = beta;
 
-            // Update move ordering histories with a malus for moves that didn't cause beta cutoff, and a bonus for the move that did.
+            // We should also update move ordering histories with a malus for moves that didn't cause beta cutoff, and a bonus for the move that did.
             t.update_history(best_move, depth, &self.board, &quiets_tried, &caps_tried);
 
             Bound::Lower
         } else if !NT::PV || best_move.is_none() {
             // Insert this position in at an upper bound.
             // If we never updated the best move, then none of the moves were better than alpha - so at best, the position is equal to alpha.
-            best_value = alpha;
             Bound::Upper
         } else {
             // We have searched all the moves and have an exact bound for the score.
