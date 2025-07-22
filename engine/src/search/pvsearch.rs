@@ -88,8 +88,8 @@ impl Position {
         // -----------------------------------
 
         let mut tt_move = Move::NONE;
-        let mut tt_eval = Eval::NONE;
-        let mut tt_value = Eval::NONE;
+        let mut tt_eval = -Eval::INFINITY;
+        let mut tt_value = -Eval::INFINITY;
         let mut tt_bound = Bound::None;
         let mut tt_depth = -1;
         let mut tt_pv = NT::PV;
@@ -291,7 +291,7 @@ impl Position {
                 && depth >= ext_d_min()
                 && !singular
                 && m == tt_move
-                && !tt_value.is_tb_mate()
+                && tt_value.nonterminal()
                 && tt_bound.has(Bound::Lower)
                 && tt_depth >= depth - 3
             {

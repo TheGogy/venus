@@ -52,8 +52,8 @@ impl Position {
         // -----------------------------------
 
         let mut tt_move = Move::NONE;
-        let mut tt_value = Eval::NONE;
-        let mut tt_eval = Eval::NONE;
+        let mut tt_value = -Eval::INFINITY;
+        let mut tt_eval = -Eval::INFINITY;
         let mut tt_bound = Bound::None;
         let mut tt_depth = 0;
         let mut tt_pv = false;

@@ -1,7 +1,4 @@
-use std::{
-    cmp,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use chess::{
     Depth,
@@ -119,16 +116,6 @@ impl TTEntry {
     /// Get the search score.
     pub const fn value(self, ply: usize) -> Eval {
         Eval(self.value as i32).from_corrected(ply)
-    }
-
-    /// Get the tightest bound with the current eval.
-    pub fn get_tightest(self, eval: Eval, ply: usize) -> Eval {
-        match self.bound() {
-            Bound::Exact => self.value(ply),
-            Bound::Upper => cmp::min(eval, self.value(ply)),
-            Bound::Lower => cmp::max(eval, self.value(ply)),
-            Bound::None => eval,
-        }
     }
 }
 

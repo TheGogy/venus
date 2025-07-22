@@ -19,7 +19,7 @@ impl Position {
 
         let mut ml = [Move::NONE; MAX_MOVES];
         let mut nb_moves = 0;
-        let mut mp = MovePicker::new(SearchType::Pv, self.board.in_check(), Move::NONE, Eval::NONE);
+        let mut mp = MovePicker::new(SearchType::Pv, self.board.in_check(), Move::NONE, -Eval::INFINITY);
         while let Some(m) = mp.next(&self.board, t) {
             ml[nb_moves] = m;
             nb_moves += 1;

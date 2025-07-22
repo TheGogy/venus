@@ -106,7 +106,7 @@ impl Eval {
     /// Whether or not this is a valid score.
     #[inline(always)]
     pub const fn is_valid(&self) -> bool {
-        self.0.abs() <= Self::INFINITY.0
+        self.0.abs() < Self::INFINITY.0
     }
 
     /// Gets the eval from the corrected value stored in the TT.
