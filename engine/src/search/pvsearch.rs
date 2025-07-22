@@ -1,5 +1,5 @@
 use chess::{
-    Depth, MAX_PLY,
+    Depth,
     types::{eval::Eval, moves::Move},
 };
 
@@ -420,13 +420,13 @@ impl Position {
 
         // No legal moves: checkmate or stalemate.
         if !moves_exist {
-            best_value = if singular {
+            return if singular {
                 alpha
             } else if in_check {
                 Eval::mated_in(t.ply)
             } else {
                 Eval::DRAW
-            }
+            };
         }
 
         let bound = if best_value >= beta {
@@ -456,8 +456,7 @@ impl Position {
         // Store the result in the TT.
         if !singular {
             // Give checks a boost in depth.
-            let d = if moves_exist { depth } else { (depth + 5).min(MAX_PLY as Depth - 1) };
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, d, t.ply, tt_pv);
+            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
         }
 
         best_value
