@@ -1,5 +1,5 @@
 use chess::{
-    Depth,
+    Depth, MAX_PLY,
     types::{eval::Eval, moves::Move},
 };
 
@@ -209,6 +209,10 @@ impl Position {
 
                 self.undo_move(m, t);
 
+                if t.stop {
+                    return Eval::DRAW;
+                }
+
                 if v >= pc_beta {
                     tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
@@ -304,7 +308,7 @@ impl Position {
 
                 // If no other move can reach the TT move's value, extend this move.
                 let ext = if v < ext_beta {
-                    1
+                    1 + (!NT::PV && v < ext_beta - ext_double_e_diff()) as Depth + (!NT::PV && v < ext_beta - ext_triple_e_diff()) as Depth
                 }
                 // Multicut.
                 else if ext_beta >= beta && beta.nonterminal() {
@@ -416,15 +420,19 @@ impl Position {
 
         // No legal moves: checkmate or stalemate.
         if !moves_exist {
-            return if in_check { Eval::mated_in(t.ply) } else { Eval::DRAW };
+            best_value = if singular {
+                alpha
+            } else if in_check {
+                Eval::mated_in(t.ply)
+            } else {
+                Eval::DRAW
+            }
         }
 
         let bound = if best_value >= beta {
             // Insert this position in at a lower bound.
-            // We stopped searching after the beta cutoff, as we proved the position is so strong
-            // that the opponent will play to avoid it.
+            // We stopped searching after the beta cutoff, as we proved the position is so strong that the opponent will play to avoid it.
             // We don't know the exact value of the position, we just know it's at least beta.
-            best_value = beta;
 
             // Update move ordering histories with a malus for moves that didn't cause beta cutoff, and a bonus for the move that did.
             t.update_history(best_move, depth, &self.board, &quiets_tried, &caps_tried);
@@ -433,7 +441,6 @@ impl Position {
         } else if !NT::PV || best_move.is_none() {
             // Insert this position in at an upper bound.
             // If we never updated the best move, then none of the moves were better than alpha - so at best, the position is equal to alpha.
-            best_value = alpha;
             Bound::Upper
         } else {
             // We have searched all the moves and have an exact bound for the score.
@@ -448,7 +455,9 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
+            // Give checks a boost in depth.
+            let d = if moves_exist { depth } else { (depth + 5).min(MAX_PLY as Depth - 1) };
+            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, d, t.ply, tt_pv);
         }
 
         best_value
