@@ -304,7 +304,7 @@ impl Position {
 
                 // If no other move can reach the TT move's value, extend this move.
                 let ext = if v < ext_beta {
-                    1
+                    1 + (!NT::PV && v < ext_beta - ext_double_e_diff()) as Depth + (!NT::PV && v < ext_beta - ext_triple_e_diff()) as Depth
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
@@ -423,11 +423,10 @@ impl Position {
 
         let bound = if best_value >= beta {
             // Insert this position in at a lower bound.
-            // We stopped searching after the beta cutoff, as we proved the position is so strong
-            // that the opponent will play to avoid it.
+            // We stopped searching after the beta cutoff, as we proved the position is so strong that the opponent will play to avoid it.
             // We don't know the exact value of the position, we just know it's at least beta.
 
-            // We should also update move ordering histories with a malus for moves that didn't cause beta cutoff, and a bonus for the move that did.
+            // Update move ordering histories with a malus for moves that didn't cause beta cutoff, and a bonus for the move that did.
             t.update_history(best_move, depth, &self.board, &quiets_tried, &caps_tried);
 
             Bound::Lower
