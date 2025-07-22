@@ -304,7 +304,8 @@ impl Position {
 
                 // If no other move can reach the TT move's value, extend this move.
                 let ext = if v < ext_beta {
-                    1
+                    // Single, double and triple extensions.
+                    1 + (!NT::PV && v < ext_beta - ext_double()) as Depth + (!NT::PV && v < ext_beta - ext_triple()) as Depth
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
@@ -411,6 +412,7 @@ impl Position {
         }
 
         // No legal moves: checkmate or stalemate.
+        // If we are in a singular extension, we should return a fail low score.
         if !moves_exist {
             return if singular {
                 alpha
