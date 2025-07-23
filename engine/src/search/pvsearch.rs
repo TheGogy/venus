@@ -306,7 +306,11 @@ impl Position {
 
                 // Single and double extensions.
                 let ext = if v < ext_beta {
-                    1 + (!NT::PV && v.nonterminal() && v < ext_beta - ext_double()) as Depth
+                    1 + (!NT::PV && !v.is_loss() && v < ext_beta - ext_double()) as Depth
+                }
+                // Multicut.
+                else if v >= beta && v.nonterminal() {
+                    return v;
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
