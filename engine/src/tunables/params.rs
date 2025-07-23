@@ -61,7 +61,7 @@ init_tunables! {
     // extensions.
     ext_d_min: i16 = 8, 5, 10, 1;
     ext_mult:  i16 = 2, 1, 4, 1;
-    ext_double: i32 = 15, 10, 30, 1;
+    ext_double: i32 = 28, 10, 30, 1;
 
     // Late move reduction table parameters (scaled up x1024).
     lmr_base: i32 = 887, 500, 2000, 100;
