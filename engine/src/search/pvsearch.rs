@@ -306,6 +306,7 @@ impl Position {
 
                 // Single and double extensions.
                 let ext = if v < ext_beta {
+                    depth += 1;
                     1 + (!NT::PV && !v.is_loss() && v < ext_beta - ext_double()) as Depth
                 }
                 // Multicut.
