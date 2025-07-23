@@ -298,14 +298,15 @@ impl Position {
                 let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::INFINITY);
 
                 // Search all moves except the TT move at reduced depth.
-                t.ss_mut().excluded = Some(m);
+                t.ss_mut().excluded = Some(tt_move);
                 let v = self.nwsearch(t, tt, child_pv, ext_beta, new_depth / 2, cutnode);
                 t.ss_mut().excluded = None;
 
                 // If no other move can reach the TT move's value, extend this move.
+
+                // Single and double extensions.
                 let ext = if v < ext_beta {
-                    // Single, double and triple extensions.
-                    1 + (!NT::PV && v < ext_beta - ext_double()) as Depth + (!NT::PV && v < ext_beta - ext_triple()) as Depth
+                    1 + (!NT::PV && v < ext_beta - ext_double()) as Depth
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
