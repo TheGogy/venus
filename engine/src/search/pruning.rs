@@ -55,8 +55,8 @@ pub fn can_apply_lmp(depth: Depth, moves_tried: usize, lmp_margin: usize) -> boo
 /// Futility pruning.
 /// If our score is significantly below alpha, then this position is probably bad, then we should
 /// skip the quiet moves.
-pub fn can_apply_fp(depth: Depth, eval: Eval, alpha: Eval, moves_tried: usize) -> bool {
-    let lmr_depth = depth - lmr_base_reduction(depth, moves_tried);
+pub fn can_apply_fp(depth: Depth, eval: Eval, alpha: Eval, moves_tried: usize, is_quiet: bool) -> bool {
+    let lmr_depth = depth - lmr_base_reduction(depth, moves_tried, is_quiet);
     let fp_margin = Eval(fp_base() + (lmr_depth as i32) * fp_mult());
 
     lmr_depth <= fp_d_min() && eval + fp_margin < alpha
@@ -69,12 +69,12 @@ pub fn can_apply_lmr(depth: Depth, moves_tried: usize, is_pv: bool) -> bool {
 }
 
 /// Get the late move reduction amount.
-pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> Depth {
+pub fn lmr_base_reduction(depth: Depth, moves_tried: usize, is_quiet: bool) -> Depth {
     #[cfg(not(feature = "tune"))]
     {
-        static LMR_TABLE: [[Depth; 64]; 64] = unsafe { std::mem::transmute(*include_bytes!(concat!(env!("OUT_DIR"), "/lmr.bin"))) };
+        static LMR_TABLE: [[[Depth; 2]; 64]; 64] = unsafe { std::mem::transmute(*include_bytes!(concat!(env!("OUT_DIR"), "/lmr.bin"))) };
 
-        LMR_TABLE[depth.min(63) as usize][moves_tried.min(63)]
+        LMR_TABLE[depth.min(63) as usize][moves_tried.min(63)][is_quiet as usize]
     }
 
     #[cfg(feature = "tune")]
@@ -83,9 +83,12 @@ pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> Depth {
             return 0;
         }
 
-        let lmr_base = lmr_base() as f32 / 1024.0;
-        let lmr_mult = lmr_mult() as f32 / 1024.0;
+        let (b, m) = if is_quiet {
+            (lmr_base_quiet() as f32 / 1024.0, lmr_mult_quiet() as f32 / 1024.0)
+        } else {
+            (lmr_base_noisy() as f32 / 1024.0, lmr_mult_noisy() as f32 / 1024.0)
+        };
 
-        (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as Depth
+        (b + (depth as f32).ln() * (moves_tried as f32).ln() / m) as Depth
     }
 }

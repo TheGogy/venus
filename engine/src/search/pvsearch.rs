@@ -265,7 +265,7 @@ impl Position {
                 }
 
                 // Futility pruning.
-                if can_apply_fp(depth, eval, alpha, moves_tried) {
+                if can_apply_fp(depth, eval, alpha, moves_tried, is_quiet) {
                     mp.skip_quiets = true;
                 }
             }
@@ -306,6 +306,10 @@ impl Position {
                 let ext = if v < ext_beta {
                     1 + (v < ext_beta - ext_double()) as Depth + (v < ext_beta - ext_triple()) as Depth
                 }
+                // Multicut pruning.
+                else if v >= beta && v.nonterminal() {
+                    return v;
+                }
                 // Negative extensions.
                 else if tt_value >= beta {
                     -3
@@ -333,7 +337,7 @@ impl Position {
             // already looked at the best moves. We reduce the depth that we search the other moves
             // at accordingly.
             if can_apply_lmr(depth, moves_tried, NT::PV) {
-                let mut r = lmr_base_reduction(depth, moves_tried);
+                let mut r = lmr_base_reduction(depth, moves_tried, is_quiet);
 
                 // Decrease reductions for good moves.
                 r -= in_check as Depth;
