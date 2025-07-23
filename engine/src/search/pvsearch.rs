@@ -295,7 +295,7 @@ impl Position {
                 && tt_bound.has(Bound::Lower)
                 && tt_depth >= depth - 3
             {
-                let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::INFINITY);
+                let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::LONGEST_TB_MATE);
 
                 // Search all moves except the TT move at reduced depth.
                 t.ss_mut().excluded = Some(tt_move);
@@ -306,7 +306,6 @@ impl Position {
 
                 // Single and double extensions.
                 let ext = if v < ext_beta {
-                    depth += 1;
                     1 + (!NT::PV && !v.is_loss() && v < ext_beta - ext_double()) as Depth
                 }
                 // Multicut.
