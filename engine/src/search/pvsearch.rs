@@ -309,6 +309,10 @@ impl Position {
                     depth += 1;
                     1 + (!NT::PV && !v.is_loss() && v < ext_beta - ext_double()) as Depth
                 }
+                // Multicut.
+                else if v >= beta && v.nonterminal() {
+                    return v - (depth * 4 / 5);
+                }
                 // Negative extensions.
                 else if tt_value >= beta {
                     -3
