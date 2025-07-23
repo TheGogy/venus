@@ -311,7 +311,7 @@ impl Position {
                 }
                 // Multicut.
                 else if v >= beta && v.nonterminal() {
-                    return v - (depth * 4 / 5);
+                    return v;
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
