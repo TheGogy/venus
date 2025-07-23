@@ -413,7 +413,7 @@ impl Position {
         // No legal moves: checkmate or stalemate.
         // In singular search, we should return alpha.
         if !moves_exist {
-            best_value = if singular {
+            return if singular {
                 alpha
             } else if in_check {
                 Eval::mated_in(t.ply)
