@@ -304,7 +304,7 @@ impl Position {
 
                 // If no other move can reach the TT move's value, extend this move.
                 let ext = if v < ext_beta {
-                    1 + (v < ext_beta - ext_double()) as Depth + (v < ext_beta - ext_triple()) as Depth
+                    1 + (v < ext_beta - ext_double()) as Depth
                 }
                 // Multicut pruning.
                 else if v >= beta && v.nonterminal() {
