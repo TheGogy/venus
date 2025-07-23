@@ -449,7 +449,7 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
+            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, NT::PV);
         }
 
         best_value
