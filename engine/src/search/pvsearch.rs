@@ -164,7 +164,7 @@ impl Position {
             }
 
             // Razoring.
-            if can_apply_razoring(depth, eval, alpha) {
+            if can_apply_razoring(depth, eval, alpha, NT::PV) {
                 let v = self.qsearch::<OffPV>(t, tt, alpha, beta);
                 // If the qsearch still can't catch up, cut this node.
                 if v <= alpha {
