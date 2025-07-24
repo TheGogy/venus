@@ -147,7 +147,7 @@ impl Position {
         // -----------------------------------
         //              Pruning
         // -----------------------------------
-        if !NT::PV && !in_check && !singular {
+        if !NT::PV && !in_check {
             // Reverse futility pruning (static null move pruning).
             if can_apply_rfp(depth, improving, eval, beta) {
                 return beta;
@@ -163,7 +163,7 @@ impl Position {
             }
 
             // Null move pruning.
-            if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
+            if !singular && can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
                 let r = (nmp_base() + depth / nmp_factor()).min(depth);
 
                 self.make_null(t);
