@@ -137,7 +137,7 @@ impl Position {
         }
         // Otherwise try to get eval from the tt if the position has been evaluated and the bound
         // is tighter. If we can't do that, then just evaluate the position from scratch.
-        else {
+        else if tt_depth > 0 {
             raw_value = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
 
             let mut e = self.adjust_eval(t, raw_value);
@@ -149,6 +149,10 @@ impl Position {
             }
 
             e
+        } else {
+            raw_value = self.evaluate();
+            t.ss_mut().eval = self.adjust_eval(t, raw_value);
+            t.ss().eval
         };
 
         let improving = t.is_improving();
