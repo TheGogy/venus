@@ -1,5 +1,5 @@
 use chess::{
-    Depth,
+    Depth, MAX_PLY,
     types::{eval::Eval, moves::Move},
 };
 
@@ -33,15 +33,18 @@ impl Position {
         mut depth: Depth,
         cutnode: bool,
     ) -> Eval {
+        // Base case: depth = 0.
+        if depth <= 0 {
+            return self.qsearch::<NT::Next>(t, tt, alpha, beta);
+        }
+
+        // Make sure we don't search too deep if extensions are going crazy.
+        depth = depth.min((MAX_PLY - 1) as Depth);
+
         // Check if we should stop here in the search.
         if t.should_stop() {
             t.stop = true;
             return Eval::DRAW;
-        }
-
-        // Base case: depth = 0.
-        if depth <= 0 {
-            return self.qsearch::<NT::Next>(t, tt, alpha, beta);
         }
 
         if NT::PV {
@@ -52,6 +55,11 @@ impl Position {
             // Seldepth counts from 1.
             t.seldepth = t.seldepth.max(t.ply + 1);
         }
+
+        // Initialize search node.
+        let in_check = self.board.in_check();
+        let excluded = t.ss().excluded;
+        let singular = excluded.is_some();
 
         if !NT::RT {
             // Check for upcoming draw.
@@ -67,6 +75,11 @@ impl Position {
                 return Eval::dithered_draw(t.nodes as i32);
             }
 
+            // Check if we are searching too deep.
+            if t.ply >= MAX_PLY {
+                return if in_check { Eval::dithered_draw(t.nodes as i32) } else { self.evaluate() };
+            }
+
             // Mate distance pruning.
             // If we have already found a faster mate,
             // then we don't need to search this node.
@@ -77,11 +90,6 @@ impl Position {
                 return alpha;
             }
         }
-
-        let in_check = self.board.in_check();
-        let excluded = t.ss().excluded;
-        let singular = excluded.is_some();
-        let child_pv = &mut PVLine::default();
 
         // -----------------------------------
         //             TT lookup
@@ -105,7 +113,8 @@ impl Position {
 
         // TT cutoff.
         // In a non-PV node, if the TT lookup gives us a better position evaluation, use it instead.
-        if !NT::PV && !singular && tt_value.is_valid() && tt_depth >= depth && tt_bound.is_usable(tt_value, beta) {
+        let tt_cutoff_d = depth - (tt_value <= beta) as Depth;
+        if !NT::PV && !singular && tt_value.is_valid() && tt_depth >= tt_cutoff_d && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
 
@@ -143,6 +152,7 @@ impl Position {
         };
 
         let improving = t.is_improving();
+        let child_pv = &mut PVLine::default();
 
         // -----------------------------------
         //              Pruning
