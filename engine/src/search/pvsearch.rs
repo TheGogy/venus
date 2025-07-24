@@ -332,7 +332,7 @@ impl Position {
             // If we have already searched a lot of moves in this position, then we have probably
             // already looked at the best moves. We reduce the depth that we search the other moves
             // at accordingly.
-            if can_apply_lmr(depth, moves_tried, NT::PV) {
+            if can_apply_lmr(depth, moves_tried) {
                 let mut r = lmr_base_reduction(depth, moves_tried);
 
                 // Decrease reductions for good moves.
