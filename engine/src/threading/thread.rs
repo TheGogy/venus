@@ -150,12 +150,11 @@ impl Thread {
     }
 
     /// Whether the current position is improving.
-    #[rustfmt::skip]
     pub fn is_improving(&self) -> bool {
         if self.ply >= 2 && self.ss_at(2).eval != -Eval::INFINITY {
-            !self.ss().in_check && !self.ss_at(2).in_check && self.ss().eval > self.ss_at(2).eval
+            self.ss().eval > self.ss_at(2).eval
         } else if self.ply >= 4 && self.ss_at(4).eval != -Eval::INFINITY {
-            !self.ss().in_check && !self.ss_at(4).in_check && self.ss().eval > self.ss_at(4).eval
+            self.ss().eval > self.ss_at(4).eval
         } else {
             true
         }
