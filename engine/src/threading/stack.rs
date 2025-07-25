@@ -13,6 +13,7 @@ pub struct SearchStackEntry {
     pub ply_from_null: usize,
     pub eval: Eval,
     pub excluded: Option<Move>,
+    pub in_check: bool,
 }
 
 impl Thread {

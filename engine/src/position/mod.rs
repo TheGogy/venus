@@ -72,6 +72,7 @@ impl Position {
     pub fn make_move(&mut self, m: Move, t: &mut Thread) {
         t.move_made(PieceTo::from(&self.board, m));
         self.board.make_move(m);
+        t.ss_mut().in_check = self.board.in_check();
     }
 
     /// Undo a move on the board on a given thread.
