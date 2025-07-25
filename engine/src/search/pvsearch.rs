@@ -257,14 +257,16 @@ impl Position {
 
             // Ignore excluded move.
             if excluded == Some(m) {
-                moves_tried += 1;
                 continue;
             }
+
+            moves_tried += 1;
 
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
             let hist_score = t.hist_score(&self.board, m);
             let mut new_depth = depth - 1;
+            let mut r = lmr_base_reduction(depth, moves_tried);
 
             // -----------------------------------
             //          Move loop pruning
@@ -281,7 +283,7 @@ impl Position {
                 }
 
                 // Futility pruning.
-                if can_apply_fp(depth, eval, alpha, moves_tried) {
+                if can_apply_fp(depth, eval, alpha, r) {
                     mp.skip_quiets = true;
                 }
             }
@@ -293,7 +295,6 @@ impl Position {
                 && mp.stage > MPStage::PvNoisyWin
                 && !self.board.see(m, Eval(see_margins[is_quiet as usize]))
             {
-                moves_tried += 1;
                 continue;
             };
 
@@ -349,8 +350,6 @@ impl Position {
             // already looked at the best moves. We reduce the depth that we search the other moves
             // at accordingly.
             if can_apply_lmr(depth, moves_tried, NT::PV) {
-                let mut r = lmr_base_reduction(depth, moves_tried);
-
                 // Decrease reductions for good moves.
                 r -= in_check as Depth;
                 r -= self.board.in_check() as Depth;
@@ -376,13 +375,13 @@ impl Position {
                 }
             }
             // For moves that can't be reduced, or first move in non-PV, do null-window search
-            else if !NT::PV || moves_tried > 0 {
+            else if !NT::PV || moves_tried > 1 {
                 v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
             };
 
             // For the first move in a PV node, or any move that beats alpha,
             // do a full-window search to get the exact score.
-            if NT::PV && (moves_tried == 0 || v > alpha) {
+            if NT::PV && (moves_tried == 1 || v > alpha) {
                 v = -self.pvsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
             }
 
@@ -422,8 +421,6 @@ impl Position {
             } else if m.flag().is_cap() {
                 caps_tried.push(m);
             }
-
-            moves_tried += 1;
         }
 
         // No legal moves: checkmate or stalemate.

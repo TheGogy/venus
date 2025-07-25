@@ -55,8 +55,8 @@ pub fn can_apply_lmp(depth: Depth, moves_tried: usize, lmp_margin: usize) -> boo
 /// Futility pruning.
 /// If our score is significantly below alpha, then this position is probably bad, then we should
 /// skip the quiet moves.
-pub fn can_apply_fp(depth: Depth, eval: Eval, alpha: Eval, moves_tried: usize) -> bool {
-    let lmr_depth = depth - lmr_base_reduction(depth, moves_tried);
+pub fn can_apply_fp(depth: Depth, eval: Eval, alpha: Eval, lmr_base: Depth) -> bool {
+    let lmr_depth = depth - lmr_base;
     let fp_margin = Eval(fp_base() + (lmr_depth as i32) * fp_mult());
 
     lmr_depth <= fp_d_min() && eval + fp_margin < alpha
