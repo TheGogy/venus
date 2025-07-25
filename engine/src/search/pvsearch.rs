@@ -149,7 +149,9 @@ impl Position {
             }
 
             e
-        } else {
+        }
+        // We can't use anything else: evaluate position from scratch.
+        else {
             raw_value = self.evaluate();
             t.ss_mut().eval = self.adjust_eval(t, raw_value);
             t.ss().eval
