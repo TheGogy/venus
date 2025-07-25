@@ -88,6 +88,9 @@ init_tunables! {
     nmp_base:             i16 = 5, 2, 7, 1;
     nmp_factor:           i16 = 3, 2, 8, 1;
 
+    // Forced improving.
+    imp_beta_base: i32 = 97, 90, 110, 1;
+
     // Internal iterative reductions.
     iir_d_min:  i16 = 2, 1, 4, 1;
 

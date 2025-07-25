@@ -157,7 +157,7 @@ impl Position {
             t.ss().eval
         };
 
-        let improving = t.is_improving();
+        let mut improving = t.is_improving();
         let child_pv = &mut PVLine::default();
 
         // -----------------------------------
@@ -192,6 +192,9 @@ impl Position {
                 }
             }
         }
+
+        // If our eval is above beta by a bit, we're doing better than we thought.
+        improving |= t.ss().eval >= beta + imp_beta_base();
 
         // Internal Iterative reductions.
         if can_apply_iir(depth, NT::PV, cutnode, tt_move, tt_bound) {
