@@ -63,8 +63,8 @@ init_tunables! {
     ext_mult:  i16 = 2, 1, 4, 1;
 
     // Late move reduction table parameters (scaled up x1024).
-    lmr_base: i32 = 887, 500, 2000, 100;
-    lmr_mult: i32 = 2003, 1500, 4000, 100;
+    lmr_base: i32 = 897, 500, 2000, 100;
+    lmr_mult: i32 = 2011, 1500, 4000, 100;
 
     // Late move reductions.
     lmr_d_min: i16 = 2, 1, 4, 1;
