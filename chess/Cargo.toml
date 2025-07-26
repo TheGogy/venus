@@ -6,3 +6,6 @@ authors = ["TheGogy"]
 
 [dependencies]
 ctor = "0.4.1"
+
+[features]
+full_tests = []
