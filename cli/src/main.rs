@@ -12,8 +12,7 @@ const HELP_MSG: &str = "Commands:
 --help (-h)    Print this message.
 --version (-v) Print the current version.
 
-bench          Run the benchmarking suite.
-";
+bench          Run the benchmarking suite.";
 
 #[cfg(feature = "tune")]
 const TUNE_HELP_MSG: &str = "
