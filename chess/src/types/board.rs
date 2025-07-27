@@ -2,7 +2,7 @@ use core::fmt;
 use std::str::FromStr;
 
 use crate::{
-    movegen::MG_ALLMV,
+    movegen::Allmv,
     tables::{atk_by_type, leaping_piece::all_pawn_atk},
 };
 
@@ -337,7 +337,7 @@ impl Board {
     /// Find a move given a UCI move string.
     pub fn find_move(&self, s: &str) -> Option<Move> {
         let mut mv = None;
-        self.enumerate_moves::<_, MG_ALLMV>(|m| {
+        self.enumerate_moves::<_, Allmv>(|m| {
             if m.to_uci(&self.castlingmask) == s {
                 mv = Some(m);
             }

@@ -1,9 +1,8 @@
 use crate::{
     defs::MAX_MOVES,
+    movegen::Allmv,
     types::{board::Board, moves::Move},
 };
-
-use super::MG_ALLMV;
 
 impl Board {
     /// Counts all the legal positions up to a given depth.
@@ -12,7 +11,7 @@ impl Board {
 
         let mut ml = [Move::NONE; MAX_MOVES];
         let mut nb_moves = 0;
-        self.enumerate_moves::<_, MG_ALLMV>(|m| {
+        self.enumerate_moves::<_, Allmv>(|m| {
             assert!(nb_moves < MAX_MOVES);
             ml[nb_moves] = m;
             nb_moves += 1;

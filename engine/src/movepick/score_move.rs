@@ -1,5 +1,5 @@
 use chess::{
-    movegen::{MG_ALLMV, MG_NOISY, MG_QUIET},
+    movegen::{Allmv, Noisy, Quiet},
     types::{
         board::Board,
         eval::Eval,
@@ -25,7 +25,7 @@ impl MovePicker {
     pub fn gen_score_quiets(&mut self, b: &Board, t: &Thread) {
         let prev_piecetos = t.get_prev_piecetos();
 
-        b.enumerate_moves::<_, MG_QUIET>(|m| {
+        b.enumerate_moves::<_, Quiet>(|m| {
             // We've already picked the TT move if it exists.
             if m == self.tt_move {
                 return;
@@ -46,7 +46,7 @@ impl MovePicker {
 
     /// Generate all noisy moves and score them.
     pub fn gen_score_noisies(&mut self, b: &Board, t: &Thread) {
-        b.enumerate_moves::<_, MG_NOISY>(|m| {
+        b.enumerate_moves::<_, Noisy>(|m| {
             // We've already picked the TT move if it exists.
             if m == self.tt_move {
                 return;
@@ -83,7 +83,7 @@ impl MovePicker {
     pub fn gen_score_evasions(&mut self, b: &Board, t: &Thread) {
         const NOISY_BASE: i32 = 1_000_000;
 
-        b.enumerate_moves::<_, MG_ALLMV>(|m| {
+        b.enumerate_moves::<_, Allmv>(|m| {
             // We've already picked the TT move if it exists.
             if m == self.tt_move {
                 return;
