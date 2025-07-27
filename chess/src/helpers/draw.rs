@@ -44,15 +44,17 @@ impl Board {
                         return true;
                     }
 
-                    // We cannot force checkmate with 2 knights, or 2 bishops on the same color squares.
-                    // We can however, force checkmate with a knight and a bishop.
                     let knights = self.p_bb(Piece::Knight);
                     let bishops = self.p_bb(Piece::Bishop);
 
+                    // 2 Knights can technically deliver checkmate, though this cannot be forced.
+                    // https://lichess.org/editor/8/8/8/8/8/1N2N3/8/3k1K2_b_-_-_0_3?color=white
                     if knights.any() && !bishops.any() {
                         return knights.nbits() <= 2;
                     }
 
+                    // 2 Bishops can deliver checkmate (except in the rare case that we have
+                    // underpromoted to a bishop and now have 2 bishops of the same color).
                     if bishops.any() && !knights.any() {
                         return bishops & Bitboard::WHITE_SQ == bishops || bishops & Bitboard::BLACK_SQ == bishops;
                     }
