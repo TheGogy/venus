@@ -13,7 +13,6 @@ impl Board {
     }
 
     /// Whether the current position has insufficient material to win for either side.
-    #[inline(never)]
     fn is_insufficient_material(&self) -> bool {
         let n_pcs = self.occ().nbits();
 
@@ -54,7 +53,7 @@ impl Board {
                     }
 
                     // 2 Bishops can deliver checkmate (except in the rare case that we have
-                    // underpromoted to a bishop and now have 2 bishops of the same color).
+                    // underpromoted to a bishop and now have 2 bishops of the same color)
                     if bishops.any() && !knights.any() {
                         return bishops & Bitboard::WHITE_SQ == bishops || bishops & Bitboard::BLACK_SQ == bishops;
                     }
