@@ -73,7 +73,7 @@ impl Not for CastlingRights {
     type Output = CastlingRights;
 
     fn not(self) -> Self {
-        unsafe { std::mem::transmute(!self.0) }
+        Self(!self.0)
     }
 }
 

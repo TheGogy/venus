@@ -4,7 +4,7 @@ pub mod corrhist;
 pub mod movebuffer;
 pub mod quiethist;
 
-use chess::Depth;
+use chess::types::Depth;
 
 use crate::tunables::params::tunables::*;
 

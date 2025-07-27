@@ -7,8 +7,8 @@ use std::{
 };
 
 use chess::{
-    Depth, MAX_PLY,
-    types::{board::Board, color::Color, eval::Eval, moves::Move},
+    defs::MAX_PLY,
+    types::{Depth, board::Board, color::Color, eval::Eval, moves::Move},
 };
 
 use crate::{

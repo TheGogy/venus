@@ -5,10 +5,7 @@ use super::{
     entry::{Bound, CompressedEntry, TTEntry},
 };
 
-use chess::{
-    Depth,
-    types::{eval::Eval, moves::Move, zobrist::Hash},
-};
+use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Hash};
 
 /// Transposition table.
 pub struct TT {

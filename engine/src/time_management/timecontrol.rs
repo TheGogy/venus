@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use chess::{Depth, types::color::Color};
+use chess::types::{Depth, color::Color};
 
 /// Time controls supported by UCI.
 /// This holds the max time that we have been given.

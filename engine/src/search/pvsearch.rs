@@ -1,6 +1,6 @@
 use chess::{
-    Depth, MAX_PLY,
-    types::{eval::Eval, moves::Move},
+    defs::MAX_PLY,
+    types::{Depth, eval::Eval, moves::Move},
 };
 
 use crate::{

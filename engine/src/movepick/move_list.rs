@@ -1,4 +1,4 @@
-use chess::{MAX_MOVES, types::moves::Move};
+use chess::{defs::MAX_MOVES, types::moves::Move};
 
 pub const LEFT: bool = true;
 pub const RIGHT: bool = false;

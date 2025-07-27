@@ -1,9 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use chess::{
-    Depth,
-    types::{eval::Eval, moves::Move, zobrist::Hash},
-};
+use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Hash};
 
 use super::bits;
 

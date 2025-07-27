@@ -9,3 +9,5 @@ pub mod piece;
 pub mod rank_file;
 pub mod square;
 pub mod zobrist;
+
+pub type Depth = i16;

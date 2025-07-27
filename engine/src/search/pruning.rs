@@ -1,7 +1,4 @@
-use chess::{
-    Depth,
-    types::{board::Board, eval::Eval, moves::Move},
-};
+use chess::types::{Depth, board::Board, eval::Eval, moves::Move};
 
 use crate::{threading::thread::Thread, tt::entry::Bound, tunables::params::tunables::*};
 

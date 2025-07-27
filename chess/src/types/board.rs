@@ -70,7 +70,7 @@ impl Board {
             castlingmask: CastlingMask::default(),
 
             state: BoardState::default(),
-            history: Vec::with_capacity(256),
+            history: Vec::new(),
         }
     }
 }

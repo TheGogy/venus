@@ -1,5 +1,5 @@
 use crate::{
-    MAX_MOVES,
+    defs::MAX_MOVES,
     types::{board::Board, moves::Move},
 };
 

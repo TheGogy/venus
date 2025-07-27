@@ -1,5 +1,5 @@
 use chess::{
-    MAX_MOVES,
+    defs::MAX_MOVES,
     types::{eval::Eval, moves::Move},
 };
 

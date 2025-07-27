@@ -7,10 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chess::{
-    Depth,
-    types::{color::Color, moves::Move, square::Square},
-};
+use chess::types::{Depth, color::Color, moves::Move, square::Square};
 
 use super::timecontrol::TimeControl;
 

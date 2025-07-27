@@ -1,5 +1,5 @@
 use chess::{
-    MAX_PLY,
+    defs::MAX_PLY,
     types::{eval::Eval, moves::Move},
 };
 

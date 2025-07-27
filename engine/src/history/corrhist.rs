@@ -1,7 +1,4 @@
-use chess::{
-    Depth,
-    types::{color::Color, eval::Eval},
-};
+use chess::types::{Depth, color::Color, eval::Eval};
 
 use super::HistEntry;
 

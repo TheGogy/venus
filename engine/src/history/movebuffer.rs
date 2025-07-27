@@ -1,4 +1,4 @@
-use chess::{MAX_MOVES, types::moves::Move};
+use chess::{defs::MAX_MOVES, types::moves::Move};
 
 /// Temporary buffer to hold the moves in so we can add them to the history.
 #[derive(Debug)]

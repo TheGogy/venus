@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{MAX_PLY, impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
+use crate::{defs::MAX_PLY, impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
 
 /// Represents the evaluation within a game.
 ///
