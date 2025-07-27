@@ -67,7 +67,6 @@ init_tunables! {
     lmr_mult: i32 = 2003, 1500, 4000, 100;
 
     // Late move reductions.
-    lmr_d_min: i16 = 2, 1, 4, 1;
     lmr_m_min: usize = 2, 1, 4, 1;
 
     // Late move reduction verifications.

@@ -62,7 +62,7 @@ pub fn can_apply_fp(depth: Depth, eval: Eval, alpha: Eval, moves_tried: usize) -
 /// Late move reductions.
 /// Reduce the search depth for moves with bad move ordering.
 pub fn can_apply_lmr(depth: Depth, moves_tried: usize, is_pv: bool) -> bool {
-    depth >= lmr_d_min() && moves_tried >= lmr_m_min() + is_pv as usize
+    depth >= 2 && moves_tried >= lmr_m_min() + is_pv as usize
 }
 
 /// Get the late move reduction amount.
