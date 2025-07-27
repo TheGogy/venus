@@ -31,6 +31,11 @@ impl Bitboard {
         self.0 != 0
     }
 
+    /// Whether the bitboard contains more than one value.
+    pub const fn multiple(self) -> bool {
+        self.0 & (self.0 - 1) != 0
+    }
+
     /// Set the bit at the given index.
     pub const fn set_bit(&mut self, s: Square) {
         self.0 |= s.bb().0

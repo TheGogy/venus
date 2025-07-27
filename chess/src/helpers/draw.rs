@@ -1,4 +1,4 @@
-use crate::types::{board::Board, piece::Piece};
+use crate::types::{board::Board, color::Color, piece::Piece};
 
 /// Draw implementations for board.
 impl Board {
@@ -13,17 +13,23 @@ impl Board {
     }
 
     /// Whether the current position has insufficient material to win for either side.
+    /// A position is drawn unless:
     fn is_insufficient_material(&self) -> bool {
-        match self.occ().nbits() {
-            // King vs King => draw.
-            2 => true,
+        // 1. A piece that can deliver checkmate exists on the board.
+        let winning_piece = (self.p_bb(Piece::Pawn) | self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)).any();
 
-            // King vs King + (...) => Draw if other piece is a knight or bishop.
-            3 => (self.p_bb(Piece::Knight) | self.p_bb(Piece::Bishop)).any(),
+        // 2. Both sides have multiple pieces.
+        let multiple_pieces = self.c_bb(Color::White).multiple() && self.c_bb(Color::Black).multiple();
 
-            // Otherwise, assume winnable
-            _ => false,
-        }
+        // 3a. Multiple minor pieces exist on the board (EXCEPT for two knights, handled below).
+        let multiple_minor = (self.p_bb(Piece::Knight) | self.p_bb(Piece::Bishop)).multiple();
+
+        // 3b. If we don't have any bishops, we need at least 3 knights to force checkmate.
+        //     (2 knights can checkmate on the edge of the board, but search will prevent it)
+        //     https://lichess.org/editor/8/8/8/8/8/1n2n3/8/3K1k2_w_-_-_0_1?color=white
+        let too_few_knights = !self.p_bb(Piece::Bishop).any() && self.p_bb(Piece::Knight).nbits() < 3;
+
+        !winning_piece && !multiple_pieces && (!multiple_minor || too_few_knights)
     }
 
     /// Whether the current position has been repeated.
