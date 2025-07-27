@@ -21,6 +21,10 @@ impl Bitboard {
     pub const EP: [Self; 2] = [Rank::R5.bb(), Rank::R4.bb()]; // Enpassant ranks.
     pub const DP: [Self; 2] = [Rank::R3.bb(), Rank::R6.bb()]; // Double push ranks.
 
+    // Light and dark squares.
+    pub const WHITE_SQ: Self = Self(0xaa55aa55aa55aa55);
+    pub const BLACK_SQ: Self = Self(0x55aa55aa55aa55aa);
+
     /// If the bitboard is empty.
     pub const fn is_empty(self) -> bool {
         self.0 == 0
@@ -29,6 +33,11 @@ impl Bitboard {
     /// Whether the bitboard contains any value.
     pub const fn any(self) -> bool {
         self.0 != 0
+    }
+
+    /// Whether the bitboard contains more than one value.
+    pub const fn multiple(self) -> bool {
+        self.0 & (self.0 - 1) != 0
     }
 
     /// Set the bit at the given index.

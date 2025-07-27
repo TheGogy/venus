@@ -1,4 +1,4 @@
-use crate::types::{board::Board, piece::Piece};
+use crate::types::{bitboard::Bitboard, board::Board, color::Color, piece::Piece};
 
 /// Draw implementations for board.
 impl Board {
@@ -14,15 +14,54 @@ impl Board {
 
     /// Whether the current position has insufficient material to win for either side.
     fn is_insufficient_material(&self) -> bool {
-        match self.occ().nbits() {
+        let n_pcs = self.occ().nbits();
+
+        match n_pcs {
             // King vs King => draw.
             2 => true,
 
-            // King vs King + (...) => Draw if other piece is a knight or bishop.
+            // King vs King + (...) => Draw if other piece is a Knight or Bishop.
             3 => (self.p_bb(Piece::Knight) | self.p_bb(Piece::Bishop)).any(),
 
-            // Otherwise, assume winnable
-            _ => false,
+            // Anything else.
+            _ => {
+                // If we have a piece that can checkmate, it is not a draw.
+                if (self.p_bb(Piece::Pawn) | self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)).any() {
+                    return false;
+                }
+
+                // The number of non-King pieces on the board (number of Knights and Bishops).
+                // We know that exactly 2 Kings must exist, and no other pieces exist.
+                let n_minor_pcs = n_pcs - 2;
+
+                // 2 minor pieces.
+                // We can checkmate with Bishop + Knight, or we can checkmate with 2 Bishops of
+                // opposite types.
+                if n_minor_pcs == 2 {
+                    // If we have one minor piece each, then we cannot force checkmate.
+                    if self.c_bb(Color::White).nbits() == self.c_bb(Color::Black).nbits() {
+                        return true;
+                    }
+
+                    let knights = self.p_bb(Piece::Knight);
+                    let bishops = self.p_bb(Piece::Bishop);
+
+                    // 2 Knights can technically deliver checkmate, though this cannot be forced.
+                    // https://lichess.org/editor/8/8/8/8/8/1N2N3/8/3k1K2_b_-_-_0_3?color=white
+                    if knights.any() && !bishops.any() {
+                        return knights.nbits() <= 2;
+                    }
+
+                    // 2 Bishops can deliver checkmate (except in the rare case that we have
+                    // underpromoted to a bishop and now have 2 bishops of the same color)
+                    if bishops.any() && !knights.any() {
+                        return bishops & Bitboard::WHITE_SQ == bishops || bishops & Bitboard::BLACK_SQ == bishops;
+                    }
+                }
+
+                // We have more than 2 minor pieces: this can lead to checkmate.
+                false
+            }
         }
     }
 

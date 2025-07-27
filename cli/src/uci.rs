@@ -23,8 +23,7 @@ pub const OPTS: &str = "
 option name UCI_Chess960 type check default false
 option name Threads type spin default 1 min 1 max 128
 option name Hash type spin default 16 min 1 max 65536
-option name Clear Hash type button
-";
+option name Clear Hash type button";
 
 #[derive(Default)]
 pub struct UCIReader {
@@ -59,8 +58,8 @@ impl UCIReader {
                 "stop"        => self.interface.handle_command(EngineCommand::Stop),
                 "eval"        => self.interface.handle_command(EngineCommand::Eval),
                 "print" | "p" => self.interface.handle_command(EngineCommand::Print),
-                "perft"       => return self.cmd_perft::<false>(&mut tokens),
-                "perftmp"     => return self.cmd_perft::<true>(&mut tokens),
+                "perft"       => return self.cmd_perft(&mut tokens),
+                "perftmp"     => return self.cmd_perftmp(&mut tokens),
                 "go"          => return self.cmd_go(&mut tokens),
                 "position"    => return self.cmd_position(&mut tokens),
                 "setoption"   => return self.cmd_setoption(&mut tokens),
@@ -91,15 +90,18 @@ impl UCIReader {
     }
 
     /// perft command.
-    pub fn cmd_perft<const MP: bool>(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+    pub fn cmd_perft(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
         match tokens.next().ok_or("No depth value!")?.parse() {
-            Ok(d) if d > 0 => {
-                if MP {
-                    self.interface.handle_command(EngineCommand::PerftMp(d))
-                } else {
-                    self.interface.handle_command(EngineCommand::Perft(d))
-                }
-            }
+            Ok(d) if d > 0 => self.interface.handle_command(EngineCommand::Perft(d)),
+            _ => return Err("Invalid depth value!"),
+        }
+        Ok(())
+    }
+
+    /// perftmp command.
+    pub fn cmd_perftmp(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+        match tokens.next().ok_or("No depth value!")?.parse() {
+            Ok(d) if d > 0 => self.interface.handle_command(EngineCommand::PerftMp(d)),
             _ => return Err("Invalid depth value!"),
         }
         Ok(())

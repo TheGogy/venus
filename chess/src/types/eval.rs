@@ -16,8 +16,8 @@ pub struct Eval(pub i32);
 
 impl Eval {
     pub const DRAW: Eval = Eval(0);
-    pub const MATE: Eval = Eval(32000);
     pub const TB_MATE: Eval = Eval(30000);
+    pub const MATE: Eval = Eval(32000);
     pub const INFINITY: Eval = Eval(32001);
 
     pub const LONGEST_MATE: Eval = Eval(Self::MATE.0 - MAX_PLY as i32);
