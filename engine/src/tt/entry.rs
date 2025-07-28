@@ -51,10 +51,14 @@ pub struct CompressedEntry {
     data: AtomicU64,
 }
 
+pub const TT_DEPTH_QS: Depth = -1;
+const TT_DEPTH_OFFSET: Depth = 2;
+
 impl TTEntry {
     /// Make a new TT entry.
     #[allow(clippy::too_many_arguments)]
-    pub const fn new(key: u64, pv: bool, age: u8, depth: u8, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
+    pub const fn new(key: u64, pv: bool, age: u8, d: Depth, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
+        let depth = (d + TT_DEPTH_OFFSET) as u8;
         Self { key, pv, age, depth, bound, mov, eval: eval.0 as i16, value: value.0 as i16 }
     }
 
@@ -92,7 +96,7 @@ impl TTEntry {
 
     /// Get the depth.
     pub const fn depth(self) -> Depth {
-        self.depth as Depth
+        (self.depth as Depth) - TT_DEPTH_OFFSET
     }
 
     /// Get the bound.
