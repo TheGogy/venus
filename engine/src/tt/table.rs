@@ -79,7 +79,7 @@ impl TT {
             || depth + tt_replace_d_min() + 2 * pv as Depth > old.depth()
         {
             let new_move = if mov.is_none() && hash.key == old.key { old.mov } else { mov };
-            slot.write(TTEntry::new(hash.key, pv, self.age, depth as u8, bound, new_move, eval, value.to_corrected(ply)));
+            slot.write(TTEntry::new(hash.key, pv, self.age, depth, bound, new_move, eval, value.to_corrected(ply)));
         }
     }
 
