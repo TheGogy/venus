@@ -8,7 +8,10 @@ use crate::{
     movepick::{MPStage, MovePicker, SearchType},
     position::Position,
     threading::thread::Thread,
-    tt::{entry::Bound, table::TT},
+    tt::{
+        entry::{Bound, TT_DEPTH_UNSEARCHED},
+        table::TT,
+    },
     tunables::params::tunables::*,
 };
 
@@ -154,6 +157,7 @@ impl Position {
         else {
             raw_value = self.evaluate();
             t.ss_mut().eval = self.adjust_eval(t, raw_value);
+            tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
             t.ss().eval
         };
 
