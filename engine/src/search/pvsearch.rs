@@ -183,12 +183,12 @@ impl Position {
                 let r = (nmp_base() + depth / nmp_factor()).min(depth);
 
                 self.make_null(t);
-                let value = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, !cutnode);
+                let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, !cutnode);
                 self.undo_null(t);
 
-                // cutoff above beta
-                if value >= beta {
-                    return beta;
+                // cutoff above beta.
+                if v >= beta {
+                    return if v.is_tb_win() { beta } else { v };
                 }
             }
         }
