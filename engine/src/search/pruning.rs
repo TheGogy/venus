@@ -1,6 +1,6 @@
 use chess::types::{Depth, board::Board, eval::Eval, moves::Move};
 
-use crate::{threading::thread::Thread, tt::entry::Bound, tunables::params::tunables::*};
+use crate::{threading::thread::Thread, tt::bits::Bound, tunables::params::tunables::*};
 
 /// Reverse futility pruning.
 // If our position is already so good that even without searching,

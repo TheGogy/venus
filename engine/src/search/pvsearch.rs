@@ -8,7 +8,7 @@ use crate::{
     movepick::{MPStage, MovePicker, SearchType},
     position::Position,
     threading::thread::Thread,
-    tt::{entry::Bound, table::TT},
+    tt::{bits::Bound, table::TT},
     tunables::params::tunables::*,
 };
 
@@ -102,13 +102,15 @@ impl Position {
         let mut tt_depth = -1;
         let mut tt_pv = NT::PV;
 
-        if let Some(tte) = tt.probe(self.board.state.hash) {
-            tt_move = tte.mov();
-            tt_eval = tte.eval();
-            tt_value = tte.value(t.ply);
-            tt_bound = tte.bound();
-            tt_depth = tte.depth();
-            tt_pv |= tte.pv;
+        let (tt_hit, tt_ref) = tt.probe(self.board.state.hash);
+
+        if tt_ref.hit {
+            tt_move = tt_hit.mov;
+            tt_value = tt_hit.value.from_corrected(t.ply);
+            tt_eval = tt_hit.eval;
+            tt_bound = tt_hit.bound;
+            tt_depth = tt_hit.depth;
+            tt_pv |= tt_hit.was_pv;
         }
 
         // TT cutoff.
@@ -226,7 +228,7 @@ impl Position {
                 self.undo_move(m, t);
 
                 if v >= pc_beta {
-                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
+                    tt.insert(tt_ref, self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
                     if v.nonterminal() {
                         return v;
@@ -464,7 +466,7 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
+            tt.insert(tt_ref, self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
         }
 
         best_value

@@ -1,43 +1,65 @@
-// Just skip the whole file rustfmt, it's more readable this way.
-#![cfg_attr(rustfmt, rustfmt_skip)]
+use chess::types::eval::Eval;
 
-// Constants and helpers for bit manipulation.
-use chess::types::moves::Move;
+/// TT Bound.
+/// Upper: search at this position fails high.
+/// Lower: search at this position fails low.
+/// Exact: exact value of this node.
+#[rustfmt::skip]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash, Default)]
+#[repr(u8)]
+pub enum Bound {
+    #[default]
+    None  = 0b00,
+    Upper = 0b01,
+    Lower = 0b10,
+    Exact = 0b11,
+}
 
-use crate::tt::entry::Bound;
+impl Bound {
+    /// Whether this bound contains the other bound.
+    pub const fn has(self, other: Bound) -> bool {
+        self as u8 & other as u8 != 0
+    }
 
-// Entry data bit positions
-const SHIFT_AGE:   u64 = 1;
-const SHIFT_DEPTH: u64 = 7;
-const SHIFT_BOUND: u64 = 14;
-const SHIFT_MOVE:  u64 = 16;
-const SHIFT_EVAL:  u64 = 32;
-const SHIFT_VALUE: u64 = 48;
+    /// Whether the given eval is usable given the operand.
+    pub const fn is_usable(self, eval: Eval, operand: Eval) -> bool {
+        self.has(if eval.0 >= operand.0 { Self::Lower } else { Self::Upper })
+    }
+}
 
-// Entry data masks.
-pub const MASK_AGE: u64 = 0x3F;
+/// Wrapper to put the age, pv and bound into one u8.
+///
+/// 00000011 - Bound
+/// 00000100 - Is_PV
+/// 11111000 - Age
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash, Default)]
+pub struct AgePVBound(u8);
 
-const MASK_PV:    u64 = 0x1;
-const MASK_DEPTH: u64 = 0x7F << SHIFT_DEPTH;
-const MASK_BOUND: u64 = 0x3 << SHIFT_BOUND;
-const MASK_MOVE:  u64 = 0xFFFF << SHIFT_MOVE;
-const MASK_EVAL:  u64 = 0xFFFF << SHIFT_EVAL;
-const MASK_VALUE: u64 = 0xFFFF << SHIFT_VALUE;
+// The max age for any tt entry.
+pub const MAX_AGE: u8 = 1 << 5;
 
-// Helper functions for packing data.
-pub const fn pack_pv(pv: bool)        -> u64 {  pv as u64                           }
-pub const fn pack_age(age: u8)        -> u64 { (age as u64)          << SHIFT_AGE   }
-pub const fn pack_bound(bound: Bound) -> u64 { (bound as u64)        << SHIFT_BOUND }
-pub const fn pack_eval(eval: i16)     -> u64 { (eval as u16 as u64)  << SHIFT_EVAL  }
-pub const fn pack_value(value: i16)   -> u64 { (value as u16 as u64) << SHIFT_VALUE }
-pub const fn pack_depth(depth: u8)    -> u64 { (depth as u64)        << SHIFT_DEPTH }
-pub const fn pack_move(mv: Move)      -> u64 { (mv.0 as u64)         << SHIFT_MOVE  }
+impl AgePVBound {
+    pub const fn from(bound: Bound, is_pv: bool, table_age: u8) -> Self {
+        Self(bound as u8 | (is_pv as u8) << 2 | table_age << 3)
+    }
 
-// Helper functions for unpacking data
-pub const fn unpack_pv(data: u64)     -> bool  {   data & MASK_PV != 0 }
-pub const fn unpack_age(data: u64)    -> u8    { ((data & MASK_AGE) >> SHIFT_AGE) as u8 }
-pub const fn unpack_bound(data: u64)  -> Bound { unsafe { std::mem::transmute(((data & MASK_BOUND) >> SHIFT_BOUND) as u8) } }
-pub const fn unpack_eval(data: u64)   -> i16   { ((data & MASK_EVAL) >> SHIFT_EVAL) as i16 }
-pub const fn unpack_value(data: u64)  -> i16   { ((data & MASK_VALUE) >> SHIFT_VALUE) as i16 }
-pub const fn unpack_depth(data: u64)  -> u8    { ((data & MASK_DEPTH) >> SHIFT_DEPTH) as u8 }
-pub const fn unpack_move(data: u64)   -> Move  { Move(((data & MASK_MOVE) >> SHIFT_MOVE) as u16) }
+    pub const fn bound(self) -> Bound {
+        unsafe { std::mem::transmute(self.0 & 0b11) }
+    }
+
+    pub const fn is_pv(self) -> bool {
+        self.0 & 0b100 != 0
+    }
+
+    pub const fn age(self) -> u8 {
+        self.0 >> 3
+    }
+
+    pub const fn is_valid(self) -> bool {
+        self.0 != 0
+    }
+
+    pub const fn relative_age(self, table_age: u8) -> u8 {
+        (MAX_AGE + table_age - self.age()) % MAX_AGE
+    }
+}

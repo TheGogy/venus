@@ -1,151 +1,140 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::cell::UnsafeCell;
 
-use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Hash};
+use chess::types::{Depth, eval::Eval, moves::Move};
 
-use super::bits;
+use super::bits::{AgePVBound, Bound};
 
-/// TT Bound.
-/// Upper: search at this position fails high.
-/// Lower: search at this position fails low.
-/// Exact: exact value of this node.
-#[rustfmt::skip]
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash, Default)]
-#[repr(u8)]
-pub enum Bound {
-    #[default]
-    None  = 0b00,
-    Upper = 0b01,
-    Lower = 0b10,
-    Exact = 0b11,
-}
-
-impl Bound {
-    /// Whether this bound contains the other bound.
-    pub const fn has(self, other: Bound) -> bool {
-        self as u8 & other as u8 != 0
-    }
-
-    /// Whether the given eval is usable given the operand.
-    pub const fn is_usable(self, eval: Eval, operand: Eval) -> bool {
-        self.has(if eval.0 >= operand.0 { Self::Lower } else { Self::Upper })
-    }
-}
-
-/// Entry in the transposition table
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash, Default)]
-pub struct TTEntry {
-    pub key: u64,     // 64 bits - Position hash.
-    pub pv: bool,     //  1 bit  - Whether this node was pv.
-    pub age: u8,      //  6 bits - Search generation.
-    pub depth: u8,    //  7 bits - Search depth.
-    pub bound: Bound, //  2 bits - Type of bound.
-    pub mov: Move,    // 16 bits - Best move found.
-    pub eval: i16,    // 16 bits - Static evaluation.
-    pub value: i16,   // 16 bits - Search score.
-}
-
-/// A compressed transposition table entry stored in the table.
+/// TT hit.
+/// We return this when we get a hit in the TT.
 #[derive(Debug, Default)]
-pub struct CompressedEntry {
-    key: AtomicU64,
-    data: AtomicU64,
+pub struct TTHit {
+    pub eval: Eval,
+    pub depth: Depth,
+    pub was_pv: bool,
+    pub bound: Bound,
+    pub mov: Move,
+    pub value: Eval,
 }
 
+impl From<TTEntry> for TTHit {
+    fn from(entry: TTEntry) -> Self {
+        Self {
+            eval: Eval(entry.eval as i32),
+            depth: (entry.depth as Depth) + TT_DEPTH_OFFSET,
+            was_pv: entry.data.is_pv(),
+            bound: entry.data.bound(),
+            mov: entry.mov,
+            value: Eval(entry.value as i32),
+        }
+    }
+}
+
+// TT depth offsets.
 pub const TT_DEPTH_QS: Depth = -1;
-const TT_DEPTH_OFFSET: Depth = 2;
+// pub const TT_DEPTH_UNSEARCHED: Depth = -2; // TODO
+pub const TT_DEPTH_OFFSET: Depth = -3;
+
+/// Entry in the transposition table.
+#[derive(Debug, Default, Copy, Clone)]
+pub struct TTEntry {
+    pub key: u16,         // 16 bits - First 16 bits of position hash.
+    pub eval: i16,        // 16 bits - Static eval.
+    pub data: AgePVBound, // 8  bits - The age, PV and bound type.
+    pub depth: u8,        // 8  bits - Search depth.
+    pub mov: Move,        // 16 bits - The best move.
+    pub value: i16,       // 16 bits - The search score.
+}
 
 impl TTEntry {
-    /// Make a new TT entry.
+    pub const fn same_key(&self, key: u64) -> bool {
+        (key & 0xffff) as u16 == self.key
+    }
+
+    pub const fn quality(&self, table_age: u8) -> u8 {
+        self.depth - (self.data.relative_age(table_age) << 3)
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct TTSlot {
+    entry: UnsafeCell<TTEntry>,
+}
+
+unsafe impl Sync for TTSlot {}
+
+impl TTSlot {
     #[allow(clippy::too_many_arguments)]
-    pub const fn new(key: u64, pv: bool, age: u8, d: Depth, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
-        let depth = (d + TT_DEPTH_OFFSET) as u8;
-        Self { key, pv, age, depth, bound, mov, eval: eval.0 as i16, value: value.0 as i16 }
-    }
+    pub fn update(&self, key: u64, eval: i16, table_age: u8, is_pv: bool, bound: Bound, depth: Depth, mov: Move, value: i16) {
+        let e = unsafe { &mut *self.entry.get() };
 
-    /// Compress this TT entry.
-    pub const fn compress(self) -> (u64, u64) {
-        let data = bits::pack_pv(self.pv)
-            | bits::pack_age(self.age)
-            | bits::pack_depth(self.depth)
-            | bits::pack_bound(self.bound)
-            | bits::pack_move(self.mov)
-            | bits::pack_eval(self.eval)
-            | bits::pack_value(self.value);
+        if !mov.is_none() || !e.same_key(key) {
+            e.mov = mov
+        }
 
-        (self.key ^ data, data)
-    }
+        assert!(depth > TT_DEPTH_OFFSET);
+        let adj_depth = (depth - TT_DEPTH_OFFSET) as u8;
 
-    /// Get a TT entry from compressed format.
-    pub const fn from_compressed(key: u64, data: u64) -> Self {
-        Self {
-            key: key ^ data, // Recover original key
-            pv: bits::unpack_pv(data),
-            age: bits::unpack_age(data),
-            depth: bits::unpack_depth(data),
-            bound: bits::unpack_bound(data),
-            mov: bits::unpack_move(data),
-            eval: bits::unpack_eval(data),
-            value: bits::unpack_value(data),
+        // Overwrite less valuable entries.
+        if bound == Bound::Exact || !e.same_key(key) || e.data.relative_age(table_age) > 0 || adj_depth + 4 + 2 * (is_pv as u8) > e.depth {
+            e.key = (key & 0xffff) as u16;
+            e.eval = eval;
+            e.data = AgePVBound::from(bound, is_pv, table_age);
+            e.depth = adj_depth;
+            e.mov = mov;
+            e.value = value;
         }
     }
 
-    /// Get whether this was a pv node.
-    pub const fn pv(self) -> bool {
-        self.pv
-    }
-
-    /// Get the depth.
-    pub const fn depth(self) -> Depth {
-        (self.depth as Depth) - TT_DEPTH_OFFSET
-    }
-
-    /// Get the bound.
-    pub const fn bound(self) -> Bound {
-        self.bound
-    }
-
-    /// Get the move.
-    pub const fn mov(self) -> Move {
-        self.mov
-    }
-
-    /// Get static evaluation.
-    pub const fn eval(self) -> Eval {
-        Eval(self.eval as i32)
-    }
-
-    /// Get the search score.
-    pub const fn value(self, ply: usize) -> Eval {
-        Eval(self.value as i32).from_corrected(ply)
+    #[inline(always)]
+    pub fn read(&self) -> TTEntry {
+        unsafe { *self.entry.get() }
     }
 }
 
-impl CompressedEntry {
-    /// Read the entry, with hash verification.
-    pub fn read(&self, hash: Hash) -> Option<TTEntry> {
-        let key = self.key.load(Ordering::Relaxed);
-        let data = self.data.load(Ordering::Relaxed);
+const BUCKET_SIZE: usize = 3;
 
-        // Verify the entry matches the expected hash
-        if key ^ hash.key == data { Some(TTEntry::from_compressed(key, data)) } else { None }
+// Reference to the TT entry to overwrite.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct TTRef {
+    pub hit: bool,
+    pub bucket_index: usize,
+    pub entry_index: usize,
+}
+
+// Bucket of TT entries.
+#[derive(Debug, Default)]
+pub struct TTBucket {
+    pub entries: [TTSlot; BUCKET_SIZE],
+
+    #[allow(unused)]
+    pad: u16,
+}
+
+impl TTBucket {
+    /// Probe this bucket for an entry.
+    pub fn probe(&self, bucket_index: usize, key: u64, table_age: u8) -> (TTHit, TTRef) {
+        // Find an entry we can use if possible.
+        for (i, entry) in self.entries.iter().enumerate() {
+            if entry.read().same_key(key) {
+                let r = TTRef { hit: entry.read().data.is_valid(), bucket_index, entry_index: i };
+                return (TTHit::from(entry.read()), r);
+            }
+        }
+
+        // Otherwise find the entry we're going to replace.
+        let mut worst_idx = 0;
+        for (i, entry) in self.entries[1..].iter().enumerate() {
+            if entry.read().quality(table_age) < self.entries[worst_idx].read().quality(table_age) {
+                worst_idx = i
+            }
+        }
+
+        let r = TTRef { hit: false, bucket_index, entry_index: worst_idx };
+        (TTHit::default(), r)
     }
 
-    /// Read without verification - only use when known valid.
-    pub fn read_unchecked(&self) -> TTEntry {
-        let key = self.key.load(Ordering::Relaxed);
-        let data = self.data.load(Ordering::Relaxed);
-        TTEntry::from_compressed(key, data)
-    }
-
-    /// Write an entry to the table.
-    pub fn write(&self, entry: TTEntry) {
-        let (key, data) = entry.compress();
-        self.key.store(key, Ordering::Relaxed);
-        self.data.store(data, Ordering::Relaxed);
-    }
-
-    /// Check if this entry is occupied.
-    pub fn is_occupied(&self) -> bool {
-        self.key.load(Ordering::Relaxed) != 0
+    /// Count the number of entries being used in this bucket.
+    pub fn count_valid(&self, table_age: u8) -> usize {
+        self.entries.iter().filter(|e| e.read().data.is_valid() && e.read().data.age() == table_age).count()
     }
 }
