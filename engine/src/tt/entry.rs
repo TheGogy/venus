@@ -47,7 +47,7 @@ pub struct TTEntry {
 
 impl TTEntry {
     pub const fn same_key(&self, key: u64) -> bool {
-        (key & 0xffff) as u16 == self.key
+        key as u16 == self.key
     }
 
     pub const fn quality(&self, table_age: u8) -> u8 {
@@ -76,7 +76,7 @@ impl TTSlot {
 
         // Overwrite less valuable entries.
         if bound == Bound::Exact || !e.same_key(key) || e.data.relative_age(table_age) > 0 || adj_depth + 4 + 2 * (is_pv as u8) > e.depth {
-            e.key = (key & 0xffff) as u16;
+            e.key = key as u16;
             e.eval = eval;
             e.data = AgePVBound::from(bound, is_pv, table_age);
             e.depth = adj_depth;

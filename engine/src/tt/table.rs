@@ -7,7 +7,7 @@ use super::{
 
 /// Transposition table.
 pub struct TT {
-    buckets: Vec<TTBucket>,
+    pub buckets: Vec<TTBucket>,
     age: u8,
 }
 

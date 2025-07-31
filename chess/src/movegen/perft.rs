@@ -6,7 +6,7 @@ use crate::{
 
 impl Board {
     /// Counts all the legal positions up to a given depth.
-    pub fn perft<const PRINT: bool>(&mut self, depth: usize) -> usize {
+    pub fn perft<const PRINT: bool, const CHECK_LEGAL: bool>(&mut self, depth: usize) -> usize {
         let mut total = 0;
 
         let mut ml = [Move::NONE; MAX_MOVES];
@@ -23,8 +23,11 @@ impl Board {
 
         assert!(nb_moves <= MAX_MOVES);
         for m in ml[..nb_moves].iter() {
-            self.make_move(*m);
-            let n = self.perft::<false>(depth - 1);
+            if !CHECK_LEGAL || self.is_legal(*m) {
+                self.make_move(*m);
+            }
+
+            let n = self.perft::<false, CHECK_LEGAL>(depth - 1);
             self.undo_move(*m);
 
             total += n;
@@ -98,7 +101,7 @@ mod tests {
         for (fen, correct_count, depth) in PERFT_TESTS.iter().chain(LONG_PERFT_TESTS) {
             let mut board: Board = fen.parse().unwrap();
             println!("{fen}");
-            let nodes = board.perft::<true>(*depth);
+            let nodes = board.perft::<true, true>(*depth);
             assert_eq!(nodes, *correct_count);
         }
     }
