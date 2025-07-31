@@ -18,7 +18,8 @@ fn main() {
         Some("--help") | Some("-h") => println!("{HELP_MSG}"),
         Some("--version") | Some("-v") => println!("{VERSION}"),
 
-        Some("--perft") => _ = Board::default().perft::<false>(PERFT_DEPTH),
+        Some("--perft") => _ = Board::default().perft::<false, false>(PERFT_DEPTH),
+        Some("--perftlc") => _ = Board::default().perft::<false, true>(PERFT_DEPTH),
         Some("--see") => bench_see(SEE_ITERS),
 
         None | Some(&_) => println!("Unknown command! (run '--help')"),

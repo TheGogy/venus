@@ -143,7 +143,7 @@ impl Position {
         }
         // Otherwise try to get eval from the tt if the position has been evaluated and the bound
         // is tighter. If we can't do that, then just evaluate the position from scratch.
-        else if tt_depth > -TT_DEPTH_OFFSET {
+        else if tt_ref.hit {
             raw_value = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
 
             let mut e = self.adjust_eval(t, raw_value);

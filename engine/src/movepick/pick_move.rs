@@ -13,13 +13,15 @@ impl MovePicker {
             // Return TT move.
             MPStage::PvTT | MPStage::QsTT | MPStage::EvTT => {
                 self.stage = self.stage.next();
-                return Some(self.tt_move);
+                if b.is_legal(self.tt_move) {
+                    return Some(self.tt_move);
+                }
             }
 
             // For probcut, we also want to make sure the TT move has a SEE over the threshold.
             MPStage::PcTT => {
                 self.stage = self.stage.next();
-                if self.tt_move.flag().is_noisy() && b.see(self.tt_move, self.see_threshold) {
+                if self.tt_move.flag().is_noisy() && b.is_legal(self.tt_move) && b.see(self.tt_move, self.see_threshold) {
                     return Some(self.tt_move);
                 }
             }

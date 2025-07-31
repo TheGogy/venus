@@ -111,7 +111,7 @@ impl Engine {
     /// Handle perft command.
     fn handle_perft<const MP: bool>(&mut self, depth: usize) {
         let start = Instant::now();
-        let total = if MP { self.pos.perftmp::<true>(depth) } else { self.pos.board.perft::<true>(depth) };
+        let total = if MP { self.pos.perftmp::<true>(depth) } else { self.pos.board.perft::<true, false>(depth) };
         let duration = start.elapsed();
 
         let perf = total as u128 / duration.as_micros();
