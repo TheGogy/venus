@@ -51,7 +51,7 @@ impl TTEntry {
     }
 
     pub const fn quality(&self, table_age: u8) -> u8 {
-        self.depth - (self.data.relative_age(table_age) << 3)
+        self.depth - self.data.relative_age(table_age)
     }
 }
 
