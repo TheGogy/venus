@@ -80,6 +80,8 @@ impl TT {
         {
             let new_move = if mov.is_none() && hash.key == old.key { old.mov } else { mov };
             slot.write(TTEntry::new(hash.key, pv, self.age, depth, bound, new_move, eval, value.to_corrected(ply)));
+        } else if old.mov.is_none() && !mov.is_none() {
+            slot.write(TTEntry::new(hash.key, pv, self.age, depth, bound, mov, eval, value.to_corrected(ply)));
         }
     }
 
