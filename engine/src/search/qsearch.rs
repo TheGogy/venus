@@ -8,7 +8,7 @@ use crate::{
     position::Position,
     threading::thread::Thread,
     tt::{
-        entry::{Bound, TT_DEPTH_QS},
+        entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_QS, TT_DEPTH_UNSEARCHED},
         table::TT,
     },
     tunables::params::tunables::*,
@@ -58,7 +58,7 @@ impl Position {
         let mut tt_value = -Eval::INFINITY;
         let mut tt_eval = -Eval::INFINITY;
         let mut tt_bound = Bound::None;
-        let mut tt_depth = 0;
+        let mut tt_depth = -TT_DEPTH_OFFSET;
         let mut tt_pv = false;
 
         if let Some(tte) = tt.probe(self.board.state.hash) {
@@ -116,7 +116,11 @@ impl Position {
             if best_value >= beta {
                 // Return average of static eval and beta to avoid returning
                 // values that are too far from the "true" evaluation.
-                return (best_value + beta) / 2;
+                best_value = (best_value + beta) / 2;
+                if tt_depth == -TT_DEPTH_OFFSET {
+                    tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, best_value, TT_DEPTH_UNSEARCHED, t.ply, false);
+                }
+                return best_value;
             }
 
             // Raise alpha if our stand pat evaluation is better.
