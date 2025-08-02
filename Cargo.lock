@@ -50,7 +50,7 @@ checksum = "7454e41ff9012c00d53cf7f475c5e3afa3b91b7c90568495495e8d9bf47a1055"
 
 [[package]]
 name = "engine"
-version = "0.4.5"
+version = "0.4.6"
 dependencies = [
  "chess",
  "nnue",
@@ -67,4 +67,4 @@ dependencies = [
 
 [[package]]
 name = "utils"
-version = "0.2.1"
+version = "0.2.2"
