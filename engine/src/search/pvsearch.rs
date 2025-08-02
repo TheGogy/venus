@@ -8,7 +8,10 @@ use crate::{
     movepick::{MPStage, MovePicker, SearchType},
     position::Position,
     threading::thread::Thread,
-    tt::{entry::Bound, table::TT},
+    tt::{
+        entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_UNSEARCHED},
+        table::TT,
+    },
     tunables::params::tunables::*,
 };
 
@@ -99,7 +102,7 @@ impl Position {
         let mut tt_eval = -Eval::INFINITY;
         let mut tt_value = -Eval::INFINITY;
         let mut tt_bound = Bound::None;
-        let mut tt_depth = -1;
+        let mut tt_depth = -TT_DEPTH_OFFSET;
         let mut tt_pv = NT::PV;
 
         if let Some(tte) = tt.probe(self.board.state.hash) {
@@ -137,7 +140,7 @@ impl Position {
         }
         // Otherwise try to get eval from the tt if the position has been evaluated and the bound
         // is tighter. If we can't do that, then just evaluate the position from scratch.
-        else if tt_depth > 0 {
+        else if tt_depth > -TT_DEPTH_OFFSET {
             raw_value = if tt_eval.is_valid() { tt_eval } else { self.evaluate() };
 
             let mut e = self.adjust_eval(t, raw_value);
@@ -154,6 +157,9 @@ impl Position {
         else {
             raw_value = self.evaluate();
             t.ss_mut().eval = self.adjust_eval(t, raw_value);
+
+            tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
+
             t.ss().eval
         };
 

@@ -52,7 +52,8 @@ pub struct CompressedEntry {
 }
 
 pub const TT_DEPTH_QS: Depth = -1;
-const TT_DEPTH_OFFSET: Depth = 2;
+pub const TT_DEPTH_UNSEARCHED: Depth = -2;
+pub const TT_DEPTH_OFFSET: Depth = 3;
 
 impl TTEntry {
     /// Make a new TT entry.
