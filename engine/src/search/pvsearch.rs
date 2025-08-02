@@ -235,7 +235,7 @@ impl Position {
                     tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
                     if v.nonterminal() {
-                        return v - (pc_beta - beta);
+                        return v;
                     }
                 }
             }
