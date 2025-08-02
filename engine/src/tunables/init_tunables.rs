@@ -72,24 +72,6 @@ macro_rules! init_tunables {
             }
 
             #[cfg(feature = "tune")]
-            pub fn spsa_output_json() -> String {
-                let mut json = String::new();
-                json.push_str("{\n");
-                $(
-                    json.push_str(&format!(
-                        " \"{}\": {{\n    \"value\": {},\n    \"min_value\": {},\n    \"max_value\": {},\n    \"step\": {}\n  }},\n",
-                        stringify!($name),
-                        $val,
-                        $min,
-                        $max,
-                        $step
-                    ));
-                )*
-                json.push_str("}\n");
-                json
-            }
-
-            #[cfg(feature = "tune")]
             pub fn spsa_output_txt() -> String {
                 let mut txt = String::new();
                 $(

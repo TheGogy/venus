@@ -29,14 +29,3 @@ impl<T, const SIZE: usize> DerefMut for Align64<[T; SIZE]> {
         &mut self.0
     }
 }
-
-/// Align a slice of data to the given size.
-#[inline(always)]
-pub fn aligned<T, const SIZE: usize>(data: &[T]) -> &Align64<[T; SIZE]> {
-    unsafe {
-        debug_assert_eq!(data.len(), SIZE);
-        let ptr = data.as_ptr();
-        #[allow(clippy::cast_ptr_alignment)]
-        &*ptr.cast()
-    }
-}

@@ -50,14 +50,6 @@ impl ThreadPool {
     pub const fn nb_workers(&self) -> usize {
         self.workers.len()
     }
-
-    /// The maximum available workers on this machine.
-    pub fn max_workers() -> usize {
-        match std::thread::available_parallelism() {
-            Ok(n) => n.into(),
-            Err(_) => 0,
-        }
-    }
 }
 
 /// Searching.

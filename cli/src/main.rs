@@ -31,9 +31,7 @@ fn main() {
 
         // SPSA
         #[cfg(feature = "tune")]
-        Some("spsa-json") => println!("{}", tunables::spsa_output_json()),
-        #[cfg(feature = "tune")]
-        Some("spsa-txt") => println!("{}", tunables::spsa_output_txt()),
+        Some("spsa") => println!("{}", tunables::spsa_output_txt()),
 
         // Benchmarking
         Some("bench") => Engine::run_bench(),
