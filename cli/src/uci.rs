@@ -5,7 +5,7 @@ use std::{
 
 use engine::{
     VERSION,
-    interface::{EngineCommand, EngineInterface},
+    interface::{Engine, EngineCommand, EngineInterface},
 };
 
 #[cfg(feature = "tune")]
@@ -53,6 +53,7 @@ impl UCIReader {
         match tokens.next() {
             Some(cmd) => match cmd {
                 "isready"     => println!("readyok"),
+                "cpucount"    => println!("Hardware concurrency: {}", Engine::max_workers()),
                 "uci"         => self.cmd_uci(),
                 "ucinewgame"  => self.interface.handle_command(EngineCommand::NewGame),
                 "stop"        => self.interface.handle_command(EngineCommand::Stop),

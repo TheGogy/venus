@@ -168,4 +168,12 @@ impl Engine {
             _ => eprintln!("Unsupported option: {n}!"),
         }
     }
+
+    /// The maximum available workers on this machine.
+    pub fn max_workers() -> usize {
+        match std::thread::available_parallelism() {
+            Ok(n) => n.into(),
+            Err(_) => 0,
+        }
+    }
 }

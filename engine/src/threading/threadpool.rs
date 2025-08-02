@@ -27,6 +27,7 @@ pub struct ThreadPool {
     global_nodes: Arc<AtomicU64>,
 }
 
+/// ThreadPool management.
 impl ThreadPool {
     /// Initialize a threadpool.
     pub fn new(global_stop: Arc<AtomicBool>) -> Self {
@@ -48,6 +49,14 @@ impl ThreadPool {
     /// The total number of thread workers.
     pub const fn nb_workers(&self) -> usize {
         self.workers.len()
+    }
+
+    /// The maximum available workers on this machine.
+    pub fn max_workers() -> usize {
+        match std::thread::available_parallelism() {
+            Ok(n) => n.into(),
+            Err(_) => 0,
+        }
     }
 }
 
