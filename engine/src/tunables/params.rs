@@ -91,9 +91,8 @@ init_tunables! {
     iir_d_min:  i16 = 2, 1, 4, 1;
 
     // Razoring.
-    razoring_d_max:  i16 = 7, 2, 10, 1;
-    razoring_e_max:  i32 = 1896, 1000, 3000, 100;
-    razoring_d_mult: i32 = 346, 300, 800, 25;
+    rz_base: i32 = 470, 350, 550, 40;
+    rz_mult: i32 = 300, 250, 400, 30;
 
     // History pruning.
     hp_d_min: i16 = 2, 1, 5, 1;

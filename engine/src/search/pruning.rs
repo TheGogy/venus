@@ -14,7 +14,7 @@ pub fn can_apply_rfp(depth: Depth, improving: bool, eval: Eval, beta: Eval) -> b
 // If our static eval is far below alpha, do a quick qsearch to see
 // if we can improve the position through tactics.
 pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
-    depth <= razoring_d_max() && eval.abs().0 <= razoring_e_max() && eval + (depth as i32 * razoring_d_mult()) < alpha
+    !alpha.is_tb_win() && eval < alpha - rz_base() - rz_mult() * (depth * depth) as i32
 }
 
 /// Null move pruning.

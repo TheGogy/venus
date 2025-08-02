@@ -158,6 +158,7 @@ impl Position {
             raw_value = self.evaluate();
             t.ss_mut().eval = self.adjust_eval(t, raw_value);
 
+            // Throw the static eval into the tt if we won't overwrite anything.
             tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
 
             t.ss().eval

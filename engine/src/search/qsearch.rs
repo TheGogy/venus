@@ -117,6 +117,8 @@ impl Position {
                 // Return average of static eval and beta to avoid returning
                 // values that are too far from the "true" evaluation.
                 best_value = (best_value + beta) / 2;
+
+                // Throw the static eval into the tt if we won't overwrite anything.
                 if tt_depth == -TT_DEPTH_OFFSET {
                     tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, best_value, TT_DEPTH_UNSEARCHED, t.ply, false);
                 }
@@ -140,11 +142,11 @@ impl Position {
             // -----------------------------------
             //              Pruning
             // -----------------------------------
-            if !self.board.in_check() && !best_value.is_loss() {
+            if !best_value.is_loss() {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
-                if futility <= alpha && !self.board.see(m, Eval(1)) {
+                if !self.board.in_check() && futility <= alpha && !self.board.see(m, Eval(1)) {
                     best_value = best_value.max(futility);
                     continue;
                 }
