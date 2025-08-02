@@ -76,13 +76,6 @@ pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> Depth {
 
     #[cfg(feature = "tune")]
     {
-        if depth == 0 || moves_tried == 0 {
-            return 0;
-        }
-
-        let lmr_base = lmr_base() as f32 / 1024.0;
-        let lmr_mult = lmr_mult() as f32 / 1024.0;
-
-        (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as Depth
+        (lmr_base() + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult()) as Depth
     }
 }
