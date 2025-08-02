@@ -187,6 +187,7 @@ impl Thread {
         self.hist_noisy.update(board, best, captures, bonus, malus);
 
         if best.flag().is_quiet() {
+            self.ss_mut().killer = Some(best);
             self.hist_quiet.update(board.stm, best, quiets, bonus, malus);
 
             for i in 0..CONT_NUM {

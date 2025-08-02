@@ -44,6 +44,7 @@ pub enum MPStage {
     PvTT,
     PvNoisyGen,
     PvNoisyWin,
+    PvKiller,
     PvQuietGen,
     PvQuietAll,
     PvNoisyLoss,
@@ -93,6 +94,7 @@ pub struct MovePicker {
     searchtype: SearchType,
 
     tt_move: Move,
+    killer: Move,
 
     see_threshold: Eval,
 
@@ -117,7 +119,7 @@ impl MovePicker {
             Move::NONE
         });
 
-        Self { stage, searchtype, tt_move, see_threshold, skip_quiets: false, move_list: MoveList::default() }
+        Self { stage, searchtype, tt_move, killer: Move::NONE, see_threshold, skip_quiets: false, move_list: MoveList::default() }
     }
 }
 

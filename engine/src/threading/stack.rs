@@ -13,6 +13,7 @@ pub struct SearchStackEntry {
     pub ply_from_null: usize,
     pub eval: Eval,
     pub excluded: Option<Move>,
+    pub killer: Option<Move>,
 }
 
 impl Thread {
@@ -40,5 +41,10 @@ impl Thread {
         assert!(self.ply < MAX_PLY);
         assert!(offset <= self.ply);
         &mut self.stack[self.ply - offset]
+    }
+
+    /// Clear the next node.
+    pub const fn prepare_next(&mut self) {
+        self.stack[self.ply + 1].killer = None;
     }
 }

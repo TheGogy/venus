@@ -165,6 +165,7 @@ impl Position {
 
         let improving = t.is_improving();
         let child_pv = &mut PVLine::default();
+        t.prepare_next();
 
         // -----------------------------------
         //              Pruning

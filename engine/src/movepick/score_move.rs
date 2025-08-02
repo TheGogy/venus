@@ -26,8 +26,8 @@ impl MovePicker {
         let prev_piecetos = t.get_prev_piecetos();
 
         b.enumerate_moves::<_, Quiet>(|m| {
-            // We've already picked the TT move if it exists.
-            if m == self.tt_move {
+            // We've already picked the TT and killer moves.
+            if m == self.tt_move || m == self.killer {
                 return;
             }
 

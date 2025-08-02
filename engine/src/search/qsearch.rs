@@ -130,6 +130,8 @@ impl Position {
         // -----------------------------------
         //             Moves loop
         // -----------------------------------
+        t.prepare_next();
+
         let mut best_move = Move::NONE;
         let mut moves_exist = false;
 
