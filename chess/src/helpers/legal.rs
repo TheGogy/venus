@@ -1,5 +1,5 @@
 use crate::{
-    movegen::Allmv,
+    tables::{atk_by_type, leaping_piece::pawn_atk},
     types::{
         board::Board,
         moves::{Move, MoveFlag},
@@ -9,51 +9,83 @@ use crate::{
 
 impl Board {
     /// Whether the given move is legal in this position.
-    #[rustfmt::skip]
+    /// This assumes that there was a move with this represetation at some point,
+    /// and that that move was legal, but might not be legal now.
     pub fn is_legal(&self, m: Move) -> bool {
-        use Piece::*;
-
         let flag = m.flag();
-        let src_piece = self.pc_at(m.src());
-        let in_check = self.in_check();
 
-        if src_piece == CPiece::None {
-            return false
+        let (src, dst) = (m.src(), m.dst());
+        let src_piece = self.pc_at(src);
+        let src_pt = src_piece.pt();
+
+        let occ = self.occ();
+        let stm_occ = self.c_bb(self.stm);
+        let opp_occ = self.c_bb(!self.stm);
+
+        let pin_orth = self.state.pin_orth;
+        let pin_diag = self.state.pin_diag;
+        let attacked = self.state.attacked;
+        let checkers = self.state.checkers;
+        let checkmask = self.state.checkmask;
+
+        // If the piece we're trying to move from isn't one of ours then move doesn't exist.
+        if src_piece == CPiece::None || src_piece.color() != self.stm {
+            return false;
         }
 
-        let mut found = false;
-        macro_rules! check {
-            ($f:ident $(, $check:expr)? ) => {
-                if in_check {
-                    self.$f::<_, Allmv, true>(&mut |mv| found |= mv == m);
-                } else {
-                    self.$f::<_, Allmv, false>(&mut |mv| found |= mv == m);
-                }
-            };
+        // We can't capture our own piece.
+        if stm_occ.contains(dst) {
+            return false;
         }
 
-        match src_piece.pt() {
-            None   => unreachable!(),
+        // Handle pawns.
+        if src_pt == Piece::Pawn {
+            let one_sq_fwd = src.forward(self.stm);
 
-            Pawn   => check!(enumerate_pawn),
-            Knight => check!(enumerate_knight),
-            Bishop => check!(enumerate_diag),
-            Rook   => check!(enumerate_orth),
-
-            Queen => {
-                check!(enumerate_diag);
-                check!(enumerate_orth);
+            // Handle single pushes.
+            if one_sq_fwd != dst || occ.contains(dst) || flag != MoveFlag::Normal {
+                return false;
             }
 
-            King => {
-                if flag == MoveFlag::Castling {
-                    self.enumerate_castling(&mut |mv| found |= mv == m);
-                } else {
-                    check!(enumerate_king);
+            // Handle double pushes.
+            if one_sq_fwd.forward(self.stm) != dst || occ.contains(dst) || occ.contains(one_sq_fwd) || flag != MoveFlag::DoublePush {
+                return false;
+            }
+
+            // Handle captures.
+            if !(pawn_atk(self.stm, src) & opp_occ).contains(dst) || flag != MoveFlag::Capture {
+                return false;
+            }
+
+        // Handle everything else.
+        } else if !atk_by_type(src_pt, src, occ).contains(dst) {
+            return false;
+        }
+
+        // If our piece starts in the pinmask, it must also end in that pinmask.
+        if (pin_orth.contains(src) && !pin_orth.contains(dst)) || (pin_diag.contains(src) && !pin_diag.contains(dst)) {
+            return false;
+        }
+
+        if self.in_check() {
+            if src_pt == Piece::King {
+                // King cannot move into check.
+                if attacked.contains(dst) {
+                    return false;
+                }
+            } else {
+                // If we have 2 checking pieces, we need to move the King.
+                if checkers.multiple() {
+                    return false;
+                }
+
+                // We have to get between attacker and King.
+                if !checkmask.contains(dst) {
+                    return false;
                 }
             }
         }
 
-        found
+        true
     }
 }

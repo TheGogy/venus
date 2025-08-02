@@ -41,17 +41,17 @@ impl Bitboard {
     }
 
     /// Set the bit at the given index.
-    pub const fn set_bit(&mut self, s: Square) {
+    pub const fn set(&mut self, s: Square) {
         self.0 |= s.bb().0
     }
 
     /// Pop the bit at the given index.
-    pub const fn pop_bit(&mut self, s: Square) {
+    pub const fn remove(&mut self, s: Square) {
         self.0 &= !s.bb().0
     }
 
     /// Get the bit at the current index.
-    pub const fn get_bit(self, s: Square) -> bool {
+    pub const fn contains(self, s: Square) -> bool {
         self.0 & s.bb().0 != 0
     }
 

@@ -105,7 +105,7 @@ impl Board {
     }
 
     /// Add all pawn moves.
-    fn enumerate_pawn<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_pawn<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -226,7 +226,7 @@ impl Board {
     /// Add all castling moves.
     /// This should only be called when we are enumerating quiet moves
     /// and are not in check.
-    fn enumerate_castling<F>(&self, receiver: &mut F)
+    pub fn enumerate_castling<F>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -248,7 +248,7 @@ impl Board {
     }
 
     /// Add all king moves.
-    fn enumerate_king<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_king<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -257,7 +257,7 @@ impl Board {
     }
 
     /// Add all knight moves.
-    fn enumerate_knight<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_knight<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -270,7 +270,7 @@ impl Board {
     }
 
     /// Add all diagonal slider moves.
-    fn enumerate_diag<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_diag<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -290,7 +290,7 @@ impl Board {
     }
 
     // Add all orthogonal slider moves.
-    fn enumerate_orth<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_orth<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {

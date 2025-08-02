@@ -67,11 +67,11 @@ impl Board {
         let orth_sliders = self.all_orth();
 
         let mut occ = self.occ();
-        occ.pop_bit(src);
-        occ.pop_bit(dst);
+        occ.remove(src);
+        occ.remove(dst);
 
         if flag == MoveFlag::EnPassant {
-            occ.pop_bit(self.state.epsq.forward(!self.stm));
+            occ.remove(self.state.epsq.forward(!self.stm));
         }
 
         let mut atk = self.attackers_to(dst, occ) & occ;
@@ -87,7 +87,7 @@ impl Board {
 
             // Get the least valuable attacker.
             let (p, s) = self.get_lva(stm, own_atk);
-            occ.pop_bit(s);
+            occ.remove(s);
 
             let pt = p.pt();
             if matches!(pt, Piece::Queen | Piece::Bishop | Piece::Pawn) {

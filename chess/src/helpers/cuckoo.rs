@@ -49,7 +49,7 @@ impl Board {
                 return true;
             }
 
-            let pc = if occ.get_bit(src) { self.pc_at(src) } else { self.pc_at(dst) };
+            let pc = if occ.contains(src) { self.pc_at(src) } else { self.pc_at(dst) };
 
             if pc.color() != self.stm {
                 continue;
@@ -104,7 +104,7 @@ static CUCKOO: CuckooTable = {
                     let sq_x = Square::from_raw(x);
                     let sq_y = Square::from_raw(y);
 
-                    if atk_by_type_const(pc.pt(), sq_x).get_bit(sq_y) {
+                    if atk_by_type_const(pc.pt(), sq_x).contains(sq_y) {
                         let mut mv = Move::new(sq_x, sq_y, MoveFlag::Normal);
                         let mut key = PIECE_KEYS[pc.idx()][x as usize] ^ PIECE_KEYS[pc.idx()][y as usize] ^ COLOR_KEY;
 
