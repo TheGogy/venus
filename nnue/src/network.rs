@@ -1,5 +1,5 @@
 use chess::types::{board::Board, color::Color, eval::Eval};
-use utils::box_array;
+use utils::memory::box_array;
 
 use crate::{
     NNUE_EMBEDDED,

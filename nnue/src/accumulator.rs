@@ -1,5 +1,5 @@
 use chess::types::{bitboard::Bitboard, board::Board, color::Color, piece::Piece};
-use utils::Align64;
+use utils::memory::Align64;
 
 use crate::{
     NNUE_EMBEDDED,

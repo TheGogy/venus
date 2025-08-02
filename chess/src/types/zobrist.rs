@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::utils::rng::next_rng;
+use utils::rng::next_rng;
 
 use super::{
     castling::CastlingRights,

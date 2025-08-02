@@ -20,12 +20,11 @@ use crate::{
         movebuffer::MoveBuffer,
         quiethist::QuietHist,
     },
-    search::pv::PVLine,
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
     tunables::params::tunables::{hist_corr_other, hist_corr_pawn},
 };
 
-use super::stack::SearchStackEntry;
+use super::{pv::PVLine, stack::SearchStackEntry};
 
 #[derive(Clone, Debug)]
 pub struct Thread {

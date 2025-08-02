@@ -29,7 +29,7 @@ impl Thread {
     }
 
     /// Get the search stack entry some offset from the top.
-    pub fn ss_at(&self, offset: usize) -> &SearchStackEntry {
+    pub const fn ss_at(&self, offset: usize) -> &SearchStackEntry {
         assert!(self.ply < MAX_PLY);
         assert!(offset <= self.ply);
         &self.stack[self.ply - offset]

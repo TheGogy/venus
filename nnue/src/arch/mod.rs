@@ -1,4 +1,4 @@
-use ::utils::Align64;
+use ::utils::memory::Align64;
 
 pub mod propagate;
 pub mod utils;
