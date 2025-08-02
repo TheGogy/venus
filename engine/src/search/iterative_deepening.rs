@@ -1,8 +1,13 @@
 use chess::types::eval::Eval;
 
-use crate::{position::Position, threading::thread::Thread, tt::table::TT, tunables::params::tunables::*};
+use crate::{
+    position::Position,
+    threading::{pv::PVLine, thread::Thread},
+    tt::table::TT,
+    tunables::params::tunables::*,
+};
 
-use super::{Root, pv::PVLine};
+use super::Root;
 
 impl Position {
     /// Iterative deepening loop.

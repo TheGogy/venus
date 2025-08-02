@@ -132,7 +132,7 @@ impl Engine {
             "Threads" => {
                 if let Ok(size) = v.parse::<usize>() {
                     if size > 0 {
-                        self.pool.resize(size);
+                        self.pool.resize(size - 1);
                     }
                 }
             }

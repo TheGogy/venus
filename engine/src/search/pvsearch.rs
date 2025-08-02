@@ -7,7 +7,7 @@ use crate::{
     history::movebuffer::MoveBuffer,
     movepick::{MPStage, MovePicker, SearchType},
     position::Position,
-    threading::thread::Thread,
+    threading::{pv::PVLine, thread::Thread},
     tt::{
         entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_UNSEARCHED},
         table::TT,
@@ -15,7 +15,7 @@ use crate::{
     tunables::params::tunables::*,
 };
 
-use super::{NodeType, OffPV, pruning::*, pv::PVLine};
+use super::{NodeType, OffPV, pruning::*};
 
 impl Position {
     /// Null window search.
