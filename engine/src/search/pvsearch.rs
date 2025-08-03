@@ -9,7 +9,8 @@ use crate::{
     position::Position,
     threading::{pv::PVLine, thread::Thread},
     tt::{
-        entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_UNSEARCHED},
+        bits::Bound,
+        entry::{TT_DEPTH_OFFSET, TT_DEPTH_UNSEARCHED},
         table::TT,
     },
     tunables::params::tunables::*,
@@ -105,13 +106,15 @@ impl Position {
         let mut tt_depth = -TT_DEPTH_OFFSET;
         let mut tt_pv = NT::PV;
 
-        if let Some(tte) = tt.probe(self.board.state.hash) {
-            tt_move = tte.mov();
-            tt_eval = tte.eval();
-            tt_value = tte.value(t.ply);
-            tt_bound = tte.bound();
-            tt_depth = tte.depth();
-            tt_pv |= tte.pv;
+        let (tt_hit, tt_ref) = tt.probe(self.board.state.hash);
+
+        if tt_ref.hit {
+            tt_move = tt_hit.mov;
+            tt_value = tt_hit.value.from_corrected(t.ply);
+            tt_eval = tt_hit.eval;
+            tt_bound = tt_hit.bound;
+            tt_depth = tt_hit.depth;
+            tt_pv |= tt_hit.was_pv;
         }
 
         // TT cutoff.
@@ -159,7 +162,17 @@ impl Position {
             t.ss_mut().eval = self.adjust_eval(t, raw_value);
 
             // Throw the static eval into the tt if we won't overwrite anything.
-            tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
+            tt.insert(
+                tt_ref,
+                self.board.state.hash,
+                Bound::None,
+                Move::NONE,
+                raw_value,
+                -Eval::INFINITY,
+                TT_DEPTH_UNSEARCHED,
+                t.ply,
+                tt_pv,
+            );
 
             t.ss().eval
         };
@@ -233,7 +246,7 @@ impl Position {
                 self.undo_move(m, t);
 
                 if v >= pc_beta {
-                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
+                    tt.insert(tt_ref, self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
                     if v.nonterminal() {
                         return v;
@@ -471,7 +484,7 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
+            tt.insert(tt_ref, self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
         }
 
         best_value

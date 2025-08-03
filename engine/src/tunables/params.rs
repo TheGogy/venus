@@ -51,9 +51,6 @@ init_tunables! {
     hist_corr_pawn: i32 = 80, 60, 100, 2;
     hist_corr_other: i32 = 100, 80, 120, 2;
 
-    // transposition table.
-    tt_replace_d_min: i16 = 5, 2, 6, 1;
-
     // Probcut.
     pc_beta_base:          i32 = 143, 120, 200, 5;
     pc_beta_non_improving: i32 = 55, 30, 80, 4;
