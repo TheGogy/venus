@@ -7,7 +7,7 @@ use crate::{threading::thread::Thread, tt::entry::Bound, tunables::params::tunab
 // we're likely to exceed beta, we can return beta immediately.
 pub fn can_apply_rfp(depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
     let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
-    depth <= rfp_d_max() && eval - rfp_margin >= beta
+    !eval.is_tb_win() && !beta.is_tb_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
 }
 
 /// Razoring.
