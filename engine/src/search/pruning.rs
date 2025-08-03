@@ -5,9 +5,9 @@ use crate::{threading::thread::Thread, tt::entry::Bound, tunables::params::tunab
 /// Reverse futility pruning.
 // If our position is already so good that even without searching,
 // we're likely to exceed beta, we can return beta immediately.
-pub fn can_apply_rfp(depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
+pub fn can_apply_rfp(depth: Depth, improving: bool, eval: Eval, beta: Eval, tt_pv: bool) -> bool {
     let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
-    depth <= rfp_d_max() && eval - rfp_margin >= beta
+    !tt_pv && !eval.is_tb_win() && !beta.is_tb_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
 }
 
 /// Razoring.
