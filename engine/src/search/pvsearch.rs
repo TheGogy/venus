@@ -173,7 +173,7 @@ impl Position {
         if !NT::PV && !in_check && !singular {
             // Reverse futility pruning (static null move pruning).
             if can_apply_rfp(depth, improving, eval, beta) {
-                return beta;
+                return (eval + beta) / 2;
             }
 
             // Razoring.
