@@ -5,8 +5,11 @@ use crate::{threading::thread::Thread, tt::entry::Bound, tunables::params::tunab
 /// Reverse futility pruning.
 // If our position is already so good that even without searching,
 // we're likely to exceed beta, we can return beta immediately.
-pub fn can_apply_rfp(depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
-    let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
+#[rustfmt::skip]
+pub fn can_apply_rfp(depth: Depth, improving: bool, opp_worsening: bool, eval: Eval, beta: Eval) -> bool {
+    let rfp_margin = rfp_mult() * Eval(depth as i32) 
+                   - rfp_improving_margin() * Eval(improving as i32)
+                   - rfp_worsening_margin() * Eval(opp_worsening as i32);
     !eval.is_tb_win() && !beta.is_tb_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
 }
 

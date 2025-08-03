@@ -158,6 +158,11 @@ impl Thread {
             true
         }
     }
+
+    /// Whether our opponent's position is getting worse.
+    pub fn opp_worsening(&self) -> bool {
+        self.ply >= 2 && self.ss_at(1).eval < self.ss().eval
+    }
 }
 
 /// Histories.
