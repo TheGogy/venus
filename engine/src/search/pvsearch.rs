@@ -165,6 +165,7 @@ impl Position {
         };
 
         let improving = t.is_improving();
+        let opp_worsening = t.opp_worsening();
         let child_pv = &mut PVLine::default();
 
         // -----------------------------------
@@ -172,8 +173,8 @@ impl Position {
         // -----------------------------------
         if !NT::PV && !in_check && !singular {
             // Reverse futility pruning (static null move pruning).
-            if can_apply_rfp(depth, improving, eval, beta) {
-                return (eval + beta) / 2;
+            if can_apply_rfp(depth, improving, opp_worsening, eval, beta) {
+                return beta + (eval - beta) / 3;
             }
 
             // Razoring.
