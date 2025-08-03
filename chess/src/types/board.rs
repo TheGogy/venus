@@ -316,16 +316,16 @@ impl Board {
 
     /// Set the given piece on the given square.
     pub const fn set_piece(&mut self, p: CPiece, s: Square) {
-        self.pieces[p.pt().idx()].set_bit(s);
-        self.colors[p.color().idx()].set_bit(s);
+        self.pieces[p.pt().idx()].add(s);
+        self.colors[p.color().idx()].add(s);
         self.pc_map[s.idx()] = p;
     }
 
     /// Remove the piece on the given square.
     pub const fn pop_piece(&mut self, s: Square) {
         let p = self.pc_at(s);
-        self.pieces[p.pt().idx()].pop_bit(s);
-        self.colors[p.color().idx()].pop_bit(s);
+        self.pieces[p.pt().idx()].pop(s);
+        self.colors[p.color().idx()].pop(s);
         self.pc_map[s.idx()] = CPiece::None;
     }
 

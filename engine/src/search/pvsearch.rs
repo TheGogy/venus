@@ -86,8 +86,8 @@ impl Position {
             // Mate distance pruning.
             // If we have already found a faster mate,
             // then we don't need to search this node.
-            alpha = alpha.max(Eval::mated_in(t.ply));
-            beta = beta.min(Eval::mate_in(t.ply + 1));
+            alpha = alpha.max(Eval::search_mated_in(t.ply));
+            beta = beta.min(Eval::search_mate_in(t.ply + 1));
 
             if alpha >= beta {
                 return alpha;
@@ -196,7 +196,7 @@ impl Position {
 
                 // cutoff above beta.
                 if v >= beta {
-                    return if v.is_tb_win() { beta } else { v };
+                    return if v.is_win() { beta } else { v };
                 }
             }
         }
@@ -439,7 +439,7 @@ impl Position {
             return if singular {
                 alpha
             } else if in_check {
-                Eval::mated_in(t.ply)
+                Eval::search_mated_in(t.ply)
             } else {
                 Eval::DRAW
             };

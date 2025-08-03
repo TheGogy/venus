@@ -142,7 +142,7 @@ impl Position {
             // -----------------------------------
             //              Pruning
             // -----------------------------------
-            if !best_value.is_loss() {
+            if !best_value.is_search_loss() {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
@@ -190,7 +190,7 @@ impl Position {
         // Checkmate detection.
         // If we're in check and have no legal moves, it's checkmate.
         if in_check && !moves_exist {
-            return Eval::mated_in(t.ply);
+            return Eval::search_mated_in(t.ply);
         }
 
         // Adjust beta cutoff values to be more conservative.

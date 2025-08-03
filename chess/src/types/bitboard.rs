@@ -41,17 +41,17 @@ impl Bitboard {
     }
 
     /// Set the bit at the given index.
-    pub const fn set_bit(&mut self, s: Square) {
+    pub const fn add(&mut self, s: Square) {
         self.0 |= s.bb().0
     }
 
     /// Pop the bit at the given index.
-    pub const fn pop_bit(&mut self, s: Square) {
+    pub const fn pop(&mut self, s: Square) {
         self.0 &= !s.bb().0
     }
 
     /// Get the bit at the current index.
-    pub const fn get_bit(self, s: Square) -> bool {
+    pub const fn has(self, s: Square) -> bool {
         self.0 & s.bb().0 != 0
     }
 
@@ -61,7 +61,7 @@ impl Bitboard {
     }
 
     /// Pop the least significant bit.
-    pub const fn pop(&mut self) {
+    pub const fn pop_lsb(&mut self) {
         self.0 &= self.0 - 1
     }
 
@@ -78,7 +78,7 @@ impl Bitboard {
         let mut bb = *self;
         while bb.any() {
             f(bb.lsb());
-            bb.pop();
+            bb.pop_lsb();
         }
     }
 

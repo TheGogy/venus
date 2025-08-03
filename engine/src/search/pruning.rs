@@ -10,14 +10,14 @@ pub fn can_apply_rfp(depth: Depth, improving: bool, opp_worsening: bool, eval: E
     let rfp_margin = rfp_mult() * Eval(depth as i32) 
                    - rfp_improving_margin() * Eval(improving as i32)
                    - rfp_worsening_margin() * Eval(opp_worsening as i32);
-    !eval.is_tb_win() && !beta.is_tb_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
+    !eval.is_win() && !beta.is_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
 }
 
 /// Razoring.
 // If our static eval is far below alpha, do a quick qsearch to see
 // if we can improve the position through tactics.
 pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
-    !alpha.is_tb_win() && eval < alpha - rz_base() - rz_mult() * (depth * depth) as i32
+    !alpha.is_win() && eval < alpha - rz_base() - rz_mult() * (depth * depth) as i32
 }
 
 /// Null move pruning.
@@ -29,7 +29,7 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval:
         && eval >= t.ss().eval
         && eval + nmp_improving_margin() * Eval(improving as i32) >= beta
         && !b.only_king_pawns_left()
-        && !beta.is_tb_loss()
+        && !beta.is_loss()
 }
 
 /// Internal iterative reductions.

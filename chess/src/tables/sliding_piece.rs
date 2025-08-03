@@ -283,8 +283,8 @@ mod tests {
     fn test_rook_blocking_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::E6);
-        blockers.set_bit(Square::G4);
+        blockers.add(Square::E6);
+        blockers.add(Square::G4);
 
         let attacks = rook_atk(pos, blockers);
 
@@ -295,8 +295,8 @@ mod tests {
     fn test_rook_ignore_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::B6);
-        blockers.set_bit(Square::G7);
+        blockers.add(Square::B6);
+        blockers.add(Square::G7);
 
         let attacks = rook_atk(pos, blockers);
 
@@ -324,8 +324,8 @@ mod tests {
     fn test_bishop_blocking_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::G6);
-        blockers.set_bit(Square::C2);
+        blockers.add(Square::G6);
+        blockers.add(Square::C2);
 
         let attacks = bishop_atk(pos, blockers);
 
@@ -336,8 +336,8 @@ mod tests {
     fn test_bishop_ignore_pieces() {
         let pos = Square::E4;
         let mut blockers = Bitboard::EMPTY;
-        blockers.set_bit(Square::B6);
-        blockers.set_bit(Square::G7);
+        blockers.add(Square::B6);
+        blockers.add(Square::G7);
 
         let attacks = bishop_atk(pos, blockers);
 
