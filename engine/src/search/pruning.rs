@@ -26,6 +26,7 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval:
         && eval >= t.ss().eval
         && eval + nmp_improving_margin() * Eval(improving as i32) >= beta
         && !b.only_king_pawns_left()
+        && !beta.is_tb_loss()
 }
 
 /// Internal iterative reductions.

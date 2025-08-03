@@ -103,6 +103,7 @@ impl Engine {
 
     /// Handle go command.
     fn handle_go(&mut self, tc: TimeControl) {
+        self.tt.increment_age();
         let bestmove = self.pool.go(&mut self.pos, tc, &self.tt);
         println!("bestmove {}", bestmove.to_uci(&self.pos.board.castlingmask));
     }
