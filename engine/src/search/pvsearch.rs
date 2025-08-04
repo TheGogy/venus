@@ -188,11 +188,10 @@ impl Position {
 
             // Null move pruning.
             if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
-                let r = (nmp_base() + depth / nmp_factor()) + (((eval.0 - beta.0) / nmp_delta_div()).min(4)) as Depth;
-                let d = (depth - r).max(0);
+                let r = (nmp_base() + depth / nmp_factor()).min(depth);
 
                 self.make_null(t);
-                let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), d, false);
+                let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, false);
                 self.undo_null(t);
 
                 // cutoff above beta.
