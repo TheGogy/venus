@@ -187,8 +187,8 @@ impl Position {
             }
 
             // Null move pruning.
-            if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
-                let r = (nmp_base() + depth / nmp_factor()).min(depth);
+            if can_apply_nmp(&self.board, t, depth, eval, beta) {
+                let r = (nmp_base() + depth / nmp_factor()).min(depth) + tt_move.flag().is_noisy() as Depth;
 
                 self.make_null(t);
                 let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, false);

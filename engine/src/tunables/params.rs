@@ -83,11 +83,11 @@ init_tunables! {
     rfp_worsening_margin: i32 = 6, 5, 20, 1;
 
     // Null move pruning.
-    nmp_d_min:            i16 = 3, 1, 4, 1;
-    nmp_improving_margin: i32 = 68, 40, 100, 5;
-    nmp_base:             i16 = 5, 2, 7, 1;
-    nmp_factor:           i16 = 3, 2, 8, 1;
-    nmp_depth_factor:     i32 = 22, 10, 25, 1;
+    nmp_d_min:    i16 = 3, 1, 4, 1;
+    nmp_b_margin: i32 = 68, 40, 100, 5;
+    nmp_b_factor: i32 = 18, 10, 25, 1;
+    nmp_base:     i16 = 5, 2, 7, 1;
+    nmp_factor:   i16 = 3, 2, 8, 1;
 
     // Internal iterative reductions.
     iir_d_min:  i16 = 2, 1, 4, 1;

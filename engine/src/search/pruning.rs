@@ -23,9 +23,9 @@ pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
 /// Null move pruning.
 /// If the opponent gets a free move and we're still above beta, then our
 /// position is probably so good we can just return beta.
-pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
-    let nmp_bonus = nmp_improving_margin() * improving as i32 + nmp_depth_factor() * depth as i32;
-    depth >= nmp_d_min() && t.ply_from_null > 0 && eval + nmp_bonus >= beta && !b.only_king_pawns_left() && !beta.is_loss()
+pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, eval: Eval, beta: Eval) -> bool {
+    let nmp_bonus = nmp_b_factor() * depth as i32 - nmp_b_margin();
+    !beta.is_loss() && depth >= nmp_d_min() && t.ply_from_null > 0 && eval + nmp_bonus >= beta && !b.only_king_pawns_left()
 }
 
 /// Internal iterative reductions.
