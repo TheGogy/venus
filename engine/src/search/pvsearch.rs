@@ -191,7 +191,7 @@ impl Position {
                 let r = (nmp_base() + depth / nmp_factor()).min(depth);
 
                 self.make_null(t);
-                let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, !cutnode);
+                let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, false);
                 self.undo_null(t);
 
                 // cutoff above beta.
