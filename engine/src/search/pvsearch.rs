@@ -105,7 +105,7 @@ impl Position {
         let mut tt_depth = -TT_DEPTH_OFFSET;
         let mut tt_pv = NT::PV;
 
-        if let Some(tte) = tt.probe(self.board.state.hash) {
+        if let Some(tte) = tt.probe(self.hash()) {
             tt_move = tte.mov();
             tt_eval = tte.eval();
             tt_value = tte.value(t.ply);
@@ -159,7 +159,7 @@ impl Position {
             t.ss_mut().eval = self.adjust_eval(t, raw_value);
 
             // Throw the static eval into the tt if we won't overwrite anything.
-            tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
+            tt.insert(self.hash(), Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
 
             t.ss().eval
         };
@@ -234,7 +234,7 @@ impl Position {
                 self.undo_move(m, t);
 
                 if v >= pc_beta {
-                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
+                    tt.insert(self.hash(), Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
                     if v.nonterminal() {
                         return v;
@@ -348,7 +348,7 @@ impl Position {
             //             Make Move
             // -----------------------------------
             self.make_move(m, t);
-            tt.prefetch(self.board.state.hash);
+            tt.prefetch(self.hash());
 
             let mut v = -Eval::INFINITY;
 
@@ -472,7 +472,7 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
+            tt.insert(self.hash(), bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
         }
 
         best_value
