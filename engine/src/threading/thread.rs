@@ -168,7 +168,7 @@ impl Thread {
 /// Histories.
 impl Thread {
     /// Get the piece and square of the move n steps back.
-    pub fn pieceto_at(&self, offset: usize) -> Option<PieceTo> {
+    pub const fn pieceto_at(&self, offset: usize) -> Option<PieceTo> {
         if self.ply >= offset {
             return self.ss_at(offset).pieceto;
         }

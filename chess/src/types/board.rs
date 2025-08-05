@@ -346,7 +346,7 @@ impl Board {
     }
 
     /// Get the current ply of the board.
-    pub fn ply(&self) -> usize {
+    pub const fn ply(&self) -> usize {
         self.history.len()
     }
 

@@ -26,13 +26,13 @@ impl QuietHist {
     }
 
     /// Add a bonus to the given move.
-    fn add_bonus(&mut self, c: Color, m: Move, bonus: i16) {
+    const fn add_bonus(&mut self, c: Color, m: Move, bonus: i16) {
         let i = Self::idx(c, m);
         self.0[i.0][i.1][i.2].gravity::<QUIET_MAX>(bonus);
     }
 
     /// Get a bonus for the given move.
-    pub fn get_bonus(&self, c: Color, m: Move) -> i32 {
+    pub const fn get_bonus(&self, c: Color, m: Move) -> i32 {
         let i = Self::idx(c, m);
         self.0[i.0][i.1][i.2].0 as i32
     }
