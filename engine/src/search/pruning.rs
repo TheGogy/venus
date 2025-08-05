@@ -16,8 +16,9 @@ pub fn can_apply_rfp(depth: Depth, improving: bool, opp_worsening: bool, eval: E
 /// Razoring.
 // If our static eval is far below alpha, do a quick qsearch to see
 // if we can improve the position through tactics.
-pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
-    !alpha.is_win() && eval < alpha - rz_base() - rz_mult() * (depth * depth) as i32
+pub fn can_apply_razoring(depth: Depth, improving: bool, eval: Eval, alpha: Eval) -> bool {
+    let d = depth as i32 - !improving as i32;
+    !alpha.is_win() && eval < alpha - rz_base() - rz_mult() * d * d
 }
 
 /// Null move pruning.
