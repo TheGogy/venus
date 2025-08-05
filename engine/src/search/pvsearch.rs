@@ -221,6 +221,8 @@ impl Position {
                     continue;
                 }
 
+                t.nodes += 1;
+
                 self.make_move(m, t);
 
                 // Do a quick qsearch to see if the move is worth looking at.
