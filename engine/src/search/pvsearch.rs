@@ -202,7 +202,7 @@ impl Position {
         }
 
         // Internal Iterative reductions.
-        if can_apply_iir(depth, NT::PV, cutnode, tt_move) {
+        if !singular && can_apply_iir(depth, NT::PV, cutnode, tt_move) {
             depth -= 1;
         }
 
@@ -220,6 +220,8 @@ impl Position {
                 if excluded == Some(m) {
                     continue;
                 }
+
+                t.nodes += 1;
 
                 self.make_move(m, t);
 
