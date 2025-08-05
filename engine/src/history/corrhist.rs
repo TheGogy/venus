@@ -28,13 +28,13 @@ impl CorrHist {
     }
 
     /// Add a bonus to this CorrHist.
-    pub fn add_bonus(&mut self, key: u64, c: Color, bonus: i16) {
+    pub const fn add_bonus(&mut self, key: u64, c: Color, bonus: i16) {
         let i = Self::idx(key, c);
         self.0[i.0][i.1].gravity::<CORR_HIST_MAX>(bonus);
     }
 
     /// Get a bonus from this CorrHist.
-    pub fn get_bonus(&self, key: u64, c: Color) -> i32 {
+    pub const fn get_bonus(&self, key: u64, c: Color) -> i32 {
         let i = Self::idx(key, c);
         self.0[i.0][i.1].0 as i32
     }

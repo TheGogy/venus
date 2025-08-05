@@ -87,7 +87,7 @@ impl Engine {
             EngineCommand::PerftMp(d)    => self.handle_perft::<true>(d),
             EngineCommand::Eval          => self.handle_eval(),
             EngineCommand::Print         => println!("{}", self.pos.board),
-            _ => eprintln!("Unknown command!")
+            _ => println!("Unknown command!")
         }
     }
 }
@@ -131,18 +131,18 @@ impl Engine {
     fn handle_setopt(&mut self, n: String, v: String) {
         match &n[..] {
             "Threads" => {
-                if let Ok(size) = v.parse::<usize>() {
-                    if size > 0 {
-                        self.pool.resize(size - 1);
-                    }
+                if let Ok(size) = v.parse::<usize>()
+                    && size > 0
+                {
+                    self.pool.resize(size - 1);
                 }
             }
 
             "Hash" => {
-                if let Ok(size) = v.parse::<usize>() {
-                    if size > 0 {
-                        self.tt.resize(size);
-                    }
+                if let Ok(size) = v.parse::<usize>()
+                    && size > 0
+                {
+                    self.tt.resize(size);
                 }
             }
 
@@ -161,7 +161,7 @@ impl Engine {
             #[cfg(feature = "tune")]
             _ => {
                 if tunables::set_tunable(&n, &v).is_err() {
-                    eprintln!("Unsupported option: {n}!");
+                    println!("Unsupported option: {n}!");
                 }
             }
 

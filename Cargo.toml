@@ -4,13 +4,9 @@ members = ["chess", "cli", "engine", "nnue", "utils"]
 
 [profile.release]
 opt-level = 3
-target-cpu = "native"
 lto = "fat"
 codegen-units = 1
 panic = "abort"
-overflow-checks = false
-debug = false
-rpath = false
 
 [profile.bench]
 inherits = "release"
