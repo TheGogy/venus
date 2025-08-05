@@ -89,7 +89,7 @@ init_tunables! {
     nmp_factor:           i16 = 3, 2, 8, 1;
 
     // Internal iterative reductions.
-    iir_d_min:  i16 = 2, 1, 4, 1;
+    iir_d_min:  i16 = 4, 1, 6, 1;
 
     // Razoring.
     rz_base: i32 = 470, 350, 550, 40;
