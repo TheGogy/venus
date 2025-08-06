@@ -142,7 +142,7 @@ impl Position {
             // -----------------------------------
             //              Pruning
             // -----------------------------------
-            if !best_value.is_search_loss() {
+            if !best_value.is_loss() {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
