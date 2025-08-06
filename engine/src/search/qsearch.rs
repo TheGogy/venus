@@ -70,11 +70,11 @@ impl Position {
             tt_pv = tte.pv();
         };
 
-        // TT cutoff in qsearch.
+        // TT cutoff.
         // If the bound from the tt is tighter than the current search value, just return it.
         // Even shallow TT entries can be useful in qsearch since we're mostly
         // looking at forced sequences.
-        if !NT::PV && tt_value.is_valid() && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
+        if !NT::PV && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
 
@@ -133,20 +133,30 @@ impl Position {
         //             Moves loop
         // -----------------------------------
         let mut best_move = Move::NONE;
-        let mut moves_exist = false;
+        let mut moves_tried = 0;
 
         let mut mp = MovePicker::new(SearchType::Qs, in_check, tt_move, Eval::DRAW);
         while let Some(m) = mp.next(&self.board, t) {
-            moves_exist = true;
+            moves_tried += 1;
 
             // -----------------------------------
             //              Pruning
             // -----------------------------------
             if !best_value.is_loss() {
+                let gives_check = self.board.gives_check(m);
+                let desperado_value = futility + self.capture_value(m);
+
+                // Desperado pruning. (TODO: Does this have a proper name?)
+                // If our eval is so low that even making the capture with no recaptures is bad,
+                // prune the move.
+                if !gives_check && desperado_value <= alpha {
+                    continue;
+                }
+
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
-                if !self.board.gives_check(m) && futility <= alpha && !self.board.see(m, Eval(1)) {
+                if !gives_check && futility <= alpha && !self.board.see(m, Eval(1)) {
                     best_value = best_value.max(futility);
                     continue;
                 }
@@ -189,7 +199,7 @@ impl Position {
 
         // Checkmate detection.
         // If we're in check and have no legal moves, it's checkmate.
-        if in_check && !moves_exist {
+        if in_check && moves_tried == 0 {
             return Eval::search_mated_in(t.ply);
         }
 

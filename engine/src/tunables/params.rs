@@ -23,7 +23,8 @@ use crate::init_tunables;
 // mult => The multiplier (combined with a base value).
 init_tunables! {
     // Material scaling values.
-    ms_base: i32 = 715, 600, 900, 10;
+    ms_base:   i32 = 715, 600, 900, 10;
+    ms_pawn:   i32 = 118, 100, 200, 5;
     ms_knight: i32 = 446, 400, 500, 5;
     ms_bishop: i32 = 459, 400, 500, 5;
     ms_rook:   i32 = 705, 600, 800, 10;

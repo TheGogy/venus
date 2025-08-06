@@ -1,9 +1,9 @@
 pub mod eval;
 
-use chess::types::{board::Board, moves::Move, zobrist::Hash};
+use chess::types::{board::Board, eval::Eval, moves::Move, zobrist::Hash};
 use nnue::network::NNUE;
 
-use crate::{history::conthist::PieceTo, threading::thread::Thread};
+use crate::{history::conthist::PieceTo, threading::thread::Thread, tunables::params::tunables::*};
 
 /// Position.
 /// This contains a representation of the board itself and the NNUE updated with the most recently
@@ -95,5 +95,12 @@ impl Position {
     /// Get the current board hash.
     pub fn hash(&self) -> Hash {
         self.board.state.hash
+    }
+
+    /// The value of the piece captured with the given move.
+    pub fn capture_value(&self, m: Move) -> Eval {
+        // Only time we "capture" an empty square is for en passant or queen promos.
+        let pc_val = [ms_pawn(), ms_knight(), ms_bishop(), ms_rook(), ms_queen(), 0, ms_pawn()];
+        Eval(pc_val[self.board.captured(m).pt().idx()])
     }
 }
