@@ -176,7 +176,7 @@ impl Board {
                 }
 
                 // Prune orthgonal pins.
-                if (eprank & rook_atk(self.ksq(self.stm), occ ^ src.bb() ^ epcap) & self.orth_slider(!self.stm)).is_empty() {
+                if (eprank & rook_atk(self.ksq(self.stm), occ ^ src.bb() ^ epcap) & self.c_orth(!self.stm)).is_empty() {
                     receiver(Move::new(src, self.state.epsq, MoveFlag::EnPassant));
                 }
             });
@@ -274,7 +274,7 @@ impl Board {
     where
         F: FnMut(Move),
     {
-        let diag = self.diag_slider(self.stm) & !self.state.pin_orth;
+        let diag = self.c_diag(self.stm) & !self.state.pin_orth;
         let occ = self.occ();
         let ok = !self.c_bb(self.stm);
 
@@ -294,7 +294,7 @@ impl Board {
     where
         F: FnMut(Move),
     {
-        let orth = self.orth_slider(self.stm) & !self.state.pin_diag;
+        let orth = self.c_orth(self.stm) & !self.state.pin_diag;
         let occ = self.occ();
         let ok = !self.c_bb(self.stm);
 
