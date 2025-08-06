@@ -146,7 +146,7 @@ impl Position {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
-                if !self.board.in_check() && futility <= alpha && !self.board.see(m, Eval(1)) {
+                if !self.board.gives_check(m) && futility <= alpha && !self.board.see(m, Eval(1)) {
                     best_value = best_value.max(futility);
                     continue;
                 }
