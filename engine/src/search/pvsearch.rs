@@ -276,7 +276,7 @@ impl Position {
 
             // Late move reductions.
             let mut r = lmr_base_reduction(depth, moves_tried);
-            r += cutnode as Depth;
+            r += tt_pv as Depth;
 
             // -----------------------------------
             //          Move loop pruning
@@ -369,6 +369,7 @@ impl Position {
 
                 // Increase reductions for bad moves.
                 r += !NT::PV as Depth;
+                r += cutnode as Depth;
                 r += !improving as Depth;
                 r += tt_move.flag().is_noisy() as Depth;
 
