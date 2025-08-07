@@ -74,7 +74,7 @@ impl Position {
         // If the bound from the tt is tighter than the current search value, just return it.
         // Even shallow TT entries can be useful in qsearch since we're mostly
         // looking at forced sequences.
-        if !NT::PV && tt_value.is_valid() && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
+        if !NT::PV && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
 
