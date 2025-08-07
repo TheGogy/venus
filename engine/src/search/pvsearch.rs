@@ -164,7 +164,7 @@ impl Position {
             t.ss().eval
         };
 
-        let improving = t.is_improving();
+        let improving = !in_check && t.is_improving();
         let opp_worsening = t.opp_worsening();
         let child_pv = &mut PVLine::default();
 
