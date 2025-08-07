@@ -274,6 +274,8 @@ impl Position {
             let hist_score = t.hist_score(&self.board, m);
             let mut new_depth = depth - 1;
 
+            let mut r = lmr_base_reduction(depth, moves_tried);
+
             // -----------------------------------
             //          Move loop pruning
             // -----------------------------------
@@ -289,7 +291,7 @@ impl Position {
                 }
 
                 // Futility pruning.
-                if can_apply_fp(depth, eval, alpha, moves_tried) {
+                if can_apply_fp(depth, r, eval, alpha) {
                     mp.skip_quiets = true;
                 }
             }
@@ -357,8 +359,6 @@ impl Position {
             // already looked at the best moves. We reduce the depth that we search the other moves
             // at accordingly.
             if can_apply_lmr(depth, moves_tried, NT::PV) {
-                let mut r = lmr_base_reduction(depth, moves_tried);
-
                 // Decrease reductions for good moves.
                 r -= in_check as Depth;
                 r -= self.board.in_check() as Depth;
