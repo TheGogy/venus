@@ -33,7 +33,7 @@ pub const fn pack_value(value: i16)   -> u64 { (value as u16 as u64) << SHIFT_VA
 pub const fn pack_depth(depth: u8)    -> u64 { (depth as u64)        << SHIFT_DEPTH }
 pub const fn pack_move(mv: Move)      -> u64 { (mv.0 as u64)         << SHIFT_MOVE  }
 
-// Helper functions for unpacking data
+// Helper functions for unpacking data.
 pub const fn unpack_pv(data: u64)     -> bool  {   data & MASK_PV != 0 }
 pub const fn unpack_age(data: u64)    -> u8    { ((data & MASK_AGE) >> SHIFT_AGE) as u8 }
 pub const fn unpack_bound(data: u64)  -> Bound { unsafe { std::mem::transmute(((data & MASK_BOUND) >> SHIFT_BOUND) as u8) } }

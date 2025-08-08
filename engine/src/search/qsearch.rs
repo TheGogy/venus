@@ -70,7 +70,7 @@ impl Position {
             tt_pv = tte.pv();
         };
 
-        // TT cutoff in qsearch.
+        // TT cutoff.
         // If the bound from the tt is tighter than the current search value, just return it.
         // Even shallow TT entries can be useful in qsearch since we're mostly
         // looking at forced sequences.
@@ -151,7 +151,7 @@ impl Position {
                     continue;
                 }
 
-                // SEE (Static Exchange Evaluation) pruning.
+                // SEE pruning.
                 // If a capture loses material, it's usually not worth considering
                 // unless we're in a desperate position.
                 if !self.board.see(m, Eval(sp_qs_margin())) {
