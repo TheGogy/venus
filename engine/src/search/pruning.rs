@@ -5,27 +5,30 @@ use crate::{threading::thread::Thread, tt::entry::Bound, tunables::params::tunab
 /// Reverse futility pruning.
 // If our position is already so good that even without searching,
 // we're likely to exceed beta, we can return beta immediately.
-pub fn can_apply_rfp(depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
-    let rfp_margin = rfp_mult() * Eval(depth as i32) - rfp_improving_margin() * Eval(improving as i32);
-    depth <= rfp_d_max() && eval - rfp_margin >= beta
+#[rustfmt::skip]
+pub fn can_apply_rfp(depth: Depth, improving: bool, opp_worsening: bool, eval: Eval, beta: Eval) -> bool {
+    let rfp_margin = rfp_mult() * Eval(depth as i32) 
+                   - rfp_improving_margin() * Eval(improving as i32)
+                   - rfp_worsening_margin() * Eval(opp_worsening as i32);
+    !eval.is_win() && !beta.is_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
 }
 
 /// Razoring.
 // If our static eval is far below alpha, do a quick qsearch to see
 // if we can improve the position through tactics.
 pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
-    depth <= razoring_d_max() && eval.abs().0 <= razoring_e_max() && eval + (depth as i32 * razoring_d_mult()) < alpha
+    !alpha.is_win() && eval < alpha - rz_base() - rz_mult() * (depth * depth) as i32
 }
 
 /// Null move pruning.
 /// If the opponent gets a free move and we're still above beta, then our
 /// position is probably so good we can just return beta.
 pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
-    depth > nmp_d_min()
+    depth >= nmp_d_min()
         && t.ply_from_null > 0
-        && eval >= t.ss().eval
-        && eval + nmp_improving_margin() * Eval(improving as i32) >= beta
+        && eval + nmp_improving_margin() * improving as i32 >= beta
         && !b.only_king_pawns_left()
+        && !beta.is_loss()
 }
 
 /// Internal iterative reductions.
@@ -66,6 +69,7 @@ pub fn can_apply_lmr(depth: Depth, moves_tried: usize, is_pv: bool) -> bool {
 }
 
 /// Get the late move reduction amount.
+#[inline(never)]
 pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> Depth {
     #[cfg(not(feature = "tune"))]
     {
@@ -76,6 +80,13 @@ pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> Depth {
 
     #[cfg(feature = "tune")]
     {
-        (lmr_base() + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult()) as Depth
+        if depth == 0 || moves_tried == 0 {
+            return 0;
+        }
+
+        let lmr_base = lmr_base() as f32 / 1024.0;
+        let lmr_mult = lmr_mult() as f32 / 1024.0;
+
+        (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as Depth
     }
 }

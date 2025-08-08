@@ -22,18 +22,18 @@ impl Default for ContHist {
 impl ContHist {
     /// The index into this ContHist.
     /// [pieceto][from][to]
-    fn idx(m: Move, pt: PieceTo) -> (usize, usize, usize) {
+    const fn idx(m: Move, pt: PieceTo) -> (usize, usize, usize) {
         (pt.idx(), m.src().idx(), m.dst().idx())
     }
 
     /// Add a bonus to the given move pair.
-    fn add_bonus(&mut self, m: Move, pt: PieceTo, bonus: i16) {
+    const fn add_bonus(&mut self, m: Move, pt: PieceTo, bonus: i16) {
         let i = Self::idx(m, pt);
         self.0[i.0][i.1][i.2].gravity::<CONT_HIST_MAX>(bonus);
     }
 
     /// Get a bonus from the given move pair.
-    pub fn get_bonus(&self, m: Move, pt: PieceTo) -> i32 {
+    pub const fn get_bonus(&self, m: Move, pt: PieceTo) -> i32 {
         let i = Self::idx(m, pt);
         self.0[i.0][i.1][i.2].0 as i32
     }

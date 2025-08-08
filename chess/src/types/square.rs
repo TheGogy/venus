@@ -70,8 +70,8 @@ impl Square {
     }
 
     /// Iterate over all squares.
-    pub fn iter() -> impl Iterator<Item = Square> {
-        (0..64).map(Square::from_raw)
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (0..64).map(Self::from_raw)
     }
 
     /// Flip horizontal.

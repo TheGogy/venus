@@ -86,8 +86,8 @@ impl Position {
             // Mate distance pruning.
             // If we have already found a faster mate,
             // then we don't need to search this node.
-            alpha = alpha.max(Eval::mated_in(t.ply));
-            beta = beta.min(Eval::mate_in(t.ply + 1));
+            alpha = alpha.max(Eval::search_mated_in(t.ply));
+            beta = beta.min(Eval::search_mate_in(t.ply + 1));
 
             if alpha >= beta {
                 return alpha;
@@ -105,7 +105,7 @@ impl Position {
         let mut tt_depth = -TT_DEPTH_OFFSET;
         let mut tt_pv = NT::PV;
 
-        if let Some(tte) = tt.probe(self.board.state.hash) {
+        if let Some(tte) = tt.probe(self.hash()) {
             tt_move = tte.mov();
             tt_eval = tte.eval();
             tt_value = tte.value(t.ply);
@@ -158,12 +158,14 @@ impl Position {
             raw_value = self.evaluate();
             t.ss_mut().eval = self.adjust_eval(t, raw_value);
 
-            tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
+            // Throw the static eval into the tt if we won't overwrite anything.
+            tt.insert(self.hash(), Bound::None, Move::NONE, raw_value, -Eval::INFINITY, TT_DEPTH_UNSEARCHED, t.ply, tt_pv);
 
             t.ss().eval
         };
 
-        let improving = t.is_improving();
+        let improving = !in_check && t.is_improving();
+        let opp_worsening = t.opp_worsening();
         let child_pv = &mut PVLine::default();
 
         // -----------------------------------
@@ -171,8 +173,8 @@ impl Position {
         // -----------------------------------
         if !NT::PV && !in_check && !singular {
             // Reverse futility pruning (static null move pruning).
-            if can_apply_rfp(depth, improving, eval, beta) {
-                return beta;
+            if can_apply_rfp(depth, improving, opp_worsening, eval, beta) {
+                return beta + (eval - beta) / 3;
             }
 
             // Razoring.
@@ -186,15 +188,15 @@ impl Position {
 
             // Null move pruning.
             if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
-                let r = (nmp_base() + depth / nmp_factor()).min(depth);
+                let r = (nmp_base() + depth / nmp_factor()).min(depth) + tt_move.flag().is_noisy() as Depth;
 
                 self.make_null(t);
-                let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, !cutnode);
+                let v = -self.nwsearch(t, tt, child_pv, -beta + Eval(1), depth - r, false);
                 self.undo_null(t);
 
                 // cutoff above beta.
                 if v >= beta {
-                    return if v.is_tb_win() { beta } else { v };
+                    return if v.is_win() { beta } else { v };
                 }
             }
         }
@@ -232,7 +234,7 @@ impl Position {
                 self.undo_move(m, t);
 
                 if v >= pc_beta {
-                    tt.insert(self.board.state.hash, Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
+                    tt.insert(self.hash(), Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
                     if v.nonterminal() {
                         return v;
@@ -346,7 +348,7 @@ impl Position {
             //             Make Move
             // -----------------------------------
             self.make_move(m, t);
-            tt.prefetch(self.board.state.hash);
+            tt.prefetch(self.hash());
 
             let mut v = -Eval::INFINITY;
 
@@ -437,7 +439,7 @@ impl Position {
             return if singular {
                 alpha
             } else if in_check {
-                Eval::mated_in(t.ply)
+                Eval::search_mated_in(t.ply)
             } else {
                 Eval::DRAW
             };
@@ -470,7 +472,7 @@ impl Position {
 
         // Store the result in the TT.
         if !singular {
-            tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
+            tt.insert(self.hash(), bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
         }
 
         best_value

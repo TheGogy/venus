@@ -61,7 +61,7 @@ impl Position {
         let mut tt_depth = -TT_DEPTH_OFFSET;
         let mut tt_pv = false;
 
-        if let Some(tte) = tt.probe(self.board.state.hash) {
+        if let Some(tte) = tt.probe(self.hash()) {
             tt_move = tte.mov();
             tt_value = tte.value(t.ply);
             tt_eval = tte.eval();
@@ -74,7 +74,7 @@ impl Position {
         // If the bound from the tt is tighter than the current search value, just return it.
         // Even shallow TT entries can be useful in qsearch since we're mostly
         // looking at forced sequences.
-        if !NT::PV && tt_value.is_valid() && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
+        if !NT::PV && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
 
@@ -117,8 +117,10 @@ impl Position {
                 // Return average of static eval and beta to avoid returning
                 // values that are too far from the "true" evaluation.
                 best_value = (best_value + beta) / 2;
+
+                // Throw the static eval into the tt if we won't overwrite anything.
                 if tt_depth == -TT_DEPTH_OFFSET {
-                    tt.insert(self.board.state.hash, Bound::None, Move::NONE, raw_value, best_value, TT_DEPTH_UNSEARCHED, t.ply, false);
+                    tt.insert(self.hash(), Bound::None, Move::NONE, raw_value, best_value, TT_DEPTH_UNSEARCHED, t.ply, false);
                 }
                 return best_value;
             }
@@ -144,7 +146,7 @@ impl Position {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
-                if !self.board.in_check() && futility <= alpha && !self.board.see(m, Eval(1)) {
+                if !self.board.gives_check(m) && futility <= alpha && !self.board.see(m, Eval(1)) {
                     best_value = best_value.max(futility);
                     continue;
                 }
@@ -188,7 +190,7 @@ impl Position {
         // Checkmate detection.
         // If we're in check and have no legal moves, it's checkmate.
         if in_check && !moves_exist {
-            return Eval::mated_in(t.ply);
+            return Eval::search_mated_in(t.ply);
         }
 
         // Adjust beta cutoff values to be more conservative.
@@ -208,7 +210,7 @@ impl Position {
         //
         // We can't use an exact bound as we don't know if we've searched all the moves.
         let bound = if best_value >= beta { Bound::Lower } else { Bound::Upper };
-        tt.insert(self.board.state.hash, bound, best_move, raw_value, best_value, TT_DEPTH_QS, t.ply, tt_pv);
+        tt.insert(self.hash(), bound, best_move, raw_value, best_value, TT_DEPTH_QS, t.ply, tt_pv);
 
         best_value
     }

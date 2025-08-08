@@ -16,6 +16,7 @@ impl Board {
     pub(crate) fn update_masks(&self, state: &mut BoardState) {
         self.update_attacked(state);
         self.update_checkers(state);
+        self.update_kinglines(state);
         self.update_pins(state);
     }
 
@@ -33,12 +34,12 @@ impl Board {
         });
 
         // Bishops + Queens.
-        self.diag_slider(opp).bitloop(|s| {
+        self.c_diag(opp).bitloop(|s| {
             state.attacked |= bishop_atk(s, occ);
         });
 
         // Rooks + Queens.
-        self.orth_slider(opp).bitloop(|s| {
+        self.c_orth(opp).bitloop(|s| {
             state.attacked |= rook_atk(s, occ);
         });
 
@@ -56,8 +57,21 @@ impl Board {
         state.checkers =
             self.pc_bb(opp, Piece::Pawn)   & pawn_atk(self.stm, ksq)
           | self.pc_bb(opp, Piece::Knight) & knight_atk(ksq)
-          | self.diag_slider(opp)          & bishop_atk(ksq, occ)
-          | self.orth_slider(opp)          & rook_atk(ksq, occ)
+          | self.c_diag(opp)               & bishop_atk(ksq, occ)
+          | self.c_orth(opp)               & rook_atk(ksq, occ)
+    }
+
+    /// Update the king lines.
+    #[rustfmt::skip]
+    fn update_kinglines(&self, state: &mut BoardState) {
+        let ksq = self.ksq(!self.stm);
+        let occ = self.occ();
+
+        state.kinglines[0] = pawn_atk(!self.stm, ksq);                // Pawn
+        state.kinglines[1] = knight_atk(ksq);                         // Knight
+        state.kinglines[2] = bishop_atk(ksq, occ);                    // Bishop
+        state.kinglines[3] = rook_atk(ksq, occ);                      // Rook
+        state.kinglines[4] = state.kinglines[2] | state.kinglines[3]; // Queen
     }
 
     /// Update the pins on the board.
@@ -80,7 +94,7 @@ impl Board {
         }
 
         // Bishops and queens
-        (self.diag_slider(opp) & bishop_atk(ksq, opp_occ)).bitloop(|s| {
+        (self.c_diag(opp) & bishop_atk(ksq, opp_occ)).bitloop(|s| {
             let between = between(ksq, s);
             match (between & stm_occ).nbits() {
                 0 => state.checkmask |= between | s.bb(), // No pieces: add to checkmask
@@ -90,7 +104,7 @@ impl Board {
         });
 
         // Rooks and queens
-        (self.orth_slider(opp) & rook_atk(ksq, opp_occ)).bitloop(|s| {
+        (self.c_orth(opp) & rook_atk(ksq, opp_occ)).bitloop(|s| {
             let between = between(ksq, s);
             match (between & stm_occ).nbits() {
                 0 => state.checkmask |= between | s.bb(), // No pieces: add to checkmask

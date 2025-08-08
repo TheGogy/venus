@@ -50,49 +50,49 @@ impl Eval {
 
     /// Gets the internal eval representation for checkmate in `ply`.
     #[inline(always)]
-    pub const fn mate_in(ply: usize) -> Self {
+    pub const fn search_mate_in(ply: usize) -> Self {
         Eval(Self::MATE.0 - ply as i32)
     }
 
     /// Gets the internal eval representation for tablebase checkmate in `ply`.
     #[inline(always)]
-    pub const fn tb_mate_in(ply: usize) -> Self {
+    pub const fn mate_in(ply: usize) -> Self {
         Eval(Self::TB_MATE.0 - ply as i32)
     }
 
     /// Gets the internal eval representation for opponent checkmate in `ply`.
     #[inline(always)]
-    pub const fn mated_in(ply: usize) -> Self {
+    pub const fn search_mated_in(ply: usize) -> Self {
         Eval(-Self::MATE.0 + ply as i32)
     }
 
     /// Gets the internal eval representation for opponent tablebase checkmate in `ply`.
     #[inline(always)]
-    pub const fn tb_mated_in(ply: usize) -> Self {
+    pub const fn mated_in(ply: usize) -> Self {
         Eval(-Self::TB_MATE.0 + ply as i32)
     }
 
     /// Whether this score implies a win.
     #[inline(always)]
-    pub const fn is_win(self) -> bool {
+    pub const fn is_search_win(self) -> bool {
         self.0 >= Self::LONGEST_MATE.0
     }
 
     /// Whether this score implies a loss.
     #[inline(always)]
-    pub const fn is_loss(self) -> bool {
+    pub const fn is_search_loss(self) -> bool {
         self.0 <= -Self::LONGEST_MATE.0
     }
 
     /// Whether this score implies a win.
     #[inline(always)]
-    pub const fn is_tb_win(self) -> bool {
+    pub const fn is_win(self) -> bool {
         self.0 >= Self::LONGEST_TB_MATE.0
     }
 
     /// Whether this score implies a loss.
     #[inline(always)]
-    pub const fn is_tb_loss(self) -> bool {
+    pub const fn is_loss(self) -> bool {
         self.0 <= -Self::LONGEST_TB_MATE.0
     }
 
@@ -102,16 +102,10 @@ impl Eval {
         self.0.abs() >= Self::LONGEST_MATE.0
     }
 
-    /// Whether this score implies checkmate has been found in the tb.
-    #[inline(always)]
-    pub const fn is_tb_mate(self) -> bool {
-        self.0.abs() >= Self::LONGEST_TB_MATE.0
-    }
-
     /// Whether this score implies that the game has not been confirmed as mate.
     #[inline(always)]
     pub const fn nonterminal(self) -> bool {
-        !self.is_tb_mate()
+        self.0.abs() < Self::LONGEST_TB_MATE.0
     }
 
     /// Whether or not this is a valid score.
@@ -123,9 +117,9 @@ impl Eval {
     /// Gets the eval from the corrected value stored in the TT.
     #[inline(always)]
     pub const fn from_corrected(self, ply: usize) -> Self {
-        if self.0 >= Eval::LONGEST_TB_MATE.0 {
+        if self.is_win() {
             Eval(self.0 - ply as i32)
-        } else if self.0 <= -Eval::LONGEST_TB_MATE.0 {
+        } else if self.is_loss() {
             Eval(self.0 + ply as i32)
         } else {
             self
@@ -135,9 +129,9 @@ impl Eval {
     /// Converts the eval to the corrected value stored in the TT.
     #[inline(always)]
     pub const fn to_corrected(self, ply: usize) -> Self {
-        if self.0 >= Eval::LONGEST_TB_MATE.0 {
+        if self.is_win() {
             Eval(self.0 + ply as i32)
-        } else if self.0 <= -Eval::LONGEST_TB_MATE.0 {
+        } else if self.is_loss() {
             Eval(self.0 - ply as i32)
         } else {
             self
@@ -145,11 +139,13 @@ impl Eval {
     }
 
     /// Normalizes the evaluation.
-    /// TODO: Calculate proper normalized pawn value.
+    /// TODO: Feed it more games
+    ///       It needs more games
+    ///       It always needs more games
     /// https://github.com/official-stockfish/WDL_model
     #[inline(always)]
     pub const fn normalized(self) -> i32 {
-        const NORMALIZE_PAWN_VALUE: i32 = 199;
+        const NORMALIZE_PAWN_VALUE: i32 = 168;
 
         if self.is_mate() { self.0 } else { (self.0 * 100) / NORMALIZE_PAWN_VALUE }
     }

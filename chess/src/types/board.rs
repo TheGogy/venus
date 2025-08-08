@@ -39,6 +39,9 @@ pub struct BoardState {
 
     // Keys.
     pub hash: Hash,
+
+    // Used for check detection.
+    pub kinglines: [Bitboard; Piece::NUM],
 }
 
 /// Contains the current board state.
@@ -290,12 +293,12 @@ impl Board {
     }
 
     /// Get all the diagonal sliders on the board (queens + bishops) of a specific color.
-    pub fn diag_slider(&self, c: Color) -> Bitboard {
+    pub fn c_diag(&self, c: Color) -> Bitboard {
         self.all_diag() & self.c_bb(c)
     }
 
     /// Get all the orthogonal sliders on the board (queens + rooks) of a specific color.
-    pub fn orth_slider(&self, c: Color) -> Bitboard {
+    pub fn c_orth(&self, c: Color) -> Bitboard {
         self.all_orth() & self.c_bb(c)
     }
 
@@ -314,18 +317,23 @@ impl Board {
         self.pc_map[s.idx()]
     }
 
+    /// Get the squares that the king can be checked on for the given piece.
+    pub const fn king_line(&self, p: Piece) -> Bitboard {
+        self.state.kinglines[p.idx()]
+    }
+
     /// Set the given piece on the given square.
     pub const fn set_piece(&mut self, p: CPiece, s: Square) {
-        self.pieces[p.pt().idx()].set_bit(s);
-        self.colors[p.color().idx()].set_bit(s);
+        self.pieces[p.pt().idx()].add(s);
+        self.colors[p.color().idx()].add(s);
         self.pc_map[s.idx()] = p;
     }
 
     /// Remove the piece on the given square.
     pub const fn pop_piece(&mut self, s: Square) {
         let p = self.pc_at(s);
-        self.pieces[p.pt().idx()].pop_bit(s);
-        self.colors[p.color().idx()].pop_bit(s);
+        self.pieces[p.pt().idx()].pop(s);
+        self.colors[p.color().idx()].pop(s);
         self.pc_map[s.idx()] = CPiece::None;
     }
 
@@ -346,7 +354,7 @@ impl Board {
     }
 
     /// Get the current ply of the board.
-    pub fn ply(&self) -> usize {
+    pub const fn ply(&self) -> usize {
         self.history.len()
     }
 

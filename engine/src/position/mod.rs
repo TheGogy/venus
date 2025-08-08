@@ -1,6 +1,6 @@
 pub mod eval;
 
-use chess::types::{board::Board, moves::Move};
+use chess::types::{board::Board, moves::Move, zobrist::Hash};
 use nnue::network::NNUE;
 
 use crate::{history::conthist::PieceTo, threading::thread::Thread};
@@ -90,5 +90,10 @@ impl Position {
     pub fn undo_null(&mut self, t: &mut Thread) {
         t.move_undo();
         self.board.undo_null();
+    }
+
+    /// Get the current board hash.
+    pub fn hash(&self) -> Hash {
+        self.board.state.hash
     }
 }

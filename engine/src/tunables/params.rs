@@ -63,8 +63,8 @@ init_tunables! {
     ext_mult:  i16 = 2, 1, 4, 1;
 
     // Late move reduction table parameters (scaled up x1024).
-    lmr_base: f32 = 0.8662, 0.6, 1.1, 0.05;
-    lmr_mult: f32 = 1.9561, 1.7, 2.5, 0.05;
+    lmr_base: i32 = 887, 500, 2000, 100;
+    lmr_mult: i32 = 2003, 1500, 4000, 100;
 
     // Late move reductions.
     lmr_m_min: usize = 2, 1, 4, 1;
@@ -80,6 +80,7 @@ init_tunables! {
     rfp_d_max:            i16 = 8, 5, 12, 1;
     rfp_mult:             i32 = 82, 40, 120, 5;
     rfp_improving_margin: i32 = 59, 25, 85, 5;
+    rfp_worsening_margin: i32 = 6, 5, 20, 1;
 
     // Null move pruning.
     nmp_d_min:            i16 = 3, 1, 4, 1;
@@ -91,9 +92,8 @@ init_tunables! {
     iir_d_min:  i16 = 2, 1, 4, 1;
 
     // Razoring.
-    razoring_d_max:  i16 = 7, 2, 10, 1;
-    razoring_e_max:  i32 = 1896, 1000, 3000, 100;
-    razoring_d_mult: i32 = 346, 300, 800, 25;
+    rz_base: i32 = 470, 350, 550, 40;
+    rz_mult: i32 = 300, 250, 400, 30;
 
     // History pruning.
     hp_d_min: i16 = 2, 1, 5, 1;
