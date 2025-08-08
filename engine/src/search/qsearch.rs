@@ -1,6 +1,6 @@
 use chess::{
     defs::MAX_PLY,
-    types::{eval::Eval, moves::Move},
+    types::{Depth, eval::Eval, moves::Move},
 };
 
 use crate::{
@@ -70,7 +70,7 @@ impl Position {
             tt_pv = tte.pv();
         };
 
-        // TT cutoff in qsearch.
+        // TT cutoff.
         // If the bound from the tt is tighter than the current search value, just return it.
         // Even shallow TT entries can be useful in qsearch since we're mostly
         // looking at forced sequences.
@@ -151,7 +151,7 @@ impl Position {
                     continue;
                 }
 
-                // SEE (Static Exchange Evaluation) pruning.
+                // SEE pruning.
                 // If a capture loses material, it's usually not worth considering
                 // unless we're in a desperate position.
                 if !self.board.see(m, Eval(sp_qs_margin())) {
@@ -210,7 +210,8 @@ impl Position {
         //
         // We can't use an exact bound as we don't know if we've searched all the moves.
         let bound = if best_value >= beta { Bound::Lower } else { Bound::Upper };
-        tt.insert(self.hash(), bound, best_move, raw_value, best_value, TT_DEPTH_QS, t.ply, tt_pv);
+        let depth = TT_DEPTH_QS + self.board.in_check() as Depth;
+        tt.insert(self.hash(), bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
 
         best_value
     }

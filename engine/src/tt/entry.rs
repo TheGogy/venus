@@ -51,8 +51,14 @@ pub struct CompressedEntry {
     data: AtomicU64,
 }
 
+/// TT depth offsets.
+/// Depth of qsearch entries. Must be <= -1, as we add 1 for qsearch entries in check.
 pub const TT_DEPTH_QS: Depth = -1;
+
+/// Depth of unsearched entries. Must be < QS entries.
 pub const TT_DEPTH_UNSEARCHED: Depth = -2;
+
+/// Offset to make all stored depths positive and > 0.
 pub const TT_DEPTH_OFFSET: Depth = 3;
 
 impl TTEntry {
