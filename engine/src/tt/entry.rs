@@ -51,7 +51,7 @@ pub struct CompressedEntry {
     data: AtomicU64,
 }
 
-pub const TT_DEPTH_QS: Depth = -1;
+pub const TT_DEPTH_QS: Depth = -1; // Most be <= -1 with qs tt check
 pub const TT_DEPTH_UNSEARCHED: Depth = -2;
 pub const TT_DEPTH_OFFSET: Depth = 3;
 
