@@ -365,50 +365,39 @@ impl Position {
             // If we have already searched a lot of moves in this position, then we have probably
             // already looked at the best moves. We reduce the depth that we search the other moves
             // at accordingly.
+            #[rustfmt::skip]
             if can_apply_lmr(depth, moves_tried, NT::PV) {
                 // Decrease reductions for good moves.
-                if in_check {
-                    r -= lmr_incheck()
-                }
-                if gives_check {
-                    r -= lmr_givecheck()
-                }
-                if tt_depth >= depth {
-                    r -= lmr_ttdeeper()
-                }
-
-                r -= eval_diff.0 / lmr_evaldiff();
+                if in_check                  { r -= lmr_incheck()   }
+                if gives_check               { r -= lmr_givecheck() }
+                if tt_depth >= depth         { r -= lmr_ttdeeper()  }
 
                 // Increase reductions for bad moves.
-                if !NT::PV {
-                    r += lmr_nonpv()
-                }
-                if cutnode {
-                    r += lmr_cutnode()
-                }
-                if !improving {
-                    r += lmr_nonimprov()
-                }
-                if tt_move.flag().is_noisy() {
-                    r += lmr_ttnoisy()
-                }
-
-                r += lmr_offset();
+                if !NT::PV                   { r += lmr_nonpv()     }
+                if cutnode                   { r += lmr_cutnode()   }
+                if !improving                { r += lmr_nonimprov() }
+                if tt_move.flag().is_noisy() { r += lmr_ttnoisy() }
 
                 // Increase or decrease depth based on the move's history.
                 r -= hist_score * lmr_histscale() / if is_quiet { hist_quiet_div() } else { hist_noisy_div() };
-                r /= LMR_SCALE;
 
-                r = r.clamp(-1 - NT::PV as i32, new_depth as i32 - 1);
+                // Increase or decrease depth based on the complexity of the position.
+                r -= eval_diff.0 / lmr_evaldiff();
+
+                // Scale LMR back down to int size.
+                r += lmr_offset();
+                r = (r / LMR_SCALE).clamp(-1 - NT::PV as i32, new_depth as i32 - 1);
 
                 // Try reduced depth first.
                 v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r as i16, true);
 
                 // Re-search at full depth if the reduced search suggests the move is good.
-                if v > alpha && r > 1 {
+                if v > alpha {
                     new_depth += (v > best_value + lmr_ver_e_min() + 2 * new_depth as i32) as Depth;
                     new_depth -= (v < best_value + new_depth) as Depth;
-                    v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    if r > 1 {
+                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    }
                 }
             }
             // For moves that can't be reduced, or first move in non-PV, do null-window search
