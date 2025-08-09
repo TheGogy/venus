@@ -71,14 +71,15 @@ init_tunables! {
 
     // Late move reduction scales.
     lmr_ttpv:      i32 = 983, -1024, 1024, 200;
-    lmr_incheck:   i32 = 1084, 512, 2048, 150;
-    lmr_givecheck: i32 = 1167, 512, 2048, 150;
-    lmr_ttdeeper:  i32 = 988, 512, 2048, 150;
-    lmr_nonpv:     i32 = 587, 512, 2048, 150;
-    lmr_cutnode:   i32 = 2004, 1024, 4096, 400;
-    lmr_nonimprov: i32 = 872, 512, 2048, 150;
-    lmr_ttnoisy:   i32 = 1063, 512, 2048, 150;
-    lmr_histscale: i32 = 906, 512, 2048, 150;
+    lmr_incheck:   i32 = 1086, 512, 2048, 150;
+    lmr_givecheck: i32 = 1165, 512, 2048, 150;
+    lmr_ttdeeper:  i32 = 989, 512, 2048, 150;
+    lmr_nonpv:     i32 = 588, 512, 2048, 150;
+    lmr_cutnode:   i32 = 2008, 1024, 4096, 400;
+    lmr_nonimprov: i32 = 874, 512, 2048, 150;
+    lmr_ttnoisy:   i32 = 1061, 512, 2048, 150;
+    lmr_histscale: i32 = 908, 512, 2048, 150;
+    lmr_ttnone:    i32 = 401, 200, 800, 80;
 
     lmr_offset:    i32 = 399, -1024, 1024, 200;
     lmr_evaldiff:  i32 = 27614, 24000, 32000, 1000;

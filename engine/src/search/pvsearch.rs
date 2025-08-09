@@ -386,6 +386,9 @@ impl Position {
                 if cutnode {
                     r += lmr_cutnode()
                 }
+                if tt_move.is_none() {
+                    r += lmr_ttnone()
+                }
                 if !improving {
                     r += lmr_nonimprov()
                 }
