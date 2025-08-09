@@ -397,18 +397,24 @@ impl Position {
 
                 // Increase or decrease depth based on the move's history.
                 r -= hist_score * lmr_histscale() / if is_quiet { hist_quiet_div() } else { hist_noisy_div() };
-                r /= LMR_SCALE;
 
-                r = r.clamp(-1 - NT::PV as i32, new_depth as i32 - 1);
+                // Scale down r to an int and clamp it to a sensible range.
+                r = (r / LMR_SCALE).clamp(-1 - NT::PV as i32, new_depth as i32 - 1);
+
+                // Reduced depth.
+                let d = new_depth - r as Depth;
 
                 // Try reduced depth first.
-                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r as i16, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, d, true);
 
                 // Re-search at full depth if the reduced search suggests the move is good.
-                if v > alpha && r > 1 {
+                if v > alpha {
                     new_depth += (v > best_value + lmr_ver_e_min() + 2 * new_depth as i32) as Depth;
                     new_depth -= (v < best_value + new_depth) as Depth;
-                    v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+
+                    if new_depth > d {
+                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    }
                 }
             }
             // For moves that can't be reduced, or first move in non-PV, do null-window search
