@@ -62,19 +62,32 @@ init_tunables! {
     ext_d_min: i16 = 8, 5, 10, 1;
     ext_mult:  i16 = 2, 1, 4, 1;
 
-    // Late move reduction table parameters (scaled up x1024).
-    lmr_base: i32 = 887, 500, 2000, 100;
-    lmr_mult: i32 = 2003, 1500, 4000, 100;
-
     // Late move reductions.
     lmr_m_min: usize = 2, 1, 4, 1;
 
+    // Late move reduction table parameters (scaled up x1024).
+    lmr_base: i32 = 762, 500, 2000, 100;
+    lmr_mult: i32 = 2147, 1500, 4000, 100;
+
+    // Late move reduction scales.
+    lmr_ttpv:      i32 = 983, -1024, 1024, 200;
+    lmr_incheck:   i32 = 1084, 512, 2048, 150;
+    lmr_givecheck: i32 = 1167, 512, 2048, 150;
+    lmr_ttdeeper:  i32 = 988, 512, 2048, 150;
+    lmr_nonpv:     i32 = 587, 512, 2048, 150;
+    lmr_cutnode:   i32 = 2004, 1024, 4096, 400;
+    lmr_nonimprov: i32 = 872, 512, 2048, 150;
+    lmr_ttnoisy:   i32 = 1063, 512, 2048, 150;
+    lmr_histscale: i32 = 906, 512, 2048, 150;
+
+    lmr_offset:    i32 = 399, -1024, 1024, 200;
+    lmr_evaldiff:  i32 = 27614, 24000, 32000, 1000;
+
+    lmr_quiet_div: i32 = 8411, 6000, 10000, 100;
+    lmr_noisy_div: i32 = 5976, 4000, 10000, 100;
+
     // Late move reduction verifications.
     lmr_ver_e_min: i32 = 42, 30, 50, 1;
-
-    // Reduction history metrics.
-    lmr_quiet_div: i32 = 8439, 6000, 10000, 100;
-    lmr_noisy_div: i32 = 5910, 4000, 10000, 100;
 
     // Reverse futility pruning.
     rfp_d_max:            i16 = 8, 5, 12, 1;
@@ -102,7 +115,7 @@ init_tunables! {
     // Futility pruning.
     fp_base:  i32 = 80, 50, 100, 2;
     fp_mult:  i32 = 91, 50, 100, 2;
-    fp_d_min: i16 = 5, 3, 8, 1;
+    fp_d_min: i32 = 5, 3, 8, 1;
 
     // Futility pruning for qsearch.
     fp_qs_base: i32 = 353, 300, 400, 5;

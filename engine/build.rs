@@ -8,11 +8,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     for (depth, table) in lmr_table.iter_mut().enumerate().skip(1) {
         for (move_count, reduction) in table.iter_mut().enumerate().skip(1) {
-            *reduction = (LMR_BASE + (depth as f32).ln() * (move_count as f32).ln() / LMR_MULT) as i16;
+            *reduction = (LMR_BASE + (depth as f32).ln() * (move_count as f32).ln() / LMR_MULT) as i32;
         }
     }
 
-    let lmr = unsafe { std::slice::from_raw_parts::<u8>(lmr_table.as_ptr().cast::<u8>(), 64 * 64 * std::mem::size_of::<i16>()) };
+    let lmr = unsafe { std::slice::from_raw_parts::<u8>(lmr_table.as_ptr().cast::<u8>(), 64 * 64 * std::mem::size_of::<i32>()) };
 
     // Write to file in the output directory.
     let out_dir = env::var("OUT_DIR")?;

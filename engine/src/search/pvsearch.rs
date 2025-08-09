@@ -255,6 +255,8 @@ impl Position {
         let mut moves_tried = 0;
         let mut moves_exist = false;
 
+        let eval_diff = raw_value - t.ss().eval;
+
         let lmp_margin = ((depth * depth + lmp_base()) / (2 - improving as i16)) as usize;
         let see_margins = [sp_noisy_margin() * (depth * depth) as i32, sp_quiet_margin() * depth as i32];
 
@@ -276,7 +278,9 @@ impl Position {
 
             // Late move reductions.
             let mut r = lmr_base_reduction(depth, moves_tried);
-            r += tt_pv as Depth;
+            if tt_pv {
+                r -= lmr_ttpv()
+            }
 
             // -----------------------------------
             //          Move loop pruning
@@ -354,6 +358,7 @@ impl Position {
             self.make_move(m, t);
             tt.prefetch(self.hash());
 
+            let gives_check = self.board.in_check();
             let mut v = -Eval::INFINITY;
 
             // Late move reductions.
@@ -362,21 +367,42 @@ impl Position {
             // at accordingly.
             if can_apply_lmr(depth, moves_tried, NT::PV) {
                 // Decrease reductions for good moves.
-                r -= in_check as Depth;
-                r -= self.board.in_check() as Depth;
-                r -= (tt_depth >= depth) as Depth;
-                r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as Depth;
+                if in_check {
+                    r -= lmr_incheck()
+                }
+                if gives_check {
+                    r -= lmr_givecheck()
+                }
+                if tt_depth >= depth {
+                    r -= lmr_ttdeeper()
+                }
+
+                r -= eval_diff.0 / lmr_evaldiff();
 
                 // Increase reductions for bad moves.
-                r += !NT::PV as Depth;
-                r += cutnode as Depth;
-                r += !improving as Depth;
-                r += tt_move.flag().is_noisy() as Depth;
+                if !NT::PV {
+                    r += lmr_nonpv()
+                }
+                if cutnode {
+                    r += lmr_cutnode()
+                }
+                if !improving {
+                    r += lmr_nonimprov()
+                }
+                if tt_move.flag().is_noisy() {
+                    r += lmr_ttnoisy()
+                }
 
-                r = r.clamp(1, depth - 1);
+                r += lmr_offset();
+
+                // Increase or decrease depth based on the move's history.
+                r -= hist_score * lmr_histscale() / if is_quiet { hist_quiet_div() } else { hist_noisy_div() };
+                r /= LMR_SCALE;
+
+                r = r.clamp(-1 - NT::PV as i32, new_depth as i32 - 1);
 
                 // Try reduced depth first.
-                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth + 1 - r, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r as i16, true);
 
                 // Re-search at full depth if the reduced search suggests the move is good.
                 if v > alpha && r > 1 {
