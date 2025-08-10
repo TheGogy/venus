@@ -255,6 +255,8 @@ impl Position {
         let mut moves_tried = 0;
         let mut moves_exist = false;
 
+        let eval_diff = raw_value - t.ss().eval;
+
         let lmp_margin = ((depth * depth + lmp_base()) / (2 - improving as i16)) as usize;
         let see_margins = [sp_noisy_margin() * (depth * depth) as i32, sp_quiet_margin() * depth as i32];
 
@@ -274,6 +276,12 @@ impl Position {
             let hist_score = t.hist_score(&self.board, m);
             let mut new_depth = depth - 1;
 
+            // Late move reductions.
+            let mut r = lmr_base_reduction(depth, moves_tried);
+            if tt_pv {
+                r -= lmr_ttpv()
+            }
+
             // -----------------------------------
             //          Move loop pruning
             // -----------------------------------
@@ -289,7 +297,7 @@ impl Position {
                 }
 
                 // Futility pruning.
-                if can_apply_fp(depth, eval, alpha, moves_tried) {
+                if can_apply_fp(depth, r, eval, alpha) {
                     mp.skip_quiets = true;
                 }
             }
@@ -350,37 +358,46 @@ impl Position {
             self.make_move(m, t);
             tt.prefetch(self.hash());
 
+            let gives_check = self.board.in_check();
             let mut v = -Eval::INFINITY;
 
             // Late move reductions.
             // If we have already searched a lot of moves in this position, then we have probably
             // already looked at the best moves. We reduce the depth that we search the other moves
             // at accordingly.
+            #[rustfmt::skip]
             if can_apply_lmr(depth, moves_tried, NT::PV) {
-                let mut r = lmr_base_reduction(depth, moves_tried);
-
                 // Decrease reductions for good moves.
-                r -= in_check as Depth;
-                r -= self.board.in_check() as Depth;
-                r -= (tt_depth >= depth) as Depth;
-                r -= (hist_score / (if is_quiet { hist_quiet_div() } else { hist_noisy_div() })) as Depth;
+                if in_check                  { r -= lmr_incheck()   }
+                if gives_check               { r -= lmr_givecheck() }
+                if tt_depth >= depth         { r -= lmr_ttdeeper()  }
 
                 // Increase reductions for bad moves.
-                r += !NT::PV as Depth;
-                r += cutnode as Depth;
-                r += !improving as Depth;
-                r += tt_move.flag().is_noisy() as Depth;
+                if !NT::PV                   { r += lmr_nonpv()     }
+                if cutnode                   { r += lmr_cutnode()   }
+                if !improving                { r += lmr_nonimprov() }
+                if tt_move.flag().is_noisy() { r += lmr_ttnoisy()   }
 
-                r = r.clamp(1, depth - 1);
+                // Increase or decrease depth based on the move's history.
+                r -= hist_score * lmr_histscale() / if is_quiet { hist_quiet_div() } else { hist_noisy_div() };
+
+                // Increase or decrease depth based on the complexity of the position.
+                r -= eval_diff.0 / lmr_evaldiff();
+
+                // Scale LMR back down to int size.
+                r += lmr_offset();
+                r = (r / LMR_SCALE).clamp(-1 - NT::PV as i32, new_depth as i32 - 1);
 
                 // Try reduced depth first.
-                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth + 1 - r, true);
+                v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth - r as i16, true);
 
                 // Re-search at full depth if the reduced search suggests the move is good.
-                if v > alpha && r > 1 {
+                if v > alpha {
                     new_depth += (v > best_value + lmr_ver_e_min() + 2 * new_depth as i32) as Depth;
                     new_depth -= (v < best_value + new_depth) as Depth;
-                    v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    if r > 1 {
+                        v = -self.nwsearch(t, tt, child_pv, -alpha, new_depth, !cutnode);
+                    }
                 }
             }
             // For moves that can't be reduced, or first move in non-PV, do null-window search

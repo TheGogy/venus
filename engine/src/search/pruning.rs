@@ -55,9 +55,9 @@ pub fn can_apply_lmp(depth: Depth, moves_tried: usize, lmp_margin: usize) -> boo
 /// Futility pruning.
 /// If our score is significantly below alpha, then this position is probably bad, then we should
 /// skip the quiet moves.
-pub fn can_apply_fp(depth: Depth, eval: Eval, alpha: Eval, moves_tried: usize) -> bool {
-    let lmr_depth = depth - lmr_base_reduction(depth, moves_tried);
-    let fp_margin = Eval(fp_base() + (lmr_depth as i32) * fp_mult());
+pub fn can_apply_fp(depth: Depth, r: i32, eval: Eval, alpha: Eval) -> bool {
+    let lmr_depth = depth as i32 - (r / LMR_SCALE);
+    let fp_margin = Eval(fp_base() + lmr_depth * fp_mult());
 
     lmr_depth <= fp_d_min() && eval + fp_margin < alpha
 }
@@ -68,14 +68,16 @@ pub fn can_apply_lmr(depth: Depth, moves_tried: usize, is_pv: bool) -> bool {
     depth >= 2 && moves_tried >= lmr_m_min() + is_pv as usize
 }
 
+pub const LMR_SCALE: i32 = 1024;
+
 /// Get the late move reduction amount.
 #[inline(never)]
-pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> Depth {
+pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> i32 {
     #[cfg(not(feature = "tune"))]
     {
-        static LMR_TABLE: [[Depth; 64]; 64] = unsafe { std::mem::transmute(*include_bytes!(concat!(env!("OUT_DIR"), "/lmr.bin"))) };
+        static LMR_TABLE: [[i32; 64]; 64] = unsafe { std::mem::transmute(*include_bytes!(concat!(env!("OUT_DIR"), "/lmr.bin"))) };
 
-        LMR_TABLE[depth.min(63) as usize][moves_tried.min(63)]
+        LMR_TABLE[depth.min(63) as usize][moves_tried.min(63)] * LMR_SCALE
     }
 
     #[cfg(feature = "tune")]
@@ -87,6 +89,6 @@ pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> Depth {
         let lmr_base = lmr_base() as f32 / 1024.0;
         let lmr_mult = lmr_mult() as f32 / 1024.0;
 
-        (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as Depth
+        (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as i32 * LMR_SCALE
     }
 }
