@@ -330,13 +330,19 @@ impl Position {
                 let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::INFINITY);
 
                 // Search all moves except the TT move at reduced depth.
-                t.ss_mut().excluded = Some(m);
+                t.ss_mut().excluded = Some(tt_move);
                 let v = self.nwsearch(t, tt, child_pv, ext_beta, new_depth / 2, cutnode);
                 t.ss_mut().excluded = None;
 
                 // If no other move can reach the TT move's value, extend this move.
                 let ext = if v < ext_beta {
                     1
+                }
+                // Multicut pruning.
+                // If our singular search failed high, then that means there are other moves that
+                // fail high as well as the tt move - so this move is not singular.
+                else if v >= beta && v.nonterminal() {
+                    return v;
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
