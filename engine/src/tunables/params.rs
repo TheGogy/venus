@@ -129,4 +129,9 @@ init_tunables! {
     sp_quiet_margin: i32 = -70, -120, -30, 5;
     sp_d_min:        i16 = 10, 6, 14, 1;
     sp_qs_margin:    i32 = -33, -50, -10, 2;
+
+    // Movepick.
+    mp_see_div: i32 = 32, 20, 50, 3;
+    mp_quiet_check: i32 = 1000, 512, 2048, 100;
+    mp_noisy_check: i32 = 2000, 1024, 4096, 100;
 }

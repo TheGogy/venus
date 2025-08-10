@@ -8,7 +8,7 @@ use chess::{
     },
 };
 
-use crate::{history::capturehist::CAP_HIST_MAX, movepick::move_list::LEFT, threading::thread::Thread};
+use crate::{history::capturehist::CAP_HIST_MAX, movepick::move_list::LEFT, threading::thread::Thread, tunables::params::tunables::*};
 
 use super::{MovePicker, SearchType, move_list::RIGHT};
 
@@ -39,6 +39,8 @@ impl MovePicker {
                 }
             }
 
+            s += b.gives_direct_check(m) as i32 * mp_quiet_check();
+
             // Add to the front of the list.
             self.move_list.insert::<LEFT>(m, s);
         });
@@ -53,7 +55,7 @@ impl MovePicker {
             }
 
             #[rustfmt::skip]
-            let s = match m.flag() {
+            let mut s = match m.flag() {
                 // Regular queen promotions give us a queen for a pawn: best MVV trade.
                 MoveFlag::PromoQ  => CAP_HIST_MAX + MVV[Piece::Queen.idx()] + 1,
                 MoveFlag::CPromoQ => CAP_HIST_MAX + MVV[Piece::Queen.idx()] + capture_value(b, m),
@@ -63,12 +65,14 @@ impl MovePicker {
                 f if f.is_underpromo() => 0,
 
                 // All other moves are captures, so this is safe.
-                _ => capture_value(b, m) + t.hist_noisy.get_bonus(b, m)
+                _ => capture_value(b, m) * 5 + t.hist_noisy.get_bonus(b, m)
             };
+
+            s += (b.gives_direct_check(m) && b.see(m, Eval(sp_qs_margin() - 1))) as i32 * mp_noisy_check();
 
             // If this move doesn't pass the SEE test (or is an underpromotion),
             // move it back to the start with the other noisy moves.
-            let threshold = if self.searchtype == SearchType::Pv { Eval(-s / 32) } else { self.see_threshold };
+            let threshold = if self.searchtype == SearchType::Pv { -Eval(s / mp_see_div()) } else { self.see_threshold };
             if b.see(m, threshold) && !m.flag().is_underpromo() {
                 // Good noisy move.
                 self.move_list.insert::<LEFT>(m, s);

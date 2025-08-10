@@ -11,6 +11,11 @@ use crate::{
 };
 
 impl Board {
+    /// Whether our move gives direct check (ignore any other forms of check).
+    pub fn gives_direct_check(&self, m: Move) -> bool {
+        self.king_line(self.get_piece(m.src()).pt()).has(m.dst())
+    }
+
     /// Whether a move puts the opponent in check on the current board.
     pub fn gives_check(&self, m: Move) -> bool {
         let stm = self.stm;
