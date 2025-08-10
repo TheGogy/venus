@@ -376,7 +376,7 @@ impl Position {
                 if !NT::PV                   { r += lmr_nonpv()     }
                 if cutnode                   { r += lmr_cutnode()   }
                 if !improving                { r += lmr_nonimprov() }
-                if tt_move.flag().is_noisy() { r += lmr_ttnoisy() }
+                if tt_move.flag().is_noisy() { r += lmr_ttnoisy()   }
 
                 // Increase or decrease depth based on the move's history.
                 r -= hist_score * lmr_histscale() / if is_quiet { hist_quiet_div() } else { hist_noisy_div() };
