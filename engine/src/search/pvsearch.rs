@@ -338,15 +338,9 @@ impl Position {
                 let ext = if v < ext_beta {
                     1
                 }
-                // Multicut pruning.
-                // If our singular search failed high, then that means there are other moves that
-                // fail high as well as the tt move - so this move is not singular.
-                else if v >= beta && v.nonterminal() {
-                    return v;
-                }
                 // Negative extensions.
                 else if tt_value >= beta {
-                    -2 + NT::PV as Depth
+                    -3
                 } else if cutnode {
                     -2
                 }
