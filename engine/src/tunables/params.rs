@@ -66,8 +66,8 @@ init_tunables! {
     lmr_m_min: usize = 2, 1, 4, 1;
 
     // Late move reduction table parameters (scaled up x1024).
-    lmr_base: i32 = 762, 500, 2000, 100;
-    lmr_mult: i32 = 2147, 1500, 4000, 100;
+    lmr_base: i32 = 887, 500, 2000, 100;
+    lmr_mult: i32 = 2003, 1500, 4000, 100;
 
     // Late move reduction scales.
     lmr_ttpv:      i32 = 983, -1024, 1024, 200;
