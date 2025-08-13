@@ -336,7 +336,11 @@ impl Position {
 
                 // If no other move can reach the TT move's value, extend this move.
                 let ext = if v < ext_beta {
-                    1
+                    if !NT::PV && v < ext_beta - ext_double() {
+                        2 + (is_quiet && v < ext_beta - ext_triple()) as i16
+                    } else {
+                        1
+                    }
                 }
                 // Negative extensions.
                 else if tt_value >= beta {

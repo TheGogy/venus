@@ -61,6 +61,8 @@ init_tunables! {
     // extensions.
     ext_d_min: i16 = 8, 5, 10, 1;
     ext_mult:  i16 = 2, 1, 4, 1;
+    ext_double: i32 = 12, 7, 14, 1;
+    ext_triple: i32 = 80, 50, 150, 20;
 
     // Late move reductions.
     lmr_m_min: usize = 2, 1, 4, 1;
