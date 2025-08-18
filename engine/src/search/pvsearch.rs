@@ -59,10 +59,7 @@ impl Position {
             t.seldepth = t.seldepth.max(t.ply + 1);
         }
 
-        // Initialize search node.
         let in_check = self.board.in_check();
-        let excluded = t.ss().excluded;
-        let singular = excluded.is_some();
 
         if !NT::RT {
             // Check for upcoming draw.
@@ -93,6 +90,10 @@ impl Position {
                 return alpha;
             }
         }
+
+        // Initialize search node.
+        let excluded = t.ss().excluded;
+        let singular = excluded.is_some();
 
         // -----------------------------------
         //             TT lookup
@@ -233,6 +234,7 @@ impl Position {
 
                 self.undo_move(m, t);
 
+                // If it's still looking good, then we can (probably) safely return this value.
                 if v >= pc_beta {
                     tt.insert(self.hash(), Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
@@ -343,7 +345,7 @@ impl Position {
                     }
                 }
                 // Multicut.
-                // We had a beta cutoff, so another move was too good - so the TT move wasn't
+                // We had a beta cutoff, so another move was too good - meaning the TT move wasn't
                 // singular. If the same score would cause a cutoff here, prune it.
                 else if v >= beta && v.nonterminal() {
                     return beta;
