@@ -330,7 +330,7 @@ impl Position {
                 let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::INFINITY);
 
                 // Search all moves except the TT move at reduced depth.
-                t.ss_mut().excluded = Some(m);
+                t.ss_mut().excluded = Some(tt_move);
                 let v = self.nwsearch(t, tt, child_pv, ext_beta, new_depth / 2, cutnode);
                 t.ss_mut().excluded = None;
 
@@ -341,6 +341,12 @@ impl Position {
                     } else {
                         1
                     }
+                }
+                // Multicut.
+                // We had a beta cutoff, so another move was too good - so the TT move wasn't
+                // singular. If the same score would cause a cutoff here, prune it.
+                else if v >= beta && v.nonterminal() {
+                    return beta;
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
