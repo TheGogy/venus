@@ -269,7 +269,6 @@ impl Position {
 
             // Ignore excluded move.
             if excluded == Some(m) {
-                moves_tried += 1;
                 continue;
             }
 
