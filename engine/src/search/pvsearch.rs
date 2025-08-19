@@ -322,7 +322,7 @@ impl Position {
             // Singular extensions: if the TT move is significantly better than all alternatives,
             // extend the search depth for this move as it's likely critical.
             if !NT::RT
-                && depth >= ext_d_min()
+                && depth >= ext_d_min() - !tt_pv as Depth
                 && !singular
                 && m == tt_move
                 && tt_value.nonterminal()
