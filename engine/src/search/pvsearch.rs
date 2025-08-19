@@ -59,10 +59,7 @@ impl Position {
             t.seldepth = t.seldepth.max(t.ply + 1);
         }
 
-        // Initialize search node.
         let in_check = self.board.in_check();
-        let excluded = t.ss().excluded;
-        let singular = excluded.is_some();
 
         if !NT::RT {
             // Check for upcoming draw.
@@ -93,6 +90,10 @@ impl Position {
                 return alpha;
             }
         }
+
+        // Initialize search node.
+        let excluded = t.ss().excluded;
+        let singular = excluded.is_some();
 
         // -----------------------------------
         //             TT lookup
@@ -233,6 +234,7 @@ impl Position {
 
                 self.undo_move(m, t);
 
+                // If it's still looking good, then we can (probably) safely return this value.
                 if v >= pc_beta {
                     tt.insert(self.hash(), Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
@@ -330,13 +332,23 @@ impl Position {
                 let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::INFINITY);
 
                 // Search all moves except the TT move at reduced depth.
-                t.ss_mut().excluded = Some(m);
+                t.ss_mut().excluded = Some(tt_move);
                 let v = self.nwsearch(t, tt, child_pv, ext_beta, new_depth / 2, cutnode);
                 t.ss_mut().excluded = None;
 
                 // If no other move can reach the TT move's value, extend this move.
                 let ext = if v < ext_beta {
-                    1
+                    if !NT::PV && v < ext_beta - ext_double() {
+                        2 + (is_quiet && v < ext_beta - ext_triple()) as i16
+                    } else {
+                        1
+                    }
+                }
+                // Multicut.
+                // We had a beta cutoff, so another move was too good - meaning the TT move wasn't
+                // singular. If the same score would cause a cutoff here, prune it.
+                else if v >= beta && v.nonterminal() {
+                    return beta;
                 }
                 // Negative extensions.
                 else if tt_value >= beta {
