@@ -116,14 +116,14 @@ impl Board {
         });
 
         // Update pinmasks for opponent.
-        (self.diag_bb(opp) & bishop_atk(ksqs[opp.idx()], opp_occ)).bitloop(|s| {
+        (self.diag_bb(opp) & bishop_atk(ksqs[opp.idx()], stm_occ)).bitloop(|s| {
             let between = between(ksqs[opp.idx()], s);
-            if (between & stm_occ).nbits() == 1 { state.pin_diag[opp.idx()] |= between | s.bb() }
+            if (between & opp_occ).nbits() == 1 { state.pin_diag[opp.idx()] |= between | s.bb() }
         });
 
-        (self.orth_bb(opp) & rook_atk(ksqs[opp.idx()], opp_occ)).bitloop(|s| {
+        (self.orth_bb(opp) & rook_atk(ksqs[opp.idx()], stm_occ)).bitloop(|s| {
             let between = between(ksqs[opp.idx()], s);
-            if (between & stm_occ).nbits() == 1 { state.pin_orth[opp.idx()] |= between | s.bb() }
+            if (between & opp_occ).nbits() == 1 { state.pin_orth[opp.idx()] |= between | s.bb() }
         });
     }
 }
