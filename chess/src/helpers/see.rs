@@ -1,5 +1,3 @@
-use std::hint::black_box;
-
 use crate::{
     tables::{
         leaping_piece::{king_atk, knight_atk, pawn_atk},
@@ -63,8 +61,18 @@ impl Board {
             return true;
         }
 
+        // Setup sliders.
         let diag_sliders = self.all_diag();
         let orth_sliders = self.all_orth();
+
+        // Setup pins.
+        let mut diag_pinned = [Bitboard::EMPTY; Color::NUM];
+        let mut orth_pinned = [Bitboard::EMPTY; Color::NUM];
+
+        for c in Color::iter() {
+            diag_pinned[c.idx()] = if self.state.pin_diag[c.idx()].has(dst) { Bitboard::EMPTY } else { self.state.pin_diag[c.idx()] };
+            orth_pinned[c.idx()] = if self.state.pin_orth[c.idx()].has(dst) { Bitboard::EMPTY } else { self.state.pin_orth[c.idx()] };
+        }
 
         let mut occ = self.occ();
         occ.pop(src);
@@ -78,7 +86,16 @@ impl Board {
         let mut stm = !self.stm;
 
         loop {
-            let own_atk = atk & self.c_bb(stm);
+            let mut own_atk = atk & self.c_bb(stm);
+
+            // Prune pinned pieces.
+            if (occ & self.c_bb(!stm) & self.state.pin_diag[stm.idx()]).any() {
+                own_atk &= !diag_pinned[stm.idx()];
+            }
+
+            if (occ & self.c_bb(!stm) & self.state.pin_orth[stm.idx()]).any() {
+                own_atk &= !orth_pinned[stm.idx()];
+            }
 
             // Exit when we run out of attackers.
             if own_atk.is_empty() {
@@ -166,6 +183,8 @@ const SEE_TESTS: &[(&str, &str, i32, bool)] = &[
 
 /// Benchmark the static exchange eval.
 pub fn bench_see(iterations: usize) {
+    use std::hint::black_box;
+
     for (fen, mov, threshold, _) in SEE_TESTS {
         let b: Board = fen.parse().unwrap();
         let m = b.find_move(mov).unwrap();

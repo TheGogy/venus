@@ -113,8 +113,8 @@ impl Board {
         let ul = Direction::ul(self.stm);
         let ur = Direction::ur(self.stm);
 
-        let diag = self.state.pin_diag;
-        let orth = self.state.pin_orth;
+        let diag = self.state.pin_diag[self.stm.idx()];
+        let orth = self.state.pin_orth[self.stm.idx()];
         let occ = self.occ();
 
         let opps = self.c_bb(!self.stm);
@@ -122,7 +122,7 @@ impl Board {
         let pawns = self.pc_bb(self.stm, Piece::Pawn);
 
         // Promotions.
-        let promo = pawns & Bitboard::PR[self.stm.idx()] & !self.state.pin_orth;
+        let promo = pawns & Bitboard::PR[self.stm.idx()] & !orth;
         if promo.any() {
             if MG::NOISY {
                 // Promotions with capture.
@@ -176,7 +176,7 @@ impl Board {
                 }
 
                 // Prune orthgonal pins.
-                if (eprank & rook_atk(self.ksq(self.stm), occ ^ src.bb() ^ epcap) & self.c_orth(!self.stm)).is_empty() {
+                if (eprank & rook_atk(self.ksq(self.stm), occ ^ src.bb() ^ epcap) & self.orth_bb(!self.stm)).is_empty() {
                     receiver(Move::new(src, self.state.epsq, MoveFlag::EnPassant));
                 }
             });
@@ -233,8 +233,9 @@ impl Board {
         let ksq = self.ksq(self.stm);
         let occ = self.occ();
         let atk = self.state.attacked;
-        let ks_pin = Square::G1.relative(self.stm).bb() & self.state.pin_orth;
-        let qs_pin = (Square::C1.relative(self.stm).bb() | Square::B1.relative(self.stm).bb()) & self.state.pin_orth;
+        let orth = self.state.pin_orth[self.stm.idx()];
+        let ks_pin = Square::G1.relative(self.stm).bb() & orth;
+        let qs_pin = (Square::C1.relative(self.stm).bb() | Square::B1.relative(self.stm).bb()) & orth;
 
         // Kingside.
         if self.state.castling.has_ks(self.stm) && ks_pin.is_empty() && self.castlingmask.can_castle::<true>(ksq, self.stm, occ, atk) {
@@ -261,8 +262,10 @@ impl Board {
     where
         F: FnMut(Move),
     {
+        let diag = self.state.pin_diag[self.stm.idx()];
+        let orth = self.state.pin_orth[self.stm.idx()];
         // Pinned knights can never move: they move diagonally and orthogonally at once.
-        let knights = self.pc_bb(self.stm, Piece::Knight) & !(self.state.pin_diag | self.state.pin_orth);
+        let knights = self.pc_bb(self.stm, Piece::Knight) & !(diag | orth);
 
         knights.bitloop(|s| {
             self.add_moves::<F, MG, CHECK>(s, knight_atk(s) & !self.c_bb(self.stm), receiver);
@@ -274,18 +277,21 @@ impl Board {
     where
         F: FnMut(Move),
     {
-        let diag = self.c_diag(self.stm) & !self.state.pin_orth;
+        let diag = self.state.pin_diag[self.stm.idx()];
+        let orth = self.state.pin_orth[self.stm.idx()];
+
+        let candidates = self.diag_bb(self.stm) & !orth;
         let occ = self.occ();
         let ok = !self.c_bb(self.stm);
 
         // Non pinned bishop + queen.
-        (diag & !self.state.pin_diag).bitloop(|s| {
+        (candidates & !diag).bitloop(|s| {
             self.add_moves::<F, MG, CHECK>(s, bishop_atk(s, occ) & ok, receiver);
         });
 
         // Pinned bishop + queen.
-        (diag & self.state.pin_diag).bitloop(|s| {
-            self.add_moves::<F, MG, CHECK>(s, bishop_atk(s, occ) & ok & self.state.pin_diag, receiver);
+        (candidates & diag).bitloop(|s| {
+            self.add_moves::<F, MG, CHECK>(s, bishop_atk(s, occ) & ok & diag, receiver);
         });
     }
 
@@ -294,18 +300,20 @@ impl Board {
     where
         F: FnMut(Move),
     {
-        let orth = self.c_orth(self.stm) & !self.state.pin_diag;
+        let diag = self.state.pin_diag[self.stm.idx()];
+        let orth = self.state.pin_orth[self.stm.idx()];
+        let candidates = self.orth_bb(self.stm) & !diag;
         let occ = self.occ();
         let ok = !self.c_bb(self.stm);
 
         // Non pinned rook + queen.
-        (orth & !self.state.pin_orth).bitloop(|s| {
+        (candidates & !orth).bitloop(|s| {
             self.add_moves::<F, MG, CHECK>(s, rook_atk(s, occ) & ok, receiver);
         });
 
         // Pinned rook + queen.
-        (orth & self.state.pin_orth).bitloop(|s| {
-            self.add_moves::<F, MG, CHECK>(s, rook_atk(s, occ) & ok & self.state.pin_orth, receiver);
+        (candidates & orth).bitloop(|s| {
+            self.add_moves::<F, MG, CHECK>(s, rook_atk(s, occ) & ok & orth, receiver);
         });
     }
 }
