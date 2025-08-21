@@ -70,8 +70,17 @@ impl Board {
         let mut orth_pinned = [Bitboard::EMPTY; Color::NUM];
 
         for c in Color::iter() {
-            diag_pinned[c.idx()] = if self.state.pin_diag[c.idx()].has(dst) { Bitboard::EMPTY } else { self.state.pin_diag[c.idx()] };
-            orth_pinned[c.idx()] = if self.state.pin_orth[c.idx()].has(dst) { Bitboard::EMPTY } else { self.state.pin_orth[c.idx()] };
+            diag_pinned[c.idx()] = self.state.pin_diag[c.idx()];
+            orth_pinned[c.idx()] = self.state.pin_orth[c.idx()];
+
+            // If the pinmask is aligned with the square we are capturing on, then only the pieces
+            // that can't move in that direction are pinned.
+            if self.state.pin_diag[c.idx()].has(dst) {
+                diag_pinned[c.idx()] &= self.pc_bb(c, Piece::Knight) | self.pc_bb(c, Piece::Rook);
+            }
+            if self.state.pin_orth[c.idx()].has(dst) {
+                orth_pinned[c.idx()] &= self.pc_bb(c, Piece::Pawn) | self.pc_bb(c, Piece::Bishop);
+            }
         }
 
         let mut occ = self.occ();
