@@ -306,7 +306,7 @@ impl Position {
 
             // SEE pruning.
             // If all captures happen on this move and we lose, prune this move.
-            if depth <= sp_d_min()
+            if depth <= sp_d_max()
                 && best_value.nonterminal()
                 && mp.stage > MPStage::PvNoisyWin
                 && !self.board.see(m, Eval(see_margins[is_quiet as usize]))
@@ -465,13 +465,7 @@ impl Position {
 
         // No legal moves: checkmate or stalemate.
         if !moves_exist {
-            return if singular {
-                alpha
-            } else if in_check {
-                Eval::search_mated_in(t.ply)
-            } else {
-                Eval::DRAW
-            };
+            return if in_check { Eval::search_mated_in(t.ply) } else { Eval::DRAW };
         }
 
         let bound = if best_value >= beta {

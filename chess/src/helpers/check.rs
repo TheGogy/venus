@@ -34,7 +34,7 @@ impl Board {
         // Discovered check.
         // If we are in line with the enemy king, check if there is a sliding piece giving check,
         // and that we have moved out of the way.
-        if ((bishop_atk(opp_ksq, occ) & self.c_diag(stm)).any() || (rook_atk(opp_ksq, occ) & self.c_orth(stm)).any())
+        if ((bishop_atk(opp_ksq, occ) & self.diag_bb(stm)).any() || (rook_atk(opp_ksq, occ) & self.orth_bb(stm)).any())
             && (between(opp_ksq, src) & between(opp_ksq, dst)).is_empty()
             && !(pt == Piece::Pawn && dst.forward(stm) == opp_ksq)
         {
@@ -49,7 +49,7 @@ impl Board {
                 let epsq = dst.forward(opp).bb();
                 let ep_occ = (occ ^ epsq) | dbb;
 
-                (bishop_atk(opp_ksq, ep_occ) & self.c_diag(stm)).any() || (rook_atk(opp_ksq, ep_occ) & self.c_orth(stm)).any()
+                (bishop_atk(opp_ksq, ep_occ) & self.diag_bb(stm)).any() || (rook_atk(opp_ksq, ep_occ) & self.orth_bb(stm)).any()
             }
 
             // Castling.

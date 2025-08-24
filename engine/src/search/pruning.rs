@@ -49,7 +49,7 @@ pub fn can_apply_hp(depth: Depth, is_quiet: bool, hist_score: i32) -> bool {
 /// If we have seen a lot of moves in this position already, and we don't expect something good
 /// from this move, then we should skip the quiet moves.
 pub fn can_apply_lmp(depth: Depth, moves_tried: usize, lmp_margin: usize) -> bool {
-    depth <= lmp_d_min() && moves_tried >= lmp_margin
+    depth <= lmp_d_min() && moves_tried > lmp_margin
 }
 
 /// Futility pruning.

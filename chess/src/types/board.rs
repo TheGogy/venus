@@ -31,10 +31,10 @@ pub struct BoardState {
     pub cap: CPiece,
 
     // Bitboards for movegen.
+    pub pin_diag: [Bitboard; Color::NUM],
+    pub pin_orth: [Bitboard; Color::NUM],
     pub attacked: Bitboard,
     pub checkers: Bitboard,
-    pub pin_diag: Bitboard,
-    pub pin_orth: Bitboard,
     pub checkmask: Bitboard,
 
     // Keys.
@@ -282,6 +282,16 @@ impl Board {
         self.p_bb(p) & self.c_bb(c)
     }
 
+    /// Get all the diagonal sliders on the board (queens + bishops) of a specific color.
+    pub fn diag_bb(&self, c: Color) -> Bitboard {
+        self.all_diag() & self.c_bb(c)
+    }
+
+    /// Get all the orthogonal sliders on the board (queens + rooks) of a specific color.
+    pub fn orth_bb(&self, c: Color) -> Bitboard {
+        self.all_orth() & self.c_bb(c)
+    }
+
     /// Get all the diagonal sliders on the board (queens + bishops).
     pub fn all_diag(&self) -> Bitboard {
         self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)
@@ -290,16 +300,6 @@ impl Board {
     /// Get all the orthoonal sliders on the board (queens + bishops).
     pub fn all_orth(&self) -> Bitboard {
         self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)
-    }
-
-    /// Get all the diagonal sliders on the board (queens + bishops) of a specific color.
-    pub fn c_diag(&self, c: Color) -> Bitboard {
-        self.all_diag() & self.c_bb(c)
-    }
-
-    /// Get all the orthogonal sliders on the board (queens + rooks) of a specific color.
-    pub fn c_orth(&self, c: Color) -> Bitboard {
-        self.all_orth() & self.c_bb(c)
     }
 
     /// Get the total occupancy of the position.
