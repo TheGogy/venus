@@ -152,7 +152,7 @@ impl Position {
                 // SEE pruning.
                 // If a capture loses material, it's usually not worth considering
                 // unless we're in a desperate position.
-                if !self.board.see(m, Eval(-sp_qs_margin())) {
+                if !self.board.in_check() && !self.board.see(m, Eval(-sp_qs_margin())) {
                     continue;
                 }
             }
