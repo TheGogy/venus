@@ -9,15 +9,15 @@ use super::{QA, QAB, SCALE};
 
 impl Accumulator {
     // Propagate through the layers.
-    pub fn propagate(&self, c: Color) -> i32 {
+    pub fn propagate(&self, c: Color, output_bkt: usize) -> i32 {
         let (stm, opp) = match c {
             Color::White => (self.w, self.b),
             Color::Black => (self.b, self.w),
         };
 
         let weights = &NNUE_EMBEDDED.output_weights;
-        let sum = flatten(&stm, &weights[0]) + flatten(&opp, &weights[1]);
-        (sum / QA + NNUE_EMBEDDED.output_bias as i32) * SCALE / QAB
+        let sum = flatten(&stm, &weights[output_bkt][0]) + flatten(&opp, &weights[output_bkt][1]);
+        (sum / QA + NNUE_EMBEDDED.output_bias[output_bkt] as i32) * SCALE / QAB
     }
 }
 
