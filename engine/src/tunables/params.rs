@@ -127,8 +127,8 @@ init_tunables! {
     lmp_d_min: i16 = 8, 5, 12, 1;
 
     // SEE pruning.
-    sp_noisy_margin: i32 = -17, -40, 0, 5;
-    sp_quiet_margin: i32 = -70, -120, -30, 5;
+    sp_noisy_margin: i32 = 17, 0, 40, 5;
+    sp_quiet_margin: i32 = 70, 30, 120, 5;
     sp_d_max:        i16 = 10, 6, 14, 1;
-    sp_qs_margin:    i32 = -33, -50, -10, 2;
+    sp_qs_margin:    i32 = 33, 10, 50, 2;
 }

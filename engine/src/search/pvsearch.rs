@@ -309,7 +309,7 @@ impl Position {
             if depth <= sp_d_max()
                 && best_value.nonterminal()
                 && mp.stage > MPStage::PvNoisyWin
-                && !self.board.see(m, Eval(see_margins[is_quiet as usize]))
+                && !self.board.see(m, Eval(-see_margins[is_quiet as usize]))
             {
                 moves_tried += 1;
                 continue;

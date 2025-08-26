@@ -72,8 +72,6 @@ impl Position {
 
         // TT cutoff.
         // If the bound from the tt is tighter than the current search value, just return it.
-        // Even shallow TT entries can be useful in qsearch since we're mostly
-        // looking at forced sequences.
         if !NT::PV && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
@@ -114,8 +112,8 @@ impl Position {
             // If our current position is already good enough to cause a beta cutoff,
             // we don't need to search any captures.
             if best_value >= beta {
-                // Return average of static eval and beta to avoid returning
-                // values that are too far from the "true" evaluation.
+                // Adjust beta cutoff values to be more conservative.
+                // This prevents qsearch from returning overly optimistic evaluations.
                 best_value = (best_value + beta) / 2;
 
                 // Throw the static eval into the tt if we won't overwrite anything.
@@ -146,7 +144,7 @@ impl Position {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
-                if !self.board.gives_check(m) && futility <= alpha && !self.board.see(m, Eval(1)) {
+                if futility <= alpha && !self.board.gives_check(m) && !self.board.see(m, Eval(1)) {
                     best_value = best_value.max(futility);
                     continue;
                 }
@@ -154,7 +152,7 @@ impl Position {
                 // SEE pruning.
                 // If a capture loses material, it's usually not worth considering
                 // unless we're in a desperate position.
-                if !self.board.see(m, Eval(sp_qs_margin())) {
+                if !self.board.see(m, Eval(-sp_qs_margin())) {
                     continue;
                 }
             }
