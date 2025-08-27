@@ -94,7 +94,7 @@ impl Position {
             // Gradually expand the aspiration window for the next attempt.
             // If we keep failing outside the window, it means the position's value
             // has changed significantly, so we need a wider search window.
-            delta += delta / 2;
+            delta += delta / 3;
         }
     }
 }
