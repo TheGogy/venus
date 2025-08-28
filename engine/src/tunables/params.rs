@@ -24,10 +24,10 @@ use crate::init_tunables;
 init_tunables! {
     // Material scaling values.
     ms_base: i32 = 715, 600, 900, 10;
-    ms_knight: i32 = 446, 400, 500, 5;
-    ms_bishop: i32 = 459, 400, 500, 5;
-    ms_rook:   i32 = 705, 600, 800, 10;
-    ms_queen:  i32 = 1313, 1200, 1400, 10;
+    ms_knight: i32 = 451, 400, 500, 5;
+    ms_bishop: i32 = 460, 400, 500, 5;
+    ms_rook:   i32 = 701, 600, 800, 10;
+    ms_queen:  i32 = 1315, 1200, 1400, 10;
 
     // Aspiration window.
     asp_window_default: i32 = 24, 10, 30, 1;
@@ -55,7 +55,7 @@ init_tunables! {
     tt_replace_d_min: i16 = 5, 2, 6, 1;
 
     // Probcut.
-    pc_beta_base:          i32 = 143, 120, 200, 5;
+    pc_beta_base:          i32 = 149, 120, 200, 5;
     pc_beta_non_improving: i32 = 55, 30, 80, 4;
 
     // extensions.
@@ -85,21 +85,21 @@ init_tunables! {
     lmr_offset:    i32 = 399, -1024, 1024, 200;
     lmr_evaldiff:  i32 = 27614, 24000, 32000, 1000;
 
-    lmr_quiet_div: i32 = 8411, 6000, 10000, 100;
-    lmr_noisy_div: i32 = 5976, 4000, 10000, 100;
+    lmr_quiet_div: i32 = 8395, 6000, 10000, 100;
+    lmr_noisy_div: i32 = 6033, 4000, 10000, 100;
 
     // Late move reduction verifications.
     lmr_ver_e_min: i32 = 42, 30, 50, 1;
 
     // Reverse futility pruning.
     rfp_d_max:            i16 = 8, 5, 12, 1;
-    rfp_mult:             i32 = 82, 40, 120, 5;
+    rfp_mult:             i32 = 76, 40, 120, 5;
     rfp_improving_margin: i32 = 59, 25, 85, 5;
     rfp_worsening_margin: i32 = 6, 5, 20, 1;
 
     // Null move pruning.
     nmp_d_min:            i16 = 3, 1, 4, 1;
-    nmp_improving_margin: i32 = 68, 40, 100, 5;
+    nmp_improving_margin: i32 = 60, 40, 100, 5;
     nmp_base:             i16 = 5, 2, 7, 1;
     nmp_factor:           i16 = 3, 2, 8, 1;
 
@@ -107,8 +107,8 @@ init_tunables! {
     iir_d_min:  i16 = 2, 1, 4, 1;
 
     // Razoring.
-    rz_base: i32 = 470, 350, 550, 40;
-    rz_mult: i32 = 300, 250, 400, 30;
+    rz_base: i32 = 466, 350, 550, 40;
+    rz_mult: i32 = 286, 250, 400, 30;
 
     // History pruning.
     hp_d_min: i16 = 2, 1, 5, 1;
@@ -127,7 +127,7 @@ init_tunables! {
     lmp_d_min: i16 = 8, 5, 12, 1;
 
     // SEE pruning.
-    sp_noisy_margin: i32 = 17, 0, 40, 5;
+    sp_noisy_margin: i32 = 22, 0, 40, 5;
     sp_quiet_margin: i32 = 70, 30, 120, 5;
     sp_d_max:        i16 = 10, 6, 14, 1;
     sp_qs_margin:    i32 = 33, 10, 50, 2;
