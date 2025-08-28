@@ -1,6 +1,6 @@
 # Venus
 
-A chess engine written in Rust. Work in progress.
+A chess engine written in Rust and trained on [Lc0](https://github.com/LeelaChessZero/lc0) data. Work in progress.
 
 ```bash
 git clone --depth 1 https://github.com/TheGogy/venus.git
