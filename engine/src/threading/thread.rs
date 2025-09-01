@@ -39,6 +39,7 @@ pub struct Thread {
     pub ply_from_null: usize,
     pub nodes: u64,
     pub eval: Eval,
+    pub avg_eval: Eval,
     pub pv: PVLine,
     pub stack: [SearchStackEntry; MAX_PLY],
 
@@ -64,6 +65,7 @@ impl Thread {
             ply_from_null: 0,
             nodes: 0,
             eval: Eval::DRAW,
+            avg_eval: -Eval::INFINITY,
             pv: PVLine::default(),
             stack: [SearchStackEntry::default(); MAX_PLY],
 

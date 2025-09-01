@@ -43,7 +43,7 @@ impl Position {
         let mut pv = PVLine::default();
         let mut alpha = -Eval::INFINITY;
         let mut beta = Eval::INFINITY;
-        let mut delta = asp_window_default();
+        let mut delta = t.avg_eval.0 * t.avg_eval.0 / asp_window_div() + asp_window_base();
 
         let full_depth = t.depth + 1;
         let mut search_depth = t.depth + 1;
@@ -81,7 +81,7 @@ impl Position {
 
                 // Depth reduction on fail-high.
                 // When we fail high, we often don't need full depth to prove the position is good.
-                if search_depth > 1 && v.nonterminal() {
+                if v.nonterminal() {
                     search_depth -= 1;
                 }
             }
@@ -94,7 +94,7 @@ impl Position {
             // Gradually expand the aspiration window for the next attempt.
             // If we keep failing outside the window, it means the position's value
             // has changed significantly, so we need a wider search window.
-            delta += delta / 2;
+            delta += delta / 3;
         }
     }
 }
