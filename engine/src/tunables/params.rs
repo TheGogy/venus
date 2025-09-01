@@ -30,8 +30,9 @@ init_tunables! {
     ms_queen:  i32 = 1313, 1200, 1400, 10;
 
     // Aspiration window.
-    asp_window_default: i32 = 24, 10, 30, 1;
     asp_window_d_min:   i16 = 4, 2, 7, 1;
+    asp_window_div:     i32 = 11400, 8000, 14000, 500;
+    asp_window_base:    i32 = 5, 4, 10, 1;
 
     // History bonuses.
     hist_bonus_max:  i16 = 1567, 800, 3200, 100;

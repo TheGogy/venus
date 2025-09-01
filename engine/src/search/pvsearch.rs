@@ -431,6 +431,7 @@ impl Position {
 
             if NT::RT {
                 t.tm.update_nodes(m, t.nodes - start_nodes);
+                t.avg_eval = if t.avg_eval.is_valid() { (t.avg_eval + v) / 2 } else { v };
             }
 
             // Update best move and alpha if we found a better move.
