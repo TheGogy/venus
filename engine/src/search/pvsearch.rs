@@ -203,7 +203,7 @@ impl Position {
         }
 
         // Internal Iterative reductions.
-        if can_apply_iir(depth, NT::PV, cutnode, tt_move, tt_bound) {
+        if can_apply_iir(depth, NT::PV, cutnode, tt_move) {
             depth -= 1;
         }
 

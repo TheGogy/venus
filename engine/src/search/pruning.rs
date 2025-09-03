@@ -1,6 +1,6 @@
 use chess::types::{Depth, board::Board, eval::Eval, moves::Move};
 
-use crate::{threading::thread::Thread, tt::entry::Bound, tunables::params::tunables::*};
+use crate::{threading::thread::Thread, tunables::params::tunables::*};
 
 /// Reverse futility pruning.
 // If our position is already so good that even without searching,
@@ -34,8 +34,8 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval:
 /// Internal iterative reductions.
 // If we don't have a good move from the TT, reduce depth slightly
 // to avoid spending too much time on potentially uninteresting positions.
-pub fn can_apply_iir(depth: Depth, is_pv: bool, cutnode: bool, tt_move: Move, tt_bound: Bound) -> bool {
-    (is_pv || cutnode) && tt_move.is_none() && tt_bound != Bound::Upper && depth >= iir_d_min() + 2 * cutnode as Depth
+pub fn can_apply_iir(depth: Depth, is_pv: bool, cutnode: bool, tt_move: Move) -> bool {
+    (is_pv || cutnode) && tt_move.is_none() && depth >= iir_d_min() + 2 * cutnode as Depth
 }
 
 /// History Pruning.
