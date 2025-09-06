@@ -132,4 +132,7 @@ init_tunables! {
     sp_quiet_margin: i32 = 70, 30, 120, 5;
     sp_d_max:        i16 = 10, 6, 14, 1;
     sp_qs_margin:    i32 = 33, 10, 50, 2;
+
+    // Bonus for checks in movepicking.
+    mp_gc_bonus: i32 = 10000, 6000, 14000, 300;
 }
