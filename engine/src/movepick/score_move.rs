@@ -8,7 +8,7 @@ use chess::{
     },
 };
 
-use crate::{history::capturehist::CAP_HIST_MAX, movepick::move_list::LEFT, threading::thread::Thread};
+use crate::{history::capturehist::CAP_HIST_MAX, movepick::move_list::LEFT, threading::thread::Thread, tunables::params::tunables::*};
 
 use super::{MovePicker, SearchType, move_list::RIGHT};
 
@@ -38,6 +38,8 @@ impl MovePicker {
                     s += hist_cont.get_bonus(m, pt);
                 }
             }
+
+            s += (b.gives_check_fast(m) && b.see(m, Eval(0))) as i32 * mp_gc_bonus();
 
             // Add to the front of the list.
             self.move_list.insert::<LEFT>(m, s);

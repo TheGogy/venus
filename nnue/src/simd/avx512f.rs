@@ -2,45 +2,45 @@ pub const CHUNK_SIZE: usize = 32;
 
 pub mod vi16 {
     use std::arch::x86_64::*;
-    pub type Vec = __m512i;
+    pub type SVec = __m512i;
 
     /// Returns a zeroed out vector.
-    pub fn zeroed() -> Vec {
+    pub fn zeroed() -> SVec {
         unsafe { _mm512_setzero_si512() }
     }
 
     /// Returns a vector set to the given value.
-    pub fn from_val(val: i16) -> Vec {
+    pub fn from_val(val: i16) -> SVec {
         unsafe { _mm512_set1_epi16(val) }
     }
 
     /// Loads a vector in directly from the values at the given pointer.
-    pub fn from_ptr(ptr: *const i16) -> Vec {
+    pub fn from_ptr(ptr: *const i16) -> SVec {
         unsafe { _mm512_load_si512(ptr.cast()) }
     }
 
     /// Multiplies two vectors together.
-    pub fn mul(x: Vec, y: Vec) -> Vec {
+    pub fn mul(x: SVec, y: SVec) -> SVec {
         unsafe { _mm512_mullo_epi16(x, y) }
     }
 
     /// Multiplies and Adds two vectors together.
-    pub fn madd(x: Vec, y: Vec) -> Vec {
+    pub fn madd(x: SVec, y: SVec) -> SVec {
         unsafe { _mm512_madd_epi16(x, y) }
     }
 
     /// Adds two vectors together in i32 space.
-    pub fn add(x: Vec, y: Vec) -> Vec {
+    pub fn add(x: SVec, y: SVec) -> SVec {
         unsafe { _mm512_add_epi32(x, y) }
     }
 
     /// Clamps a vector between two values.
-    pub fn clamp(v: Vec, min: Vec, max: Vec) -> Vec {
+    pub fn clamp(v: SVec, min: SVec, max: SVec) -> SVec {
         unsafe { _mm512_min_epi16(max, _mm512_max_epi16(v, min)) }
     }
 
     /// Gets the sum of the values in the vector.
-    pub fn sum(v: Vec) -> i32 {
+    pub fn sum(v: SVec) -> i32 {
         unsafe { _mm512_reduce_add_epi32(v) }
     }
 }
