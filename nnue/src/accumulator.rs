@@ -2,8 +2,8 @@ use chess::types::{bitboard::Bitboard, board::Board, color::Color, piece::Piece}
 use utils::memory::Align64;
 
 use crate::{
-    NNUE_EMBEDDED,
-    arch::{L1, utils::ft_idx},
+    arch::{L1, NNUE_EMBEDDED},
+    simd::*,
 };
 
 /// Accumulator for each side.
@@ -36,28 +36,6 @@ impl Default for Accumulator {
 }
 
 impl Accumulator {
-    /// Toggle the specific features on and off for the accumulator.
-    /// Force not inlining to stop the function from going over the I-cache size -
-    /// When fully expanded and optimized, it's bigger than the compiler thinks.
-    #[inline(never)]
-    fn toggle_features<const ON: bool>(&mut self, ft: (usize, usize)) {
-        let update = |acc: &mut SideAccumulator, idx: usize| {
-            debug_assert!(idx + L1 <= NNUE_EMBEDDED.feature_weights.len());
-
-            // Enough bounds checking already rust, it works, we have the assertion!
-            // SAFETY: length of acc is L1, length of `idx..idx + L1` is L1, and all indices are in
-            // range.
-            unsafe {
-                acc.iter_mut().zip(NNUE_EMBEDDED.feature_weights.get_unchecked(idx..idx + L1)).for_each(|(acc_val, &weight)| {
-                    *acc_val += if ON { weight } else { -weight };
-                });
-            }
-        };
-
-        update(&mut self.w, ft.0);
-        update(&mut self.b, ft.1);
-    }
-
     /// Update features and cache to match the current board.
     pub fn update(&mut self, b: &Board) {
         // King squares for each color.
@@ -73,14 +51,33 @@ impl Accumulator {
                 let old = co & self.pieces[p];
                 let new = cn & b.pieces[p];
 
+                let mut subs = old & !new;
+                let mut adds = new & !old;
+
+                // Handle both in one go if we can.
+                while adds.any() && subs.any() {
+                    let (wadd, badd) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, adds.lsb());
+                    let (wsub, bsub) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, subs.lsb());
+
+                    add1sub1_inplace(&mut self.w, wsub, wadd);
+                    add1sub1_inplace(&mut self.b, bsub, badd);
+
+                    adds.pop_lsb();
+                    subs.pop_lsb();
+                }
+
                 // Toggle new weights on.
-                (new & !old).bitloop(|s| {
-                    self.toggle_features::<true>(ft_idx(c, p, wksq, bksq, s));
+                adds.bitloop(|s| {
+                    let (w, b) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, s);
+                    add1_inplace(&mut self.w, w);
+                    add1_inplace(&mut self.b, b);
                 });
 
                 // Toggle old weights off.
-                (old & !new).bitloop(|s| {
-                    self.toggle_features::<false>(ft_idx(c, p, wksq, bksq, s));
+                subs.bitloop(|s| {
+                    let (w, b) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, s);
+                    sub1_inplace(&mut self.w, w);
+                    sub1_inplace(&mut self.b, b);
                 });
             }
         }
