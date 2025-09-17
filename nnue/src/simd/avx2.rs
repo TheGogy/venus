@@ -60,7 +60,7 @@ pub mod vi16 {
     }
 
     /// Gets the sum of the values in the vector.
-    pub fn sum(v: SVec) -> i32 {
+    pub fn sum32(v: SVec) -> i32 {
         unsafe {
             let hi = _mm256_extracti128_si256::<1>(v);
             let lo = _mm256_castsi256_si128(v);
