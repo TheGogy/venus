@@ -46,12 +46,12 @@ pub mod vi16 {
 
     /// Adds two vectors together in i16 space.
     pub fn add16(x: SVec, y: SVec) -> SVec {
-        unsafe { _mm512_add_epi16(x, y) }
+        unsafe { _mm256_add_epi16(x, y) }
     }
 
     /// Subtracts y from x in i16 space.
     pub fn sub16(x: SVec, y: SVec) -> SVec {
-        unsafe { _mm512_sub_epi16(x, y) }
+        unsafe { _mm256_sub_epi16(x, y) }
     }
 
     /// Clamps a vector between two values.
