@@ -2,12 +2,8 @@ use chess::types::{board::Board, color::Color, eval::Eval};
 use utils::memory::box_array;
 
 use crate::{
-    NNUE_EMBEDDED,
     accumulator::Accumulator,
-    arch::{
-        NB_INPUT_BUCKETS,
-        utils::{input_bucket_idx, output_bucket_idx},
-    },
+    arch::{NB_INPUT_BUCKETS, NNUE_EMBEDDED, input_bucket_idx, output_bucket_idx},
 };
 
 /// The NNUE, as can be used in the position.

@@ -1,8 +1,8 @@
 use chess::types::color::Color;
 
 use crate::{
-    NNUE_EMBEDDED,
     accumulator::{Accumulator, SideAccumulator},
+    arch::NNUE_EMBEDDED,
 };
 
 use super::{QA, QAB, SCALE};
@@ -11,12 +11,12 @@ impl Accumulator {
     // Propagate through the layers.
     pub fn propagate(&self, c: Color, output_bkt: usize) -> i32 {
         let (stm, opp) = match c {
-            Color::White => (self.w, self.b),
-            Color::Black => (self.b, self.w),
+            Color::White => (&self.w, &self.b),
+            Color::Black => (&self.b, &self.w),
         };
 
         let weights = &NNUE_EMBEDDED.output_weights;
-        let sum = flatten(&stm, &weights[output_bkt][0]) + flatten(&opp, &weights[output_bkt][1]);
+        let sum = flatten(stm, &weights[output_bkt][0]) + flatten(opp, &weights[output_bkt][1]);
         (sum / QA + NNUE_EMBEDDED.output_bias[output_bkt] as i32) * SCALE / QAB
     }
 }
@@ -77,16 +77,16 @@ mod simdvec {
             let wptr = unsafe { weights.0.as_ptr().add(i * CHUNK_SIZE) };
 
             // Load and clip v, load w.
-            let v = clamp(from_ptr(vptr), min, max);
+            let v = clamp16(from_ptr(vptr), min, max);
             let w = from_ptr(wptr);
 
             // v * v + v * w
-            let s = madd(v, mul(v, w));
+            let s = madd16(v, mul16(v, w));
 
             // Add to output.
-            out = add(out, s);
+            out = add32(out, s);
         }
 
-        sum(out)
+        sum32(out)
     }
 }

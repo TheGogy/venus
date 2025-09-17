@@ -19,23 +19,43 @@ pub mod vi16 {
         unsafe { _mm256_load_si256(ptr.cast()) }
     }
 
+    /// Gets a simd vec from the given address.
+    pub fn from_ptr_mut(ptr: *mut i16) -> SVec {
+        unsafe { _mm256_load_si256(ptr.cast()) }
+    }
+
+    /// Inserts the given simd vec in to the given address.
+    pub fn to_ptr(x: SVec, ptr: *mut i16) {
+        unsafe { _mm256_store_si256(ptr.cast(), x) }
+    }
+
     /// Multiplies two vectors together.
-    pub fn mul(x: SVec, y: SVec) -> SVec {
+    pub fn mul16(x: SVec, y: SVec) -> SVec {
         unsafe { _mm256_mullo_epi16(x, y) }
     }
 
     /// Multiplies and Adds two vectors together.
-    pub fn madd(x: SVec, y: SVec) -> SVec {
+    pub fn madd16(x: SVec, y: SVec) -> SVec {
         unsafe { _mm256_madd_epi16(x, y) }
     }
 
     /// Adds two vectors together in i32 space.
-    pub fn add(x: SVec, y: SVec) -> SVec {
+    pub fn add32(x: SVec, y: SVec) -> SVec {
         unsafe { _mm256_add_epi32(x, y) }
     }
 
+    /// Adds two vectors together in i16 space.
+    pub fn add16(x: SVec, y: SVec) -> SVec {
+        unsafe { _mm512_add_epi16(x, y) }
+    }
+
+    /// Subtracts y from x in i16 space.
+    pub fn sub16(x: SVec, y: SVec) -> SVec {
+        unsafe { _mm512_sub_epi16(x, y) }
+    }
+
     /// Clamps a vector between two values.
-    pub fn clamp(v: SVec, min: SVec, max: SVec) -> SVec {
+    pub fn clamp16(v: SVec, min: SVec, max: SVec) -> SVec {
         unsafe { _mm256_min_epi16(max, _mm256_max_epi16(v, min)) }
     }
 
