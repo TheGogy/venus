@@ -7,8 +7,6 @@ use chess::types::{
 
 use super::{HistEntry, movebuffer::MoveBuffer};
 
-pub const CAP_HIST_MAX: i32 = 16384;
-
 /// Capture history.
 ///
 /// This is used to record the value of captures during the search,
@@ -23,6 +21,8 @@ impl Default for CaptureHist {
         Self([[[HistEntry::default(); Piece::NUM - 1]; Square::NUM]; CPiece::NUM])
     }
 }
+
+pub const CAP_HIST_MAX: i32 = 16384;
 
 impl CaptureHist {
     /// The index into this NoisyHist.

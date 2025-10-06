@@ -2,6 +2,7 @@ pub mod capturehist;
 pub mod conthist;
 pub mod corrhist;
 pub mod movebuffer;
+pub mod pawnhist;
 pub mod quiethist;
 
 use chess::types::Depth;

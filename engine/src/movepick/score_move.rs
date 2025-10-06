@@ -39,6 +39,8 @@ impl MovePicker {
                 }
             }
 
+            s += t.hist_pawn.get_bonus(b, m);
+
             s += (b.gives_check_fast(m) && b.see(m, Eval(0))) as i32 * mp_gc_bonus();
 
             // Add to the front of the list.

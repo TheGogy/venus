@@ -18,6 +18,7 @@ use crate::{
         corrhist::{CorrHist, correction_bonus},
         hist_delta,
         movebuffer::MoveBuffer,
+        pawnhist::PawnHist,
         quiethist::QuietHist,
     },
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
@@ -46,6 +47,7 @@ pub struct Thread {
     // Histories.
     pub hist_quiet: QuietHist,
     pub hist_noisy: CaptureHist,
+    pub hist_pawn: PawnHist,
     pub hist_conts: [ContHist; CONT_NUM],
     pub hist_corr_pawn: CorrHist,
     pub hist_corr_major_w: CorrHist,
@@ -71,6 +73,7 @@ impl Thread {
 
             hist_quiet: QuietHist::default(),
             hist_noisy: CaptureHist::default(),
+            hist_pawn: PawnHist::default(),
             hist_conts: array::from_fn(|_| ContHist::default()),
 
             hist_corr_pawn: CorrHist::default(),
@@ -195,6 +198,7 @@ impl Thread {
 
         if best.flag().is_quiet() {
             self.hist_quiet.update(board.stm, best, quiets, bonus, malus);
+            self.hist_pawn.update(board, best, quiets, bonus, malus);
 
             for i in 0..CONT_NUM {
                 if let Some(pt) = self.pieceto_at(i + 1) {
@@ -215,6 +219,7 @@ impl Thread {
                     v += self.hist_conts[i].get_bonus(m, pt);
                 }
             }
+            v += self.hist_pawn.get_bonus(b, m);
             v
         }
     }
