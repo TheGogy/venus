@@ -1,89 +1,58 @@
-use chess::types::{bitboard::Bitboard, board::Board, color::Color, piece::Piece};
+use chess::types::{color::Color, square::Square};
 use utils::memory::Align64;
 
-use crate::{
-    arch::{L1, NNUE_EMBEDDED},
-    simd::*,
-};
+use crate::arch::{L1, NNUE_EMBEDDED};
 
 /// Accumulator for each side.
-pub type SideAccumulator = Align64<[i16; L1]>;
+pub type HalfAcc = Align64<[i16; L1]>;
 
-/// Accumulator.
-/// Contains a SideAccumulator for each side to propagate through the network,
-/// and a cached representation of the board from the last state we evaluated from.
-#[derive(Clone, Copy, Debug)]
-pub struct Accumulator {
-    // Features.
-    pub w: SideAccumulator,
-    pub b: SideAccumulator,
-
-    // Cache.
-    colors: [Bitboard; Color::NUM],
-    pieces: [Bitboard; Piece::NUM],
+#[derive(Clone, Debug)]
+pub struct FullAcc {
+    pub feats: [HalfAcc; Color::NUM],
+    pub correct: [bool; Color::NUM],
+    pub ksqs: [Square; Color::NUM],
 }
 
-/// By default, set to feature bias.
-impl Default for Accumulator {
+impl Default for FullAcc {
     fn default() -> Self {
-        Self {
-            w: NNUE_EMBEDDED.feature_bias,
-            b: NNUE_EMBEDDED.feature_bias,
-            colors: [Bitboard::EMPTY; Color::NUM],
-            pieces: [Bitboard::EMPTY; Piece::NUM],
-        }
+        FullAcc { feats: [NNUE_EMBEDDED.feature_bias; Color::NUM], correct: [false; Color::NUM], ksqs: [Square::Invalid; Color::NUM] }
     }
 }
 
-impl Accumulator {
-    /// Update features and cache to match the current board.
-    pub fn update(&mut self, b: &Board) {
-        // King squares for each color.
-        let wksq = b.ksq(Color::White);
-        let bksq = b.ksq(Color::Black);
+/// Haha auto vectorization go brrr
 
-        // Update features.
-        for c in 0..Color::NUM {
-            let co = self.colors[c];
-            let cn = b.colors[c];
+pub fn add1_inplace(acc: &mut HalfAcc, add0: &HalfAcc) {
+    for i in 0..L1 {
+        acc[i] += add0[i];
+    }
+}
 
-            for p in 0..Piece::NUM {
-                let old = co & self.pieces[p];
-                let new = cn & b.pieces[p];
+pub fn sub1_inplace(acc: &mut HalfAcc, sub0: &HalfAcc) {
+    for i in 0..L1 {
+        acc[i] -= sub0[i];
+    }
+}
 
-                let mut subs = old & !new;
-                let mut adds = new & !old;
+pub fn add1sub1_inplace(acc: &mut HalfAcc, add0: &HalfAcc, sub0: &HalfAcc) {
+    for i in 0..L1 {
+        acc[i] += add0[i] - sub0[i];
+    }
+}
 
-                // Handle both in one go if we can.
-                while adds.any() && subs.any() {
-                    let (wadd, badd) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, adds.lsb());
-                    let (wsub, bsub) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, subs.lsb());
+pub fn add1sub1(dst: &mut HalfAcc, src: &HalfAcc, add0: &HalfAcc, sub0: &HalfAcc) {
+    for i in 0..L1 {
+        dst[i] = src[i] + add0[i] - sub0[i];
+    }
+}
 
-                    add1sub1_inplace(&mut self.w, wsub, wadd);
-                    add1sub1_inplace(&mut self.b, bsub, badd);
+pub fn add1sub2(dst: &mut HalfAcc, src: &HalfAcc, add0: &HalfAcc, sub0: &HalfAcc, sub1: &HalfAcc) {
+    for i in 0..L1 {
+        dst[i] = src[i] + add0[i] - sub0[i] - sub1[i];
+    }
+}
 
-                    adds.pop_lsb();
-                    subs.pop_lsb();
-                }
-
-                // Toggle new weights on.
-                adds.bitloop(|s| {
-                    let (w, b) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, s);
-                    add1_inplace(&mut self.w, w);
-                    add1_inplace(&mut self.b, b);
-                });
-
-                // Toggle old weights off.
-                subs.bitloop(|s| {
-                    let (w, b) = NNUE_EMBEDDED.weights_for(c, p, wksq, bksq, s);
-                    sub1_inplace(&mut self.w, w);
-                    sub1_inplace(&mut self.b, b);
-                });
-            }
-        }
-
-        // Update cache.
-        self.colors = b.colors;
-        self.pieces = b.pieces;
+pub fn add2sub2(dst: &mut HalfAcc, src: &HalfAcc, add0: &HalfAcc, add1: &HalfAcc, sub0: &HalfAcc, sub1: &HalfAcc) {
+    for i in 0..L1 {
+        dst[i] = src[i] + add0[i] + add1[i] - sub0[i] - sub1[i];
     }
 }

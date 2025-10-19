@@ -1,5 +1,5 @@
 use chess::types::{board::Board, moves::Move, piece::CPiece, square::Square};
-use utils::memory::box_array;
+use utils::memory::boxed_zeroed;
 
 use super::{HistEntry, movebuffer::MoveBuffer};
 
@@ -15,7 +15,7 @@ pub struct ContHist(Box<[[[HistEntry; Square::NUM]; Square::NUM]; PieceTo::NUM]>
 // TODO: add tunable history defaults.
 impl Default for ContHist {
     fn default() -> Self {
-        Self(box_array())
+        Self(boxed_zeroed())
     }
 }
 

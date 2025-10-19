@@ -71,7 +71,6 @@ pub fn can_apply_lmr(depth: Depth, moves_tried: usize, is_pv: bool) -> bool {
 pub const LMR_SCALE: i32 = 1024;
 
 /// Get the late move reduction amount.
-#[inline(never)]
 pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> i32 {
     #[cfg(not(feature = "tune"))]
     {

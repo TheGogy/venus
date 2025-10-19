@@ -11,7 +11,12 @@ use std::{
 #[cfg(feature = "tune")]
 use crate::tunables::params::tunables;
 
-use crate::{position::Position, threading::threadpool::ThreadPool, time_management::timecontrol::TimeControl, tt::table::TT};
+use crate::{
+    position::Position,
+    threading::{thread::Thread, threadpool::ThreadPool},
+    time_management::timecontrol::TimeControl,
+    tt::table::TT,
+};
 
 /// Engine struct.
 /// This contains the thread pool,
@@ -41,6 +46,8 @@ pub enum EngineCommand {
     Print,
     Stop,
     Eval,
+    Move(String),
+    Undo,
 }
 
 /// Setup engine in new thread.
@@ -86,6 +93,8 @@ impl Engine {
             EngineCommand::Perft(d)      => self.handle_perft::<false>(d),
             EngineCommand::PerftMp(d)    => self.handle_perft::<true>(d),
             EngineCommand::Eval          => self.handle_eval(),
+            EngineCommand::Move(m)       => self.handle_move(m),
+            EngineCommand::Undo          => self.handle_undo(),
             EngineCommand::Print         => println!("{}", self.pos.board),
             _ => println!("Unknown command!")
         }
@@ -168,6 +177,23 @@ impl Engine {
             #[cfg(not(feature = "tune"))]
             _ => eprintln!("Unsupported option: {n}!"),
         }
+    }
+
+    /// Handle move command.
+    fn handle_move(&mut self, m: String) {
+        let mv = match self.pos.board.find_move(&m) {
+            Some(m) => m,
+            None => {
+                println!("Move not found!");
+                return;
+            }
+        };
+        self.pos.make_move(mv, &mut Thread::placeholder());
+    }
+
+    /// Handle undo command.
+    fn handle_undo(&mut self) {
+        self.pos.undo_move(&mut Thread::placeholder());
     }
 
     /// The maximum available workers on this machine.

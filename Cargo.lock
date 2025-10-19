@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "chess"
-version = "0.2.9"
+version = "0.3.0"
 dependencies = [
  "ctor",
  "utils",
@@ -59,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "nnue"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "chess",
  "utils",

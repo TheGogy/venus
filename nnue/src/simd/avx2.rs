@@ -1,8 +1,8 @@
-pub const CHUNK_SIZE: usize = 16;
-
 pub mod vi16 {
     use std::arch::x86_64::*;
     pub type SVec = __m256i;
+
+    pub const CHUNK_SIZE_I16: usize = std::mem::size_of::<SVec>() / std::mem::size_of::<i16>();
 
     /// Returns a zeroed out vector.
     pub fn zeroed() -> SVec {
@@ -19,16 +19,6 @@ pub mod vi16 {
         unsafe { _mm256_load_si256(ptr.cast()) }
     }
 
-    /// Gets a simd vec from the given address.
-    pub fn from_ptr_mut(ptr: *mut i16) -> SVec {
-        unsafe { _mm256_load_si256(ptr.cast()) }
-    }
-
-    /// Inserts the given simd vec in to the given address.
-    pub fn to_ptr(x: SVec, ptr: *mut i16) {
-        unsafe { _mm256_store_si256(ptr.cast(), x) }
-    }
-
     /// Multiplies two vectors together.
     pub fn mul16(x: SVec, y: SVec) -> SVec {
         unsafe { _mm256_mullo_epi16(x, y) }
@@ -42,16 +32,6 @@ pub mod vi16 {
     /// Adds two vectors together in i32 space.
     pub fn add32(x: SVec, y: SVec) -> SVec {
         unsafe { _mm256_add_epi32(x, y) }
-    }
-
-    /// Adds two vectors together in i16 space.
-    pub fn add16(x: SVec, y: SVec) -> SVec {
-        unsafe { _mm256_add_epi16(x, y) }
-    }
-
-    /// Subtracts y from x in i16 space.
-    pub fn sub16(x: SVec, y: SVec) -> SVec {
-        unsafe { _mm256_sub_epi16(x, y) }
     }
 
     /// Clamps a vector between two values.

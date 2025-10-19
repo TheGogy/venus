@@ -1,7 +1,7 @@
 pub mod eval;
 
 use chess::types::{board::Board, moves::Move, zobrist::Hash};
-use nnue::network::NNUE;
+use nnue::net::NNUE;
 
 use crate::{history::conthist::PieceTo, threading::thread::Thread};
 
@@ -51,7 +51,7 @@ impl std::str::FromStr for Position {
             _ => return Err("Invalid position!"),
         };
 
-        // Move parsing
+        // Move parsing.
         if let Some("moves") = tokens.next() {
             for move_str in tokens {
                 let m = board.find_move(move_str);
@@ -63,7 +63,11 @@ impl std::str::FromStr for Position {
             }
         };
 
-        Ok(Self { board, nnue: NNUE::default() })
+        // Setup NNUE.
+        let mut net = NNUE::default();
+        net.update_all(&board);
+
+        Ok(Self { board, nnue: net })
     }
 }
 
@@ -71,13 +75,15 @@ impl Position {
     /// Make a null move on the board on the given thread.
     pub fn make_move(&mut self, m: Move, t: &mut Thread) {
         t.move_made(PieceTo::from(&self.board, m));
-        self.board.make_move(m);
+        let dps = self.board.make_move(m);
+        self.nnue.move_made(&self.board, dps);
     }
 
     /// Undo a move on the board on a given thread.
-    pub fn undo_move(&mut self, m: Move, t: &mut Thread) {
+    pub fn undo_move(&mut self, t: &mut Thread) {
         t.move_undo();
-        self.board.undo_move(m);
+        self.board.undo_move();
+        self.nnue.move_undo();
     }
 
     /// Make a null move on the board on a given thread.

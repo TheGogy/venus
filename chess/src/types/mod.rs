@@ -3,6 +3,7 @@ pub mod board;
 pub mod castling;
 pub mod color;
 pub mod direction;
+pub mod dirtypiece;
 pub mod eval;
 pub mod moves;
 pub mod piece;

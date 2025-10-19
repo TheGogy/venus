@@ -64,6 +64,8 @@ impl UCIReader {
                 "go"          => return self.cmd_go(&mut tokens),
                 "position"    => return self.cmd_position(&mut tokens),
                 "setoption"   => return self.cmd_setoption(&mut tokens),
+                "move"        => return self.cmd_move(&mut tokens),
+                "undo"        => self.interface.handle_command(EngineCommand::Undo),
 
                 "quit"        => std::process::exit(0),
                 _ => return Err("Unknown command!")
@@ -135,6 +137,13 @@ impl UCIReader {
         };
 
         self.interface.handle_command(EngineCommand::SetOpt(name, value));
+        Ok(())
+    }
+
+    /// position command.
+    pub fn cmd_move(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+        let m = tokens.collect::<Vec<&str>>().join(" ");
+        self.interface.handle_command(EngineCommand::Move(m));
         Ok(())
     }
 }

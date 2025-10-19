@@ -18,20 +18,12 @@ macro_rules! impl_from_type {
         impl $t {
             // Safety: caller guarantees this is within bounds.
             pub const fn from_index(i: usize) -> Self {
-                debug_assert!(i < $max);
-                unsafe {
-                    core::hint::assert_unchecked(i < $max);
-                    std::mem::transmute(i as $inner)
-                }
+                unsafe { std::mem::transmute(i as $inner) }
             }
 
             // Safety: caller guarantees this is within bounds.
             pub const fn from_raw(i: $inner) -> Self {
-                debug_assert!((i as usize) < $max);
-                unsafe {
-                    core::hint::assert_unchecked((i as usize) < $max);
-                    std::mem::transmute(i as $inner)
-                }
+                unsafe { std::mem::transmute(i as $inner) }
             }
         }
     };
@@ -51,11 +43,7 @@ macro_rules! impl_lists {
             pub const NUM: usize = $num;
 
             pub const fn idx(self) -> usize {
-                let idx = self as usize;
-                debug_assert!(idx < Self::NUM);
-                // Safety: caller guarantees idx is always < NUM.
-                unsafe { core::hint::assert_unchecked(idx < Self::NUM) };
-                idx
+                self as usize
             }
         }
     };

@@ -8,9 +8,5 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 
-[profile.bench]
-inherits = "release"
-overflow-checks = true
-
 [profile.dev]
 overflow-checks = true
