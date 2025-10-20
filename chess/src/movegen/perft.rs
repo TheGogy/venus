@@ -25,7 +25,7 @@ impl Board {
         for m in ml[..nb_moves].iter() {
             self.make_move(*m);
             let n = self.perft::<false>(depth - 1);
-            self.undo_move(*m);
+            self.undo_move();
 
             total += n;
 

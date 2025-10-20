@@ -1,5 +1,6 @@
 use crate::types::{
     board::{Board, BoardState},
+    dirtypiece::DirtyPieces,
     moves::{Move, MoveFlag},
     piece::{CPiece, Piece},
 };
@@ -8,12 +9,12 @@ use crate::types::{
 /// WARN: Assumes the move is legal in this position.
 impl Board {
     /// Make a move in the current position.
-    pub fn make_move(&mut self, m: Move) {
+    pub fn make_move(&mut self, m: Move) -> DirtyPieces {
         assert!(!m.is_none());
 
         let flag = m.flag();
         let (src, dst) = (m.src(), m.dst());
-        let mut piece = self.get_piece(src);
+        let mut pc = self.get_piece(src);
 
         let mut state = BoardState::default();
 
@@ -31,27 +32,33 @@ impl Board {
         // Set move.
         state.mov = m;
 
+        // Setup DirtyPieces.
+        let dp;
+
         // Remove piece from source square.
         self.pop_piece(src);
-        state.hash.toggle_piece(piece, src);
+        state.hash.toggle_piece(pc, src);
 
         // Do parts of move that do not include moving the piece.
         match flag {
             // Normal move: increment halfmove clock.
             MoveFlag::Normal => {
-                if piece.pt() == Piece::Pawn {
+                if pc.pt() == Piece::Pawn {
                     state.halfmoves = 0
                 }
+                dp = DirtyPieces::Add1Sub1((pc, dst), (pc, src));
             }
 
             // Castle: move rook to castling square.
             MoveFlag::Castling => {
                 let (rf, rt) = self.castlingmask.rook_src_dst(dst);
-                let p = CPiece::create(self.stm, Piece::Rook);
+                let r = CPiece::create(self.stm, Piece::Rook);
+                let k = CPiece::create(self.stm, Piece::King);
                 self.pop_piece(rf);
-                self.set_piece(p, rt);
-                state.hash.toggle_piece(p, rf);
-                state.hash.toggle_piece(p, rt);
+                self.set_piece(r, rt);
+                state.hash.toggle_piece(r, rf);
+                state.hash.toggle_piece(r, rt);
+                dp = DirtyPieces::Add2Sub2((k, dst), (r, rt), (k, src), (r, rf));
             }
 
             // Double push: update epsq.
@@ -59,6 +66,8 @@ impl Board {
                 let epsq = src.forward(self.stm);
                 state.epsq = epsq;
                 state.hash.toggle_ep(epsq);
+                state.halfmoves = 0;
+                dp = DirtyPieces::Add1Sub1((pc, dst), (pc, src));
             }
 
             // Capture: Remove piece at target square.
@@ -68,6 +77,7 @@ impl Board {
                 self.pop_piece(dst);
                 state.hash.toggle_piece(cap, dst);
                 state.halfmoves = 0;
+                dp = DirtyPieces::Add1Sub2((pc, dst), (cap, dst), (pc, src));
             }
 
             // En passant: Remove ep captured piece.
@@ -78,22 +88,27 @@ impl Board {
                 self.pop_piece(epsq);
                 state.hash.toggle_piece(cap, epsq);
                 state.halfmoves = 0;
+                dp = DirtyPieces::Add1Sub2((pc, dst), (cap, epsq), (pc, src));
             }
 
             // Regular promotion: set piece to promoted piece.
             MoveFlag::PromoN | MoveFlag::PromoB | MoveFlag::PromoR | MoveFlag::PromoQ => {
-                piece = CPiece::create(self.stm, flag.get_promo());
+                let stm_pawn = CPiece::create(self.stm, Piece::Pawn);
+                pc = CPiece::create(self.stm, flag.get_promo());
                 state.halfmoves = 0;
+                dp = DirtyPieces::Add1Sub1((pc, dst), (stm_pawn, src));
             }
 
             // Capture promotion: remove piece from to square and set piece to promoted piece.
             MoveFlag::CPromoN | MoveFlag::CPromoB | MoveFlag::CPromoR | MoveFlag::CPromoQ => {
+                let stm_pawn = CPiece::create(self.stm, Piece::Pawn);
                 let cap = self.get_piece(dst);
                 state.cap = cap;
                 self.pop_piece(dst);
                 state.hash.toggle_piece(cap, dst);
-                piece = CPiece::create(self.stm, flag.get_promo());
+                pc = CPiece::create(self.stm, flag.get_promo());
                 state.halfmoves = 0;
+                dp = DirtyPieces::Add1Sub2((pc, dst), (cap, dst), (stm_pawn, src));
             }
         }
 
@@ -103,8 +118,8 @@ impl Board {
         state.hash.toggle_castling(state.castling);
 
         // Set piece on target square.
-        self.set_piece(piece, dst);
-        state.hash.toggle_piece(piece, dst);
+        self.set_piece(pc, dst);
+        state.hash.toggle_piece(pc, dst);
 
         // Update stm.
         self.stm = !self.stm;
@@ -116,10 +131,14 @@ impl Board {
         // Set current state and push old state to history.
         let old_state = std::mem::replace(&mut self.state, state);
         self.history.push(old_state);
+
+        dp
     }
 
     /// Undo a move on the board.
-    pub fn undo_move(&mut self, m: Move) {
+    pub fn undo_move(&mut self) {
+        let m = self.state.mov;
+
         let flag = m.flag();
         let (src, dst) = (m.src(), m.dst());
         let mut piece = self.get_piece(dst);
@@ -228,7 +247,7 @@ mod tests {
         assert_eq!(b.to_fen(), x.to_fen());
         assert_eq!(b.state.hash, x.state.hash);
 
-        b.undo_move(m);
+        b.undo_move();
 
         assert_eq!(b.get_piece(Square::E4), CPiece::None);
         assert_eq!(b.get_piece(Square::E2), CPiece::WPawn);
@@ -259,7 +278,7 @@ mod tests {
         assert_eq!(b.get_piece(Square::E1), CPiece::None);
         assert_eq!(b.get_piece(Square::G1), CPiece::WKing);
 
-        b.undo_move(m);
+        b.undo_move();
 
         assert_eq!(b.get_piece(Square::F1), CPiece::None);
         assert_eq!(b.get_piece(Square::H1), CPiece::WRook);
@@ -275,7 +294,7 @@ mod tests {
         assert_eq!(b.get_piece(Square::D5), CPiece::WPawn);
         assert_eq!(b.get_piece(Square::C4), CPiece::None);
 
-        b.undo_move(m);
+        b.undo_move();
 
         assert_eq!(b.get_piece(Square::C4), CPiece::WPawn);
         assert_eq!(b.get_piece(Square::D5), CPiece::BPawn);
@@ -292,7 +311,7 @@ mod tests {
         assert_eq!(b.get_piece(Square::F6), CPiece::WPawn);
         assert_eq!(b.state.epsq, Square::Invalid);
 
-        b.undo_move(m);
+        b.undo_move();
 
         assert_eq!(b.get_piece(Square::F5), CPiece::BPawn);
         assert_eq!(b.get_piece(Square::F6), CPiece::None);
@@ -308,7 +327,7 @@ mod tests {
         assert_eq!(b.get_piece(Square::G8), CPiece::WQueen);
         assert_eq!(b.get_piece(Square::G7), CPiece::None);
 
-        b.undo_move(m);
+        b.undo_move();
 
         assert_eq!(b.get_piece(Square::G7), CPiece::WPawn);
         assert_eq!(b.get_piece(Square::G8), CPiece::None);
@@ -324,7 +343,7 @@ mod tests {
         assert_eq!(b.get_piece(Square::F8), CPiece::WQueen);
         assert_eq!(b.get_piece(Square::G7), CPiece::None);
 
-        b.undo_move(m);
+        b.undo_move();
 
         assert_eq!(b.get_piece(Square::G7), CPiece::WPawn);
         assert_eq!(b.get_piece(Square::F8), CPiece::BBishop);
@@ -349,11 +368,11 @@ mod tests {
         assert_eq!(b.to_fen(), x.to_fen());
         assert_eq!(b.state.hash, x.state.hash);
 
-        b.undo_move(m5);
-        b.undo_move(m4);
-        b.undo_move(m3);
-        b.undo_move(m2);
-        b.undo_move(m1);
+        b.undo_move();
+        b.undo_move();
+        b.undo_move();
+        b.undo_move();
+        b.undo_move();
 
         let x = Board::default();
         assert_eq!(b.to_fen(), x.to_fen());

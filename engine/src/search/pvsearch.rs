@@ -232,7 +232,7 @@ impl Position {
                     v = -self.nwsearch(t, tt, pv, -pc_beta + 1, pc_depth, !cutnode)
                 }
 
-                self.undo_move(m, t);
+                self.undo_move(t);
 
                 // If it's still looking good, then we can (probably) safely return this value.
                 if v >= pc_beta {
@@ -423,7 +423,7 @@ impl Position {
                 v = -self.pvsearch::<NT::Next>(t, tt, child_pv, -beta, -alpha, new_depth, false);
             }
 
-            self.undo_move(m, t);
+            self.undo_move(t);
 
             if t.stop {
                 return Eval::DRAW;

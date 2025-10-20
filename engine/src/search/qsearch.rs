@@ -162,7 +162,7 @@ impl Position {
             // -----------------------------------
             self.make_move(m, t);
             let v = -self.qsearch::<NT::Next>(t, tt, -beta, -alpha);
-            self.undo_move(m, t);
+            self.undo_move(t);
 
             if t.stop {
                 return Eval::DRAW;

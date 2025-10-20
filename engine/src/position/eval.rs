@@ -7,7 +7,7 @@ use chess::types::{eval::Eval, piece::Piece};
 impl Position {
     /// Evaluates the position using the NNUE.
     pub fn evaluate(&mut self) -> Eval {
-        let mut v = self.nnue.update_and_evaluate(&self.board);
+        let mut v = self.nnue.evaluate(&self.board);
 
         // Scale by the amount of material on the board.
         // This helps us to incentivise trading down when the positional value is worse, or keep

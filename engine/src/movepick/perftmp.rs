@@ -32,7 +32,7 @@ impl Position {
         for m in ml[..nb_moves].iter() {
             self.board.make_move(*m);
             let n = self.perftmp_driver::<false>(t, depth - 1);
-            self.board.undo_move(*m);
+            self.board.undo_move();
 
             total += n;
 

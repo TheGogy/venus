@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 /// Allocate a zero initialized boxed value over a generic type.
-pub fn box_array<T>() -> Box<T> {
+pub fn boxed_zeroed<T>() -> Box<T> {
     unsafe {
         let layout = std::alloc::Layout::new::<T>();
         let ptr = std::alloc::alloc_zeroed(layout);
