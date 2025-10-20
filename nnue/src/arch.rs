@@ -49,6 +49,7 @@ pub struct NNUEData {
 pub static NNUE_EMBEDDED: NNUEData = unsafe { std::mem::transmute(*include_bytes!(env!("NNUE_EVALFILE"))) };
 
 impl NNUEData {
+    /// Get the weights for the given feature.
     pub const fn feats_for(&self, mut ksq: Square, perspective: Color, p: Piece, c: Color, mut s: Square) -> &HalfAcc {
         const PIECE_STRIDE: usize = Square::NUM;
         const OPPONENT_STRIDE: usize = Square::NUM * Piece::NUM;

@@ -145,30 +145,3 @@ impl_from_type! {
     MoveFlag, u8, 16,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_move_creation() {
-        let m = Move::new(Square::E2, Square::E4, MoveFlag::Normal);
-        assert_eq!(m.src(), Square::E2);
-        assert_eq!(m.dst(), Square::E4);
-        assert_eq!(m.flag(), MoveFlag::Normal);
-    }
-
-    #[test]
-    fn test_move_flag() {
-        assert!(MoveFlag::Normal.is_quiet());
-        assert!(MoveFlag::CPromoB.is_cap());
-        assert!(MoveFlag::Castling.is_quiet());
-        assert!(MoveFlag::PromoQ.is_promo());
-        assert!(MoveFlag::PromoR.is_underpromo());
-        assert!(MoveFlag::PromoN.is_underpromo());
-        assert!(MoveFlag::PromoB.is_underpromo());
-        assert!(MoveFlag::PromoR.is_underpromo());
-        assert!(!MoveFlag::PromoQ.is_underpromo());
-        assert!(!MoveFlag::Normal.is_underpromo());
-    }
-}

@@ -1,10 +1,7 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::{
-    movegen::Allmv,
-    tables::{atk_by_type, leaping_piece::all_pawn_atk},
-};
+use crate::movegen::Allmv;
 
 use super::{
     bitboard::Bitboard,
@@ -304,7 +301,7 @@ impl Board {
 
     /// Get the total occupancy of the position.
     pub fn occ(&self) -> Bitboard {
-        self.colors[0] | self.colors[1]
+        self.c_bb(Color::White) | self.c_bb(Color::Black)
     }
 
     /// Gets the position of the king of the given color.
@@ -353,11 +350,6 @@ impl Board {
         mv
     }
 
-    /// Get the current ply of the board.
-    pub const fn ply(&self) -> usize {
-        self.history.len()
-    }
-
     /// Whether we are in check.
     pub const fn in_check(&self) -> bool {
         !self.state.checkers.is_empty()
@@ -376,22 +368,6 @@ impl Board {
     pub fn only_king_pawns_left(&self) -> bool {
         let stm = self.stm;
         (self.c_bb(stm) ^ self.pc_bb(stm, Piece::King) ^ self.pc_bb(stm, Piece::Pawn)).is_empty()
-    }
-
-    /// All attacks from a given piece type.
-    pub fn atk_from(&self, p: Piece, c: Color) -> Bitboard {
-        match p {
-            Piece::Pawn => all_pawn_atk(self.pc_bb(c, p), c),
-            _ => {
-                let mut atk = Bitboard::EMPTY;
-                let pcs = self.pc_bb(c, p);
-                let occ = self.occ();
-
-                pcs.bitloop(|s| atk |= atk_by_type(p, s, occ));
-
-                atk
-            }
-        }
     }
 }
 

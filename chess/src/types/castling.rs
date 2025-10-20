@@ -16,8 +16,7 @@ use super::{
 ///
 /// Represented as:
 /// [wk][bk][wq][bq]
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Default)]
-#[repr(transparent)]
+#[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct CastlingRights(pub u8);
 
 impl CastlingRights {
@@ -36,7 +35,7 @@ impl CastlingRights {
     pub const BQ: Self = Self(0b1000); // Black queenside
 
     // All masks.
-    const MASKS: [Self; 4] = [Self::WK, Self::BK, Self::WQ, Self::BQ];
+    const MASKS: [[Self; 2]; 2] = [[Self::WK, Self::BK], [Self::WQ, Self::BQ]];
 
     /// The index of the current castling rights.
     pub const fn idx(self) -> usize {
@@ -59,8 +58,8 @@ impl CastlingRights {
     }
 
     /// Gets the mask for a given color and side.
-    pub const fn get_mask(c: Color, is_ks: bool) -> Self {
-        Self::MASKS[c.idx() + !is_ks as usize * 2]
+    pub const fn get_mask(c: Color, is_qs: bool) -> Self {
+        Self::MASKS[is_qs as usize][c.idx()]
     }
 }
 
@@ -172,20 +171,20 @@ impl CastlingRights {
                     while b.pc_at(sq) != rook {
                         sq = sq.prev();
                     }
-                    (sq, CastlingRights::get_mask(c, true))
+                    (sq, CastlingRights::get_mask(c, false))
                 }
                 'Q' => {
                     let mut sq = Square::A1.relative(c);
                     while b.pc_at(sq) != rook {
                         sq = sq.next();
                     }
-                    (sq, CastlingRights::get_mask(c, false))
+                    (sq, CastlingRights::get_mask(c, true))
                 }
 
                 'A'..='H' => {
                     c_mask.frc = true;
                     let sq = Square::make(Rank::R1.relative(c), File::from_raw(t as u8 - b'A'));
-                    (sq, CastlingRights::get_mask(c, ksq < sq))
+                    (sq, CastlingRights::get_mask(c, ksq > sq))
                 }
 
                 _ => return Err("Invalid Castling Rights!"),

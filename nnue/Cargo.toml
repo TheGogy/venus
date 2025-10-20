@@ -3,9 +3,6 @@ name = "nnue"
 version = "0.3.0"
 edition = "2024"
 
-[lib]
-doctest = false
-
 [dependencies]
 utils = { path = "../utils" }
 chess = { path = "../chess" }

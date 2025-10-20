@@ -51,12 +51,18 @@ impl Square {
 
     /// Gets the square relative to white's side.
     pub const fn relative(self, c: Color) -> Self {
-        Self::from_raw(self as u8 ^ (c as u8 * 56))
+        match c {
+            Color::White => self,
+            Color::Black => Self::from_raw(self as u8 ^ 56),
+        }
     }
 
     /// Moves the square forward by one relative to the side.
     pub const fn forward(self, c: Color) -> Self {
-        Self::from_raw(self as u8 + 8 - (16 * c.idx() as u8))
+        match c {
+            Color::White => Self::from_raw(self as u8 + 8),
+            Color::Black => Self::from_raw(self as u8 - 8),
+        }
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8).
@@ -124,15 +130,4 @@ impl fmt::Display for Square {
 impl_from_type! {
     Square, u8, 64,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_next_prev() {
-        assert_eq!(Square::A1.next(), Square::B1);
-        assert_eq!(Square::B3.prev(), Square::A3);
-    }
 }

@@ -22,6 +22,8 @@ pub struct FinnyEntry {
 pub struct FinnyTable(pub Box<[FinnyEntry; 2 * NB_INPUT_BUCKETS]>);
 
 impl FinnyTable {
+    /// Fully refresh the entry to the given board,
+    /// and update the accumulator.
     pub fn refresh_to_pos(&mut self, acc: &mut FullAcc, b: &Board, perspective: Color) {
         let ksq = b.ksq(perspective);
         let entry = &mut self.0[input_bucket(ksq, perspective)];
