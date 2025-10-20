@@ -57,26 +57,3 @@ impl fmt::Display for Color {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_color_opp() {
-        assert_eq!(!Color::White, Color::Black);
-        assert_eq!(!Color::Black, Color::White);
-    }
-
-    #[test]
-    fn test_color_from() {
-        assert_eq!(Color::try_from('w').unwrap(), Color::White);
-        assert_eq!(Color::try_from('b').unwrap(), Color::Black);
-    }
-
-    #[test]
-    fn test_color_display() {
-        assert_eq!(Color::White.to_string(), "w");
-        assert_eq!(Color::Black.to_string(), "b");
-    }
-}

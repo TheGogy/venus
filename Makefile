@@ -1,7 +1,7 @@
-EXE        ?= Venus
-ARCH       ?= native
-FEATURES   ?=
-DIR        := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))/build
+EXE      ?= Venus
+ARCH     ?= native
+FEATURES ?=
+DIR      := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))/build
 
 ifeq ($(OS),Windows_NT)
 	NAME := $(EXE).exe

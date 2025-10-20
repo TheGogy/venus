@@ -83,9 +83,13 @@ impl Rank {
 
     /// Get the file from that color's perspective.
     /// e.g:
+    /// File::A.relative(Color::White) == File::A
     /// File::A.relative(Color::Black) == File::H
     pub const fn relative(self, c: Color) -> Self {
-        Self::from_raw(self as u8 ^ (c as u8 * 7))
+        match c {
+            Color::White => self,
+            Color::Black => Self::from_raw(self as u8 ^ 7),
+        }
     }
 
     /// Get the char representing the rank.

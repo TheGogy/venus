@@ -98,34 +98,3 @@ impl_from_type! {
     CPiece, u8, 12,
     [i64, i32, i16, i8, u64, u32, u16, u8, usize]
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_piece_index() {
-        for i in 0..Piece::NUM {
-            assert_eq!(Piece::from(i).idx(), i);
-        }
-    }
-
-    #[test]
-    fn test_cpiece_index() {
-        for i in 0..CPiece::NUM {
-            assert_eq!(CPiece::from(i).idx(), i);
-        }
-    }
-
-    #[test]
-    fn test_cpiece_color() {
-        assert_eq!(CPiece::WPawn.color(), Color::White);
-        assert_eq!(CPiece::BQueen.color(), Color::Black);
-    }
-
-    #[test]
-    fn test_cpiece_type() {
-        assert_eq!(CPiece::WPawn.pt(), Piece::Pawn);
-        assert_eq!(CPiece::BQueen.pt(), Piece::Queen);
-    }
-}

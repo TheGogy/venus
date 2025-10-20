@@ -13,7 +13,7 @@ use super::{
 /// Zobrist hash implementation.
 /// This is used to get the correct key within the tablebases,
 /// as well as some history metrics.
-#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
 #[repr(C)]
 pub struct Hash {
     pub key: u64,
