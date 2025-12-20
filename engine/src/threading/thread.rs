@@ -44,12 +44,12 @@ pub struct Thread {
     pub stack: [SearchStackEntry; MAX_PLY],
 
     // Histories.
-    pub hist_quiet: QuietHist,
-    pub hist_noisy: CaptureHist,
+    pub hist_quiet: Box<QuietHist>,
+    pub hist_noisy: Box<CaptureHist>,
     pub hist_conts: [ContHist; CONT_NUM],
-    pub hist_corr_pawn: CorrHist,
-    pub hist_corr_major_w: CorrHist,
-    pub hist_corr_major_b: CorrHist,
+    pub hist_corr_pawn: Box<CorrHist>,
+    pub hist_corr_major_w: Box<CorrHist>,
+    pub hist_corr_major_b: Box<CorrHist>,
 }
 
 impl Thread {
@@ -69,13 +69,13 @@ impl Thread {
             pv: PVLine::default(),
             stack: [SearchStackEntry::default(); MAX_PLY],
 
-            hist_quiet: QuietHist::default(),
-            hist_noisy: CaptureHist::default(),
+            hist_quiet: Box::new(QuietHist::default()),
+            hist_noisy: Box::new(CaptureHist::default()),
             hist_conts: array::from_fn(|_| ContHist::default()),
 
-            hist_corr_pawn: CorrHist::default(),
-            hist_corr_major_w: CorrHist::default(),
-            hist_corr_major_b: CorrHist::default(),
+            hist_corr_pawn: Box::new(CorrHist::default()),
+            hist_corr_major_w: Box::new(CorrHist::default()),
+            hist_corr_major_b: Box::new(CorrHist::default()),
         }
     }
 

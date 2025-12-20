@@ -22,6 +22,12 @@ pub struct FinnyEntry {
 pub struct FinnyTable(pub Box<[FinnyEntry; 2 * NB_INPUT_BUCKETS]>);
 
 impl FinnyTable {
+    pub fn reset(&mut self) {
+        for e in self.0.iter_mut() {
+            *e = FinnyEntry::default();
+        }
+    }
+
     /// Fully refresh the entry to the given board,
     /// and update the accumulator.
     pub fn refresh_to_pos(&mut self, acc: &mut FullAcc, b: &Board, perspective: Color) {
