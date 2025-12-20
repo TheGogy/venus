@@ -53,7 +53,7 @@ impl Square {
     pub const fn relative(self, c: Color) -> Self {
         match c {
             Color::White => self,
-            Color::Black => Self::from_raw(self as u8 ^ 56),
+            Color::Black => self.flipv(),
         }
     }
 

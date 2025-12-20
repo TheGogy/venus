@@ -1,4 +1,5 @@
 use chess::types::{color::Color, moves::Move, square::Square};
+use utils::memory::boxed_zeroed;
 
 use super::{HistEntry, movebuffer::MoveBuffer};
 
@@ -7,12 +8,12 @@ use super::{HistEntry, movebuffer::MoveBuffer};
 /// This is used to record the value of quiet moves during the search,
 /// in order to help with move ordering.
 #[derive(Clone, Debug)]
-pub struct QuietHist([[[HistEntry; Square::NUM]; Square::NUM]; Color::NUM]);
+pub struct QuietHist(Box<[[[HistEntry; Square::NUM]; Square::NUM]; Color::NUM]>);
 
 // TODO: add tunable history defaults.
 impl Default for QuietHist {
     fn default() -> Self {
-        Self([[[HistEntry::default(); Square::NUM]; Square::NUM]; Color::NUM])
+        Self(boxed_zeroed())
     }
 }
 

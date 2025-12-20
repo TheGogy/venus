@@ -8,7 +8,7 @@ use crate::{history::conthist::PieceTo, threading::thread::Thread};
 /// Position.
 /// This contains a representation of the board itself and the NNUE updated with the most recently
 /// evaluated board.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Position {
     pub board: Board,
     nnue: NNUE,

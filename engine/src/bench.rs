@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use crate::{interface::Engine, position::Position, threading::thread::Thread, time_management::timemanager::TimeManager, tt::table::TT};
+use crate::{interface::Engine, position::Position, threading::thread::Thread, tt::table::TT};
 
 // NOTE:  Make sure that bench depth is at least as high as the highest of any min depths in tuning.
 const BENCH_DEPTH: i16 = 14;
@@ -14,7 +14,7 @@ impl Engine {
         for fen in FENS {
             let tt = TT::default();
             let mut pos: Position = format!("fen {fen}").parse().unwrap();
-            let mut thread = Thread::new(TimeManager::fixed_depth(BENCH_DEPTH));
+            let mut thread = Thread::fixed_depth(BENCH_DEPTH);
 
             let start = Instant::now();
             pos.iterative_deepening::<false>(&mut thread, &tt);
@@ -69,4 +69,5 @@ const FENS: &[&str] = &[
     "8/8/1KP5/3r4/8/8/8/k7 w - - 0 1",
     "bbqnnrkr/pppppppp/8/8/8/8/PPPPPPPP/BBQNNRKR w HFhf - 0 1",
     "nqbnrkrb/pppppppp/8/8/8/8/PPPPPPPP/NQBNRKRB w KQkq - 0 1",
+    "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1",
 ];

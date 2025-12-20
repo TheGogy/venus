@@ -37,7 +37,7 @@ impl Position {
         let total_material =
             self.board.p_bb(Piece::Knight).nbits() as i32 * ms_knight() +
             self.board.p_bb(Piece::Bishop).nbits() as i32 * ms_bishop() +
-            self.board.p_bb(Piece::Rook).nbits()   as i32 * ms_rook() +
+            self.board.p_bb(Piece::Rook).nbits()   as i32 * ms_rook()   +
             self.board.p_bb(Piece::Queen).nbits()  as i32 * ms_queen();
 
         ms_base() + (total_material / 32)

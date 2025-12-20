@@ -1,98 +1,110 @@
-use ::utils::memory::Align64;
-use chess::types::{color::Color, eval::Eval, piece::Piece, square::Square};
+use std::sync::OnceLock;
 
-use crate::{accumulator::HalfAcc, simd::vi16::CHUNK_SIZE_I16};
+use ::utils::memory::Align64;
+use chess::types::{color::Color, piece::Piece, square::Square};
+
+use crate::simd::simd;
 
 // Quantization factors.
 pub const SCALE: i32 = 400;
-pub const QA: i32 = 255;
-pub const QB: i32 = 64;
-pub const QAB: i32 = QA * QB;
+pub const FT_QUANT: i32 = 255;
+pub const L1_QUANT: i32 = 64;
 
-// Number of features in the input layer.
-pub const FEATURES: usize = Piece::NUM * Square::NUM * 2;
+// HACK: This should just be a u32 everywhere, but avx2 decided to be special
+pub const L1Q_BITS: simd::ShiftT = L1_QUANT.trailing_zeros() as simd::ShiftT;
+
+// Invert quantization steps (clamp by FT_QUANT, downscale by FT_SHIFT, quantize by FT_QUANT * L1_QUANT).
+pub const L1_DEQUANT: f32 = (1 << (16 - L1Q_BITS)) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
 
 // Layer sizes.
-pub const L1: usize = 2048;
+pub const FEATURES: usize = Color::NUM * Piece::NUM * Square::NUM;
+pub const L1: usize = 1792;
+pub const L2: usize = 16;
+pub const L3: usize = 32;
 
-const _: () = assert!(L1 % CHUNK_SIZE_I16 == 0);
+const _: () = assert!(L1.is_multiple_of(simd::CHUNK_SIZE_I16));
 
 // King bucket map.
-// We only use the buckets on the A-D files, the E-H files are mirrored, but we want to store them
-// differently in the finny table, so it is easier to store the bucket map like this.
+// We only use the buckets on the A-D files, the E-H files are mirrored and go to the same bucket
+// on the opposite side - but we want to store them separately in the finny table, so it is easier
+// to store the bucket map like this.
 #[rustfmt::skip]
-const BUCKET_MAP: [usize; 64] = [
-    0,  1,  2,  3, 13, 12, 11, 10,
-    4,  4,  5,  5, 15, 15, 14, 14,
-    6,  6,  6,  6, 16, 16, 16, 16,
-    7,  7,  7,  7, 17, 17, 17, 17,
-    8,  8,  8,  8, 18, 18, 18, 18,
-    8,  8,  8,  8, 18, 18, 18, 18,
-    9,  9,  9,  9, 19, 19, 19, 19,
-    9,  9,  9,  9, 19, 19, 19, 19,
+pub const BUCKET_MAP: [usize; 64] = [
+  0,  1,  2,  3,  19, 18, 17, 16,
+  4,  5,  6,  7,  23, 22, 21, 20,
+  8,  8,  9,  9,  25, 25, 24, 24,
+  10, 10, 11, 11, 27, 27, 26, 26,
+  12, 12, 13, 13, 29, 29, 28, 28,
+  12, 12, 13, 13, 29, 29, 28, 28,
+  14, 14, 15, 15, 31, 31, 30, 30,
+  14, 14, 15, 15, 31, 31, 30, 30
 ];
 
-pub const NB_INPUT_BUCKETS: usize = 10;
+/// We use 32 King positions defined by BUCKET_MAP.
+/// If the King is on any of the E-H files, we mirror all the features.
+pub const INPUT_KING_POSNS: usize = 32;
+pub const NB_INPUT_BUCKETS: usize = INPUT_KING_POSNS / 2;
 pub const NB_OUTPUT_BUCKETS: usize = 8;
 
-/// Weights and biases for the NNUE.
+/// Weights and biases for the NNUE ready for inference.
 #[repr(C)]
 #[rustfmt::skip]
+#[derive(Clone, Copy)]
 pub struct NNUEData {
-    pub feature_weights: [Align64<[i16; L1]>; FEATURES * NB_INPUT_BUCKETS],
-    pub feature_bias:     Align64<[i16; L1]>,
-    pub output_weights: [[Align64<[i16; L1]>; 2]; NB_OUTPUT_BUCKETS],
-    pub output_bias:              [i16; NB_OUTPUT_BUCKETS],
+    pub ftw: [Align64<[i16; L1]>; FEATURES * NB_INPUT_BUCKETS],
+    pub ftb:  Align64<[i16; L1]>,
+    pub l1w: [Align64<[i8 ; L1 * L2]>; NB_OUTPUT_BUCKETS],
+    pub l1b: [Align64<[f32; L2]>;      NB_OUTPUT_BUCKETS],
+    pub l2w: [Align64<[f32; L2 * L3]>; NB_OUTPUT_BUCKETS],
+    pub l2b: [Align64<[f32; L3]>;      NB_OUTPUT_BUCKETS],
+    pub l3w: [Align64<[f32; L3]>;      NB_OUTPUT_BUCKETS],
+    pub l3b: [f32;                     NB_OUTPUT_BUCKETS],
 }
 
-// Raw NNUE data.
-pub static NNUE_EMBEDDED: NNUEData = unsafe { std::mem::transmute(*include_bytes!(env!("NNUE_EVALFILE"))) };
-
-impl NNUEData {
-    /// Get the weights for the given feature.
-    pub const fn feats_for(&self, mut ksq: Square, perspective: Color, p: Piece, c: Color, mut s: Square) -> &HalfAcc {
-        const PIECE_STRIDE: usize = Square::NUM;
-        const OPPONENT_STRIDE: usize = Square::NUM * Piece::NUM;
-        const BUCKET_STRIDE: usize = Square::NUM * Piece::NUM * 2;
-
-        if king_mirrored(ksq) {
-            s = s.fliph();
-            ksq = ksq.fliph();
-        }
-
-        let bucket = input_bucket(ksq, perspective);
-        let opponent = c.idx() ^ perspective.idx();
-
-        let idx = bucket * BUCKET_STRIDE + opponent * OPPONENT_STRIDE + p.idx() * PIECE_STRIDE + s.relative(perspective).idx();
-
-        &NNUE_EMBEDDED.feature_weights[idx]
-    }
+/// Raw output straight from Bullet.
+/// Factoriser merged in bullet output.
+#[repr(C)]
+#[rustfmt::skip]
+#[derive(Clone, Copy)]
+pub struct RawNNUEData {
+    pub ftw:   [f32; L1 * FEATURES * NB_INPUT_BUCKETS],
+    pub ftb:   [f32; L1],
+    pub l1w: [[[f32; L2]; NB_OUTPUT_BUCKETS]; L1],
+    pub l1b:  [[f32; L2]; NB_OUTPUT_BUCKETS],
+    pub l2w: [[[f32; L3]; NB_OUTPUT_BUCKETS]; L2],
+    pub l2b:  [[f32; L3]; NB_OUTPUT_BUCKETS],
+    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3],
+    pub l3b:   [f32; NB_OUTPUT_BUCKETS],
 }
 
-// Whether or not the board should be mirrored.
-pub const fn king_mirrored(ksq: Square) -> bool {
-    ksq.file().idx() > 3
+/// Weights and biases for the NNUE, quantized and embedded in the executable.
+#[repr(C)]
+#[rustfmt::skip]
+#[derive(Clone, Copy)]
+pub struct QuantNNUEData {
+    pub ftw:   [i16; L1 * FEATURES * NB_INPUT_BUCKETS],
+    pub ftb:   [i16; L1],
+    pub l1w: [[[i8 ; L2]; NB_OUTPUT_BUCKETS]; L1],
+    pub l1b:  [[f32; L2]; NB_OUTPUT_BUCKETS],
+    pub l2w: [[[f32; L3]; NB_OUTPUT_BUCKETS]; L2],
+    pub l2b:  [[f32; L3]; NB_OUTPUT_BUCKETS],
+    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3],
+    pub l3b:   [f32; NB_OUTPUT_BUCKETS],
 }
 
-/// Get the current input bucket to use.
-pub const fn input_bucket(ksq: Square, c: Color) -> usize {
-    BUCKET_MAP[ksq.relative(c).idx()]
-}
+/// Raw NNUE data.
+pub static NNUE_EMBEDDED: QuantNNUEData = unsafe { std::mem::transmute(*include_bytes!(env!("NNUE_EVALFILE"))) };
 
-/// Get the current output bucket to use.
-pub const fn output_bucket_idx(nb_pieces: usize) -> usize {
-    const DIV: usize = usize::div_ceil(32, NB_OUTPUT_BUCKETS);
-    let obkt = (nb_pieces - 2) / DIV;
-    assert!(obkt < NB_OUTPUT_BUCKETS);
-    obkt
-}
+static PERMUTED_NNUE: OnceLock<Box<NNUEData>> = OnceLock::new();
 
-/// Whether the king has changed position.
-pub const fn king_changed(ks1: Square, ks2: Square, c: Color) -> bool {
-    (king_mirrored(ks1) != king_mirrored(ks2)) || (input_bucket(ks1, c) != input_bucket(ks2, c))
-}
-
-/// Dequantize the output of the network and turn it to a useable evaluation.
-pub const fn dequantize(sum: i32, obkt: usize) -> Eval {
-    Eval((sum / QA + NNUE_EMBEDDED.output_bias[obkt] as i32) * SCALE / QAB)
+/// Get the NNUE and permute it into a format for fast inference.
+/// Only runs once and stores the result.
+pub fn get_permuted_nnue() -> &'static NNUEData {
+    // This funny business is here to make sure we never put the NNUE on the stack.
+    PERMUTED_NNUE.get_or_init(|| unsafe {
+        let mut nn = Box::<QuantNNUEData>::new_uninit();
+        std::ptr::copy_nonoverlapping(&NNUE_EMBEDDED as *const QuantNNUEData, nn.as_mut_ptr(), 1);
+        let nn = nn.assume_init();
+        nn.permute()
+    })
 }

@@ -4,6 +4,7 @@ use chess::types::{
     piece::{CPiece, Piece},
     square::Square,
 };
+use utils::memory::boxed_zeroed;
 
 use super::{HistEntry, movebuffer::MoveBuffer};
 
@@ -15,12 +16,12 @@ pub const CAP_HIST_MAX: i32 = 16384;
 /// in order to help with move ordering.
 /// We can use Piece::NUM - 1 because kings cannot be captured by a legal move.
 #[derive(Clone, Debug)]
-pub struct CaptureHist([[[HistEntry; Piece::NUM - 1]; Square::NUM]; CPiece::NUM]);
+pub struct CaptureHist(Box<[[[HistEntry; Piece::NUM - 1]; Square::NUM]; CPiece::NUM]>);
 
 // TODO: add tunable history defaults.
 impl Default for CaptureHist {
     fn default() -> Self {
-        Self([[[HistEntry::default(); Piece::NUM - 1]; Square::NUM]; CPiece::NUM])
+        Self(boxed_zeroed())
     }
 }
 

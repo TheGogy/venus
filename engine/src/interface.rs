@@ -128,11 +128,16 @@ impl Engine {
         println!("  nodes: {total}");
         println!("  time:  {duration:?}");
         println!("  perf:  {perf} Mnps");
+        println!("  mp?:   {MP}");
         println!("{:=^1$}", " <> ", 25);
     }
 
     /// Handle eval command.
     fn handle_eval(&mut self) {
+        if self.pos.board.in_check() {
+            println!("NOTE: In check - board will not be evaluated.");
+        }
+
         println!("{}", self.pos.evaluate());
     }
 

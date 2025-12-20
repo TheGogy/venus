@@ -58,12 +58,15 @@ impl PieceTo {
 
     /// The index of this PieceTo.
     pub const fn idx(self) -> usize {
+        assert!(self.0 < PieceTo::NUM);
         self.0
     }
 
     /// Construct a PieceTo from a piece and a move.
+    /// (this should be used *after* the move has been made on the board.)
     pub const fn from(b: &Board, m: Move) -> Self {
-        let p = b.pc_at(m.src());
-        Self(p.idx() * Square::NUM + m.dst().idx())
+        let s = m.src();
+        let p = b.pc_at(s);
+        Self(p.idx() * Square::NUM + s.idx())
     }
 }

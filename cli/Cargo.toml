@@ -6,6 +6,7 @@ authors = ["TheGogy"]
 
 [dependencies]
 engine = { path = "../engine" }
+nnue = { path = "../nnue/" }
 
 [features]
 tune = ["engine/tune"]

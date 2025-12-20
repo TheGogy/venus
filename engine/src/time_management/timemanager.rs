@@ -50,11 +50,6 @@ impl TimeManager {
         Self { start, tc, opt, max, global_stop, global_nodes, last_check: 0, move_nodes: [[0; Square::NUM]; Square::NUM] }
     }
 
-    /// Initialize a new time manager that only searches to a fixed depth.
-    pub fn fixed_depth(depth: Depth) -> Self {
-        Self::new(Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)), TimeControl::FixedDepth(depth), Color::White)
-    }
-
     /// Whether we should start the given iteration.
     pub fn should_start_iter(&mut self, depth: Depth, nodes: u64, best_move: Move) -> bool {
         if self.is_stopped() {

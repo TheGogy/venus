@@ -34,7 +34,7 @@ pub struct UCIReader {
 impl UCIReader {
     /// Start UCI reader.
     pub fn run(&self) {
-        println!("{NAME} v{VERSION} by {}", authors());
+        println!("{NAME} v{VERSION}-{} by {}", nnue::ARCH, authors());
 
         let stdin = io::stdin().lock();
         for line in stdin.lines().map(Result::unwrap) {
@@ -83,7 +83,6 @@ impl UCIReader {
     pub fn cmd_uci(&self) {
         println!("id name {NAME} v{VERSION}");
         println!("id author {}", authors());
-
         println!("{OPTS}");
 
         #[cfg(feature = "tune")]
@@ -92,21 +91,28 @@ impl UCIReader {
         println!("uciok");
     }
 
+    /// Parse a depth value from tokens.
+    fn parse_depth(&self, tokens: &mut SplitWhitespace) -> Result<usize, &'static str> {
+        let depth: usize = tokens.next().ok_or("No depth value!")?.parse().map_err(|_| "Invalid depth value!")?;
+
+        if depth == 0 {
+            return Err("Invalid depth value!");
+        }
+
+        Ok(depth)
+    }
+
     /// perft command.
     pub fn cmd_perft(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
-        match tokens.next().ok_or("No depth value!")?.parse() {
-            Ok(d) if d > 0 => self.interface.handle_command(EngineCommand::Perft(d)),
-            _ => return Err("Invalid depth value!"),
-        }
+        let depth = self.parse_depth(tokens)?;
+        self.interface.handle_command(EngineCommand::Perft(depth));
         Ok(())
     }
 
     /// perftmp command.
     pub fn cmd_perftmp(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
-        match tokens.next().ok_or("No depth value!")?.parse() {
-            Ok(d) if d > 0 => self.interface.handle_command(EngineCommand::PerftMp(d)),
-            _ => return Err("Invalid depth value!"),
-        }
+        let depth = self.parse_depth(tokens)?;
+        self.interface.handle_command(EngineCommand::PerftMp(depth));
         Ok(())
     }
 
@@ -126,21 +132,21 @@ impl UCIReader {
 
     /// setoption command.
     pub fn cmd_setoption(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
-        let name = match tokens.next() {
-            Some("name") => tokens.next().ok_or("No option name!")?.to_owned(),
-            _ => return Err("Invalid option command!"),
-        };
+        if tokens.next() != Some("name") {
+            return Err("Invalid option command!");
+        }
+        let name = tokens.next().ok_or("No option name!")?.to_owned();
 
-        let value = match tokens.next() {
-            Some("value") => tokens.next().ok_or("No option value!")?.to_owned(),
-            _ => return Err("Invalid option command!"),
-        };
+        if tokens.next() != Some("value") {
+            return Err("Invalid option command!");
+        }
+        let value = tokens.next().ok_or("No option value!")?.to_owned();
 
         self.interface.handle_command(EngineCommand::SetOpt(name, value));
         Ok(())
     }
 
-    /// position command.
+    /// move command.
     pub fn cmd_move(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
         let m = tokens.collect::<Vec<&str>>().join(" ");
         self.interface.handle_command(EngineCommand::Move(m));

@@ -1,4 +1,5 @@
 use chess::types::{Depth, color::Color, eval::Eval};
+use utils::memory::boxed_zeroed;
 
 use super::HistEntry;
 
@@ -12,11 +13,11 @@ const CORR_HIST_MAX: i32 = 1024;
 /// searches.
 /// https://www.chessprogramming.org/Static_Evaluation_Correction_History
 #[derive(Clone, Debug)]
-pub struct CorrHist([[HistEntry; CORR_HIST_SIZE]; Color::NUM]);
+pub struct CorrHist(Box<[[HistEntry; CORR_HIST_SIZE]; Color::NUM]>);
 
 impl Default for CorrHist {
     fn default() -> Self {
-        Self([[HistEntry::default(); CORR_HIST_SIZE]; Color::NUM])
+        Self(boxed_zeroed())
     }
 }
 
