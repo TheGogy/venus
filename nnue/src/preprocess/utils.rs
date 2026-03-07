@@ -13,21 +13,25 @@ macro_rules! impl_load_write {
     ($t:ty) => {
         impl $t {
             /// Read in NNUE data from a raw file path.
+            /// # Errors
+            ///     Will error if the path is invalid, or the data is the incorrect size.
             pub fn load_from_file(path: &PathBuf) -> Result<Box<Self>> {
                 let mut file = File::open(path)?;
 
                 let expected = std::mem::size_of::<$t>();
+                #[allow(clippy::cast_possible_truncation)]
                 let actual = file.metadata()?.len() as usize;
 
                 if expected != actual {
                     return Err(Error::raw(
                         ErrorKind::InvalidValue,
-                        format!("Error loading NNUE: Expected {expected} bytes, found {actual} bytes!"),
+                        format!("Error loading {}: Expected {expected} bytes, found {actual} bytes!", stringify!($t)),
                     ));
                 }
 
                 unsafe {
                     let mut data: Box<$t> = boxed_zeroed();
+                    #[allow(clippy::ref_as_ptr)]
                     let buf = std::slice::from_raw_parts_mut((data.as_mut() as *mut $t).cast::<u8>(), expected);
                     file.read_exact(buf)?;
                     Ok(data)
@@ -35,11 +39,14 @@ macro_rules! impl_load_write {
             }
 
             /// Write the NNUE data to a raw file.
+            /// # Errors
+            ///     Will error if the path cannot be written to.
             pub fn write_to_file(&self, path: &PathBuf) -> Result<()> {
                 let mut file = File::create(path)?;
                 let len = std::mem::size_of::<$t>();
 
                 unsafe {
+                    #[allow(clippy::ref_as_ptr)]
                     let buf = std::slice::from_raw_parts((self as *const $t).cast::<u8>(), len);
                     file.write_all(buf)?;
                 }

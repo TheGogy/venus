@@ -1,12 +1,14 @@
-pub mod capturehist;
 pub mod conthist;
 pub mod corrhist;
 pub mod movebuffer;
+pub mod noisyhist;
 pub mod quiethist;
 
 use chess::types::Depth;
 
-use crate::tunables::params::tunables::*;
+use crate::tunables::params::tunables::{
+    hist_bonus_base, hist_bonus_max, hist_bonus_mult, hist_malus_base, hist_malus_max, hist_malus_mult,
+};
 
 /// Entry within a history table.
 #[derive(Clone, Copy, Debug, Default)]
@@ -15,12 +17,13 @@ pub struct HistEntry(i16);
 
 impl HistEntry {
     /// History gravity.
-    /// https://www.chessprogramming.org/History_Heuristic
+    /// <https://www.chessprogramming.org/History_Heuristic>
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn gravity<const MAX: i32>(&mut self, bonus: i16) {
         // Do calculations as i32
         let x = self.0 as i32;
         let b = bonus as i32;
-        self.0 += (b - x * b.abs() / MAX) as i16
+        self.0 += (b - x * b.abs() / MAX) as i16;
     }
 }
 

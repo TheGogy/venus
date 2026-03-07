@@ -9,10 +9,7 @@ else
 	NAME := $(EXE)
 endif
 
-FEATURES_ARG :=
-ifneq ($(strip $(features)),)
-FEATURES_ARG := --features $(features)
-endif
+FEATURES_ARG := --features embed,$(FEATURES)
 
 RUSTFLAGS_BASE := -C target-cpu=$(ARCH)
 RUSTFLAGS_PGO_GEN := $(RUSTFLAGS_BASE) -C profile-generate=$(DIR)
@@ -21,7 +18,6 @@ RUSTFLAGS_PGO_USE := $(RUSTFLAGS_BASE) -C profile-use=$(DIR)/merged.profdata -C 
 .PHONY: rule dir clean release
 
 rule:
-	cargo clean
 	cargo rustc --release --package cli --bins $(FEATURES_ARG) -- $(RUSTFLAGS_BASE) --emit link=$(NAME)
 
 dir:
@@ -30,6 +26,7 @@ dir:
 clean:
 	rm -rf $(DIR)
 	rm -f *.pdb
+	cargo clean
 
 release: dir
 	cargo rustc --release --package cli --bins $(FEATURES_ARG) -- $(RUSTFLAGS_PGO_GEN) --emit link=$(NAME)

@@ -13,11 +13,11 @@ use chess::{
 
 use crate::{
     history::{
-        capturehist::CaptureHist,
         conthist::{CONT_NUM, ContHist, PieceTo},
         corrhist::{CorrHist, correction_bonus},
         hist_delta,
         movebuffer::MoveBuffer,
+        noisyhist::NoisyHist,
         quiethist::QuietHist,
     },
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
@@ -45,7 +45,7 @@ pub struct Thread {
 
     // Histories.
     pub hist_quiet: QuietHist,
-    pub hist_noisy: CaptureHist,
+    pub hist_noisy: NoisyHist,
     pub hist_conts: [ContHist; CONT_NUM],
     pub hist_corr_pawn: CorrHist,
     pub hist_corr_major_w: CorrHist,
@@ -70,7 +70,7 @@ impl Thread {
             stack: [SearchStackEntry::default(); MAX_PLY],
 
             hist_quiet: QuietHist::default(),
-            hist_noisy: CaptureHist::default(),
+            hist_noisy: NoisyHist::default(),
             hist_conts: array::from_fn(|_| ContHist::default()),
 
             hist_corr_pawn: CorrHist::default(),
@@ -99,6 +99,7 @@ impl Thread {
     }
 
     /// Whether we should start the next iteration.
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     pub fn should_start_iter(&mut self) -> bool {
         self.depth < MAX_PLY as Depth && self.tm.should_start_iter(self.depth + 1, self.nodes, self.best_move())
     }

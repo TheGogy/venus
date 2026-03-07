@@ -8,7 +8,7 @@ pub use simdvec::*;
 mod fallback {
     use utils::memory::Align64;
 
-    use crate::{arch::*, inference::accumulator::HalfAcc};
+    use crate::{arch::*, inference::accumulator::HalfAcc, simd::simd};
 
     const L1_OFF: usize = L1 / 2;
 
@@ -69,13 +69,13 @@ mod fallback {
 
         // --------------------- L3 ---------------------
 
-        let mut sum = nn.l3b[obkt];
-
+        let mut l3_prods = [0.0; L3];
         for i in 0..L3 {
-            sum += l2_out[i] * nn.l3w[obkt][i];
+            l3_prods[i] = l2_out[i] * nn.l3w[obkt][i];
         }
 
-        sum
+        // Ensure same order of operations
+        simd::reduce_add(&mut l3_prods, L3) + nn.l3b[obkt]
     }
 }
 
@@ -91,7 +91,15 @@ mod simdvec {
 
     const L1_OFF: usize = L1 / 2;
 
-    #[allow(clippy::erasing_op, clippy::identity_op, clippy::needless_range_loop)]
+    #[allow(
+        clippy::erasing_op,
+        clippy::identity_op,
+        clippy::needless_range_loop,
+        clippy::cognitive_complexity,
+        clippy::too_many_lines,
+        clippy::cast_possible_truncation,
+        clippy::cast_ptr_alignment
+    )]
     pub fn propagate_all_layers(nn: &NNUEData, stm: &HalfAcc, opp: &HalfAcc, obkt: usize) -> f32 {
         let mut ft_out = Align64([0u8; L1]);
         let mut l1_out = Align64([0.0; L2]);

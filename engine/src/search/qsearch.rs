@@ -11,7 +11,7 @@ use crate::{
         entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_QS, TT_DEPTH_UNSEARCHED},
         table::TT,
     },
-    tunables::params::tunables::*,
+    tunables::params::tunables::{fp_qs_base, sp_qs_margin},
 };
 
 use super::NodeType;
@@ -20,6 +20,7 @@ impl Position {
     /// Quiescence search.
     /// We use this to avoid the "horizon" effect, by continuing the search
     /// until all captures have been made.
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines, clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     pub fn qsearch<NT: NodeType>(&mut self, t: &mut Thread, tt: &TT, mut alpha: Eval, beta: Eval) -> Eval {
         // Check for upcoming repetition.
         if alpha < Eval::DRAW && self.board.upcoming_repetition(t.ply) {
@@ -68,7 +69,7 @@ impl Position {
             tt_bound = tte.bound();
             tt_depth = tte.depth();
             tt_pv = tte.pv();
-        };
+        }
 
         // TT cutoff.
         // If the bound from the tt is tighter than the current search value, just return it.
@@ -105,7 +106,7 @@ impl Position {
 
             // Use TT score if it's more accurate than static eval.
             if tt_value.is_valid() && tt_bound.is_usable(tt_value, best_value) {
-                best_value = tt_value
+                best_value = tt_value;
             }
 
             // Beta cutoff from stand pat.
@@ -125,7 +126,7 @@ impl Position {
 
             // Raise alpha if our stand pat evaluation is better.
             alpha = alpha.max(best_value);
-        };
+        }
 
         // -----------------------------------
         //             Moves loop
@@ -194,7 +195,7 @@ impl Position {
         // Adjust beta cutoff values to be more conservative.
         // This prevents qsearch from returning overly optimistic evaluations.
         if best_value >= beta && best_value.nonterminal() {
-            best_value = (best_value + beta) / 2
+            best_value = (best_value + beta) / 2;
         }
 
         // Save to TT.
@@ -208,7 +209,7 @@ impl Position {
         //
         // We can't use an exact bound as we don't know if we've searched all the moves.
         let bound = if best_value >= beta { Bound::Lower } else { Bound::Upper };
-        let depth = TT_DEPTH_QS + self.board.in_check() as Depth;
+        let depth = TT_DEPTH_QS + Depth::from(self.board.in_check());
         tt.insert(self.hash(), bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
 
         best_value

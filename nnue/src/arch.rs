@@ -1,5 +1,3 @@
-use std::sync::OnceLock;
-
 use ::utils::memory::Align64;
 use chess::types::{color::Color, piece::Piece, square::Square};
 
@@ -14,6 +12,7 @@ pub const L1_QUANT: i32 = 64;
 pub const L1Q_BITS: simd::ShiftT = L1_QUANT.trailing_zeros() as simd::ShiftT;
 
 // Invert quantization steps (clamp by FT_QUANT, downscale by FT_SHIFT, quantize by FT_QUANT * L1_QUANT).
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 pub const L1_DEQUANT: f32 = (1 << (16 - L1Q_BITS)) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
 
 // Layer sizes.
@@ -40,7 +39,7 @@ pub const BUCKET_MAP: [usize; 64] = [
   14, 14, 15, 15, 31, 31, 30, 30
 ];
 
-/// We use 32 King positions defined by BUCKET_MAP.
+/// We use 32 King positions defined by [`BUCKET_MAP`].
 /// If the King is on any of the E-H files, we mirror all the features.
 pub const INPUT_KING_POSNS: usize = 32;
 pub const NB_INPUT_BUCKETS: usize = INPUT_KING_POSNS / 2;
@@ -49,7 +48,6 @@ pub const NB_OUTPUT_BUCKETS: usize = 8;
 /// Weights and biases for the NNUE ready for inference.
 #[repr(C)]
 #[rustfmt::skip]
-#[derive(Clone, Copy)]
 pub struct NNUEData {
     pub ftw: [Align64<[i16; L1]>; FEATURES * NB_INPUT_BUCKETS],
     pub ftb:  Align64<[i16; L1]>,
@@ -65,7 +63,6 @@ pub struct NNUEData {
 /// Factoriser merged in bullet output.
 #[repr(C)]
 #[rustfmt::skip]
-#[derive(Clone, Copy)]
 pub struct RawNNUEData {
     pub ftw:   [f32; L1 * FEATURES * NB_INPUT_BUCKETS],
     pub ftb:   [f32; L1],
@@ -80,7 +77,6 @@ pub struct RawNNUEData {
 /// Weights and biases for the NNUE, quantized and embedded in the executable.
 #[repr(C)]
 #[rustfmt::skip]
-#[derive(Clone, Copy)]
 pub struct QuantNNUEData {
     pub ftw:   [i16; L1 * FEATURES * NB_INPUT_BUCKETS],
     pub ftb:   [i16; L1],
@@ -90,21 +86,4 @@ pub struct QuantNNUEData {
     pub l2b:  [[f32; L3]; NB_OUTPUT_BUCKETS],
     pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3],
     pub l3b:   [f32; NB_OUTPUT_BUCKETS],
-}
-
-/// Raw NNUE data.
-pub static NNUE_EMBEDDED: QuantNNUEData = unsafe { std::mem::transmute(*include_bytes!(env!("NNUE_EVALFILE"))) };
-
-static PERMUTED_NNUE: OnceLock<Box<NNUEData>> = OnceLock::new();
-
-/// Get the NNUE and permute it into a format for fast inference.
-/// Only runs once and stores the result.
-pub fn get_permuted_nnue() -> &'static NNUEData {
-    // This funny business is here to make sure we never put the NNUE on the stack.
-    PERMUTED_NNUE.get_or_init(|| unsafe {
-        let mut nn = Box::<QuantNNUEData>::new_uninit();
-        std::ptr::copy_nonoverlapping(&NNUE_EMBEDDED as *const QuantNNUEData, nn.as_mut_ptr(), 1);
-        let nn = nn.assume_init();
-        nn.permute()
-    })
 }

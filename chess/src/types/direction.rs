@@ -19,7 +19,7 @@ pub enum Direction {
 /// Relative directions.
 impl Direction {
     /// Gets the direction up, relative to the color.
-    pub const fn up(c: Color) -> Direction {
+    pub const fn up(c: Color) -> Self {
         match c {
             Color::White => Self::North,
             Color::Black => Self::South,
@@ -27,7 +27,7 @@ impl Direction {
     }
 
     /// Gets the direction up + left, relative to the color.
-    pub const fn ul(c: Color) -> Direction {
+    pub const fn ul(c: Color) -> Self {
         match c {
             Color::White => Self::NorthWest,
             Color::Black => Self::SouthEast,
@@ -35,7 +35,7 @@ impl Direction {
     }
 
     /// Gets the direction up + right, relative to the color.
-    pub const fn ur(c: Color) -> Direction {
+    pub const fn ur(c: Color) -> Self {
         match c {
             Color::White => Self::NorthEast,
             Color::Black => Self::SouthWest,
@@ -46,7 +46,7 @@ impl Direction {
 /// Move a bitboard by a direction.
 impl Bitboard {
     #[rustfmt::skip]
-    pub const fn shift(self, direction: Direction) -> Bitboard {
+    pub const fn shift(self, direction: Direction) -> Self {
         match direction {
             Direction::North     => Self(self.0 << 8),
             Direction::South     => Self(self.0 >> 8),
@@ -82,12 +82,12 @@ pub const fn sliding_ray(d: Direction, s: usize, occ: u64) -> Bitboard {
 impl Square {
     /// Add a direction to a square.
     pub const fn add_dir(self, dir: Direction) -> Self {
-        Square::from_raw((self as u8).wrapping_add(dir as u8))
+        Self::from_raw((self as u8).wrapping_add(dir as u8))
     }
 
     /// Subtract a direction from a square.
     pub const fn sub_dir(self, dir: Direction) -> Self {
-        Square::from_raw((self as u8).wrapping_sub(dir as u8))
+        Self::from_raw((self as u8).wrapping_sub(dir as u8))
     }
 }
 

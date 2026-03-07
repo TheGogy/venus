@@ -29,7 +29,7 @@ impl Position {
             return nb_moves;
         }
 
-        for m in ml[..nb_moves].iter() {
+        for m in &ml[..nb_moves] {
             self.board.make_move(*m);
             let n = self.perftmp_driver::<false>(t, depth - 1);
             self.board.undo_move();
@@ -50,6 +50,7 @@ mod tests {
     use crate::position::Position;
 
     #[test]
+    #[allow(clippy::unreadable_literal)]
     fn test_perftmp() {
         // Same test positions as perft.
         #[rustfmt::skip]

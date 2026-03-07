@@ -13,6 +13,7 @@ impl NonZeroIndicies {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 const NNZ_OFFSETS: NonZeroIndicies = {
     let mut table = [[0; 8]; 256];
 
@@ -25,7 +26,7 @@ const NNZ_OFFSETS: NonZeroIndicies = {
             j &= j - 1;
             k += 1;
         }
-        i += 1
+        i += 1;
     }
 
     NonZeroIndicies { indicies: table }
@@ -42,14 +43,15 @@ pub struct SparseMat {
 
 impl Default for SparseMat {
     fn default() -> Self {
-        SparseMat { indices: Align64([0; L1 / 4]), count: 0, base: v128::zeroed_i() }
+        Self { indices: Align64([0; L1 / 4]), count: 0, base: v128::zeroed_i() }
     }
 }
 
 impl SparseMat {
     pub fn update(&mut self, x: simd::IVec, y: simd::IVec) {
         unsafe {
-            let mask = simd::nonzero_mask_i32(x) as simd::Mask32 | (simd::nonzero_mask_i32(y) as simd::Mask32) << simd::CHUNK_SIZE_I32;
+            let mask =
+                simd::Mask32::from(simd::nonzero_mask_i32(x)) | simd::Mask32::from(simd::nonzero_mask_i32(y)) << simd::CHUNK_SIZE_I32;
 
             let iptr = self.indices.as_mut_ptr();
 
@@ -75,7 +77,7 @@ impl SparseMat {
 // SIMD-compatible target.
 // TODO: support SSE ..??
 mod v128 {
-    use std::arch::x86_64::*;
+    use std::arch::x86_64::{__m128i, _mm_add_epi16, _mm_load_si128, _mm_set1_epi16, _mm_setzero_si128, _mm_storeu_si128};
     pub type IVec = __m128i;
 
     pub fn zeroed_i() -> IVec {

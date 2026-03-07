@@ -61,7 +61,7 @@ impl std::str::FromStr for Position {
                     None => return Err("Invalid move!"),
                 };
             }
-        };
+        }
 
         // Setup NNUE.
         let mut net = NNUE::default();

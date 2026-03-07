@@ -75,11 +75,6 @@ impl Square {
         Self::from_raw(self as u8 - 1)
     }
 
-    /// Iterate over all squares.
-    pub fn iter() -> impl Iterator<Item = Self> {
-        (0..64).map(Self::from_raw)
-    }
-
     /// Flip horizontal.
     pub const fn fliph(self) -> Self {
         Self::from_raw(self as u8 ^ 7)
@@ -87,7 +82,12 @@ impl Square {
 
     /// Flip vertical.
     pub const fn flipv(self) -> Self {
-        Self::from_raw(self as u8 ^ 56)
+        Self::from_raw(self as u8 ^ 0o70)
+    }
+
+    /// Iterate over all squares.
+    pub fn iter() -> impl Iterator<Item = Self> {
+        (0..64).map(Self::from_raw)
     }
 }
 
@@ -129,5 +129,5 @@ impl fmt::Display for Square {
 
 impl_from_type! {
     Square, u8, 64,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
+    [u8]
 }

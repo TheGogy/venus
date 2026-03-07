@@ -1,6 +1,9 @@
 // Just skip the whole file rustfmt, it's more readable this way.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
+// We will lose the signs on any i32 values but we will cast them back
+#![allow(clippy::cast_sign_loss)]
+
 // Constants and helpers for bit manipulation.
 use chess::types::moves::Move;
 
@@ -37,7 +40,7 @@ pub const fn pack_move(mv: Move)      -> u64 { (mv.0 as u64)         << SHIFT_MO
 pub const fn unpack_pv(data: u64)     -> bool  {   data & MASK_PV != 0 }
 pub const fn unpack_age(data: u64)    -> u8    { ((data & MASK_AGE) >> SHIFT_AGE) as u8 }
 pub const fn unpack_bound(data: u64)  -> Bound { unsafe { std::mem::transmute(((data & MASK_BOUND) >> SHIFT_BOUND) as u8) } }
-pub const fn unpack_eval(data: u64)   -> i16   { ((data & MASK_EVAL) >> SHIFT_EVAL) as i16 }
-pub const fn unpack_value(data: u64)  -> i16   { ((data & MASK_VALUE) >> SHIFT_VALUE) as i16 }
+pub const fn unpack_eval(data: u64)   -> i16   { (((data & MASK_EVAL) >> SHIFT_EVAL) as u16).cast_signed() }
+pub const fn unpack_value(data: u64)  -> i16   { (((data & MASK_VALUE) >> SHIFT_VALUE) as u16).cast_signed() }
 pub const fn unpack_depth(data: u64)  -> u8    { ((data & MASK_DEPTH) >> SHIFT_DEPTH) as u8 }
 pub const fn unpack_move(data: u64)   -> Move  { Move(((data & MASK_MOVE) >> SHIFT_MOVE) as u16) }

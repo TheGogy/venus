@@ -7,6 +7,9 @@ authors = ["TheGogy"]
 [dependencies]
 engine = { path = "../engine" }
 nnue = { path = "../nnue/" }
+clap = { version = "4.5.58", features = ["derive"] }
 
 [features]
 tune = ["engine/tune"]
+syzygy = ["engine/syzygy"]
+embed = ["nnue/embed"]

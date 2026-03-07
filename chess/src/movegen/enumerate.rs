@@ -123,7 +123,7 @@ impl Board {
 
         // Promotions.
         let promo = pawns & Bitboard::PR[self.stm.idx()] & !orth;
-        if promo.any() {
+        if promo.non_empty() {
             if MG::NOISY {
                 // Promotions with capture.
                 // We can move within pinmask as long as we stay within pinmask.
@@ -171,7 +171,7 @@ impl Board {
 
             epbb.bitloop(|src| {
                 // Our pawn is pinned but taking enemy pawn makes us leave pinmask.
-                if (src.bb() & diag).any() && (self.state.epsq.bb() & diag).is_empty() {
+                if (src.bb() & diag).non_empty() && (self.state.epsq.bb() & diag).is_empty() {
                     return;
                 }
 

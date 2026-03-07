@@ -1,6 +1,8 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+
 use utils::memory::boxed_zeroed;
 
-use crate::arch::*;
+use crate::arch::{FEATURES, FT_QUANT, L1, L1_QUANT, L2, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, QuantNNUEData, RawNNUEData};
 
 impl RawNNUEData {
     /// Quantize a network from Bullet and save it in a format that we can use for inference.

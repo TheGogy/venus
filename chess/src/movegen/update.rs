@@ -90,7 +90,7 @@ impl Board {
 
         // We have already determined if we are in check with update_checkers; don't do these
         // lookups unless absolutely necessary.
-        if state.checkers.any() {
+        if state.checkers.non_empty() {
             state.checkmask = self.pc_bb(opp, Piece::Pawn) & pawn_atk(self.stm, ksqs[self.stm.idx()])
                             | self.pc_bb(opp, Piece::Knight) & knight_atk(ksqs[self.stm.idx()])
         }

@@ -1,9 +1,12 @@
 [package]
 name = "nnue"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 
 [dependencies]
 utils = { path = "../utils" }
 chess = { path = "../chess" }
-clap = { version = "4.5.51", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive"] }
+
+[features]
+embed = []

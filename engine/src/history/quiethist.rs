@@ -20,7 +20,7 @@ impl Default for QuietHist {
 pub const QUIET_MAX: i32 = 8192;
 
 impl QuietHist {
-    /// The index into this QuietHist.
+    /// The index into this history.
     /// [color][from][to]
     const fn idx(c: Color, m: Move) -> (usize, usize, usize) {
         (c.idx(), m.src().idx(), m.dst().idx())
@@ -38,7 +38,7 @@ impl QuietHist {
         self.0[i.0][i.1][i.2].0 as i32
     }
 
-    /// Update this QuietHist with the given quiet moves.
+    /// Update the history with the given moves.
     pub fn update(&mut self, c: Color, best: Move, quiets: &MoveBuffer, bonus: i16, malus: i16) {
         for m in quiets {
             self.add_bonus(c, *m, -malus);

@@ -1,29 +1,33 @@
 use std::time::Instant;
 
-use crate::{interface::Engine, position::Position, threading::thread::Thread, tt::table::TT};
+use crate::{interface::Engine, position::Position, tb::probe::SyzygyTB, threading::thread::Thread, tt::table::TT};
 
 // NOTE:  Make sure that bench depth is at least as high as the highest of any min depths in tuning.
 const BENCH_DEPTH: i16 = 14;
 
 impl Engine {
     /// Runs a benchmark of the engine on a number of positions.
+    /// # Panics
+    ///     Shouldn't panic, all FENs are valid.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn run_bench() {
         let mut total_nodes = 0;
         let mut total_time = 0;
 
         for fen in FENS {
             let tt = TT::default();
+            let tb = SyzygyTB::default();
             let mut pos: Position = format!("fen {fen}").parse().unwrap();
             let mut thread = Thread::fixed_depth(BENCH_DEPTH);
 
             let start = Instant::now();
-            pos.iterative_deepening::<false>(&mut thread, &tt);
+            pos.iterative_deepening::<false>(&mut thread, &tt, &tb);
 
             total_time += start.elapsed().as_micros();
             total_nodes += thread.nodes;
         }
 
-        println!("{total_nodes} nodes {} nps", total_nodes * 1_000_000 / (total_time as u64).max(1))
+        println!("{total_nodes} nodes {} nps", total_nodes * 1_000_000 / (total_time as u64).max(1));
     }
 }
 

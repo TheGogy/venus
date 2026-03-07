@@ -98,11 +98,11 @@ impl Board {
             let mut own_atk = atk & self.c_bb(stm);
 
             // Prune pinned pieces.
-            if (occ & self.c_bb(!stm) & self.state.pin_diag[stm.idx()]).any() {
+            if (occ & self.c_bb(!stm) & self.state.pin_diag[stm.idx()]).non_empty() {
                 own_atk &= !diag_pinned[stm.idx()];
             }
 
-            if (occ & self.c_bb(!stm) & self.state.pin_orth[stm.idx()]).any() {
+            if (occ & self.c_bb(!stm) & self.state.pin_orth[stm.idx()]).non_empty() {
                 own_atk &= !orth_pinned[stm.idx()];
             }
 
@@ -159,7 +159,7 @@ impl Board {
         for p in Piece::iter() {
             let s = atk & self.pc_bb(c, p) & my_occ;
 
-            if s.any() {
+            if s.non_empty() {
                 return (CPiece::create(c, p), s.lsb());
             }
         }

@@ -6,11 +6,17 @@ use chess::{
 use utils::memory::boxed_zeroed;
 
 use crate::{
-    arch::{NNUEData, SCALE, get_permuted_nnue},
-    inference::{accumulator::*, features::*, finny::FinnyTable, propagate::propagate_all_layers},
+    arch::{NNUEData, SCALE},
+    embed::get_permuted_nnue,
+    inference::{
+        accumulator::{FullAcc, add1sub1, add1sub2, add2sub2},
+        features::{king_changed, output_bucket},
+        finny::FinnyTable,
+        propagate::propagate_all_layers,
+    },
 };
 
-/// We will search up to MAX_PLY - so we need 1 extra accumulator to account for any moves made in
+/// We will search up to [`MAX_PLY`] - so we need 1 extra accumulator to account for any moves made in
 /// that final search.
 const MAX_ACCS: usize = MAX_PLY + 1;
 
@@ -28,12 +34,12 @@ pub struct NNUE {
 impl Default for NNUE {
     fn default() -> Self {
         let nn = get_permuted_nnue();
-        NNUE { cache: FinnyTable::from_nn(nn), stack: boxed_zeroed(), dp_stack: [DirtyPieces::None; MAX_ACCS], idx: 0, nn }
+        Self { cache: FinnyTable::from_nn(nn), stack: boxed_zeroed(), dp_stack: [DirtyPieces::None; MAX_ACCS], idx: 0, nn }
     }
 }
 
 impl NNUE {
-    /// A move has been made in the position: add dirty pieces to the stack.
+    /// A move has been made in the position: add [`DirtyPieces`] to the stack.
     pub fn move_made(&mut self, b: &Board, dps: DirtyPieces) {
         self.idx += 1;
         self.dp_stack[self.idx] = dps;
@@ -46,7 +52,7 @@ impl NNUE {
 
     /// A move has been undone in the position: pop 1 off the stack.
     pub const fn move_undo(&mut self) {
-        self.idx -= 1
+        self.idx -= 1;
     }
 
     /// Update everything in the NNUE to match the current board.
@@ -61,8 +67,7 @@ impl NNUE {
         }
     }
 
-    /// Refresh the accumulator to match the current board by applying
-    /// DirtyPieces.
+    /// Refresh the accumulator to match the current board by applying [`DirtyPieces`].
     fn refresh(&mut self, b: &Board) {
         for c in Color::iter() {
             if self.stack[self.idx].correct[c.idx()] {
@@ -142,6 +147,7 @@ impl NNUE {
 
         let out = propagate_all_layers(self.nn, stm, opp, obkt);
 
+        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
         Eval((out * SCALE as f32) as i32)
     }
 }

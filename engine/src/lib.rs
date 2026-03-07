@@ -1,14 +1,18 @@
+#![warn(clippy::all, clippy::perf)]
+
 pub mod bench;
 pub mod interface;
+pub mod position;
+pub mod time_management;
 pub mod tunables;
 
 mod history;
 mod movepick;
-mod position;
 mod search;
 mod threading;
-mod time_management;
 mod tt;
+
+mod tb;
 
 #[cfg(not(feature = "tune"))]
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

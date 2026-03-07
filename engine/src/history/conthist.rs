@@ -20,7 +20,7 @@ impl Default for ContHist {
 }
 
 impl ContHist {
-    /// The index into this ContHist.
+    /// The index into this history.
     /// [pieceto][from][to]
     const fn idx(m: Move, pt: PieceTo) -> (usize, usize, usize) {
         (pt.idx(), m.src().idx(), m.dst().idx())
@@ -38,11 +38,11 @@ impl ContHist {
         self.0[i.0][i.1][i.2].0 as i32
     }
 
-    /// Update this ContHist with the new best move.
-    pub fn update(&mut self, best: Move, pt: PieceTo, quiets: &MoveBuffer, bonus: i16, malus: i16) {
+    /// Update the history with the given moves.
+    pub fn update(&mut self, best: Move, pt: PieceTo, other_moves: &MoveBuffer, bonus: i16, malus: i16) {
         self.add_bonus(best, pt, bonus);
 
-        for m in quiets {
+        for m in other_moves {
             self.add_bonus(*m, pt, -malus);
         }
     }
@@ -56,14 +56,14 @@ pub struct PieceTo(usize);
 impl PieceTo {
     pub const NUM: usize = CPiece::NUM * Square::NUM;
 
-    /// The index of this PieceTo.
+    /// The index of this [`PieceTo`].
     pub const fn idx(self) -> usize {
         assert!(self.0 < PieceTo::NUM);
         self.0
     }
 
-    /// Construct a PieceTo from a piece and a move.
-    /// (this should be used *after* the move has been made on the board.)
+    /// Construct a [`PieceTo`] from a piece and a move.
+    /// NOTE: (this should be used *after* the move has been made on the board.)
     pub const fn from(b: &Board, m: Move) -> Self {
         let s = m.src();
         let p = b.pc_at(s);

@@ -7,4 +7,10 @@ git clone --depth 1 https://github.com/TheGogy/venus.git
 make release
 ```
 
+For [Syzygy tablebase](https://syzygy-tables.info/) support, build with `syzygy` features.
+
+```bash
+make release FEATURES=syzygy
+```
+
 To run the engine, you'll need a UCI compatible interface, like [Cutechess](https://cutechess.com/) or [En Croissant](https://encroissant.org/).

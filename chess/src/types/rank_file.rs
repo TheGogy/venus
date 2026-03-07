@@ -29,7 +29,7 @@ impl TryFrom<char> for File {
     fn try_from(c: char) -> Result<Self, Self::Error> {
         let index = (c.to_ascii_uppercase() as u8).wrapping_sub(b'A');
         match index {
-            0..7 => Ok(File::from(index)),
+            0..7 => Ok(Self::from(index)),
             _ => Err("Unknown file!"),
         }
     }
@@ -42,7 +42,7 @@ impl TryFrom<char> for Rank {
     fn try_from(c: char) -> Result<Self, Self::Error> {
         let index = (c as u8).wrapping_sub(b'1');
         match index {
-            0..7 => Ok(Rank::from(index)),
+            0..7 => Ok(Self::from(index)),
             _ => Err("Unknown file!"),
         }
     }
@@ -53,19 +53,19 @@ impl_lists! {Rank, 8}
 
 impl_from_type! {
     File, u8, 8,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
+    [u8]
 }
 
 impl_from_type! {
     Rank, u8, 8,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
+    [u8]
 }
 
 /// File implemenatations.
 impl File {
     /// Directly convert a file to a bitboard.
     pub const fn bb(self) -> Bitboard {
-        Bitboard(0x0101010101010101 << (self as u8))
+        Bitboard(0x0101_0101_0101_0101 << (self as u8))
     }
 
     /// Get the char representing the file.
@@ -83,8 +83,10 @@ impl Rank {
 
     /// Get the file from that color's perspective.
     /// e.g:
+    /// ```
     /// File::A.relative(Color::White) == File::A
     /// File::A.relative(Color::Black) == File::H
+    /// ```
     pub const fn relative(self, c: Color) -> Self {
         match c {
             Color::White => self,

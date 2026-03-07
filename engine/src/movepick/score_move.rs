@@ -8,7 +8,9 @@ use chess::{
     },
 };
 
-use crate::{history::capturehist::CAP_HIST_MAX, movepick::move_list::LEFT, threading::thread::Thread, tunables::params::tunables::*};
+use crate::{
+    history::noisyhist::CAP_HIST_MAX, movepick::move_list::LEFT, threading::thread::Thread, tunables::params::tunables::mp_gc_bonus,
+};
 
 use super::{MovePicker, SearchType, move_list::RIGHT};
 
@@ -39,7 +41,7 @@ impl MovePicker {
                 }
             }
 
-            s += (b.gives_check_fast(m) && b.see(m, Eval(0))) as i32 * mp_gc_bonus();
+            s += i32::from(b.gives_check_fast(m) && b.see(m, Eval(0))) * mp_gc_bonus();
 
             // Add to the front of the list.
             self.move_list.insert::<LEFT>(m, s);
@@ -95,7 +97,7 @@ impl MovePicker {
             let s = if m.flag().is_cap() {
                 NOISY_BASE + capture_value(b, m)
             } else {
-                let ch = t.pieceto_at(1).map(|pt| t.hist_conts[0].get_bonus(m, pt)).unwrap_or(0);
+                let ch = t.pieceto_at(1).map_or(0, |pt| t.hist_conts[0].get_bonus(m, pt));
                 t.hist_quiet.get_bonus(b.stm, m) + ch
             };
 

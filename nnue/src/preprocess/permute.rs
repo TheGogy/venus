@@ -1,6 +1,9 @@
 use utils::memory::{Align64, boxed_zeroed};
 
-use crate::{arch::*, simd::simd};
+use crate::{
+    arch::{FEATURES, L1, L2, L3, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, NNUEData, QuantNNUEData},
+    simd::simd,
+};
 
 impl QuantNNUEData {
     /// Helper function to permute ft weights/biases for packus.

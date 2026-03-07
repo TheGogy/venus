@@ -33,6 +33,7 @@ impl TT {
     }
 
     /// Get the index for a given hash.
+    #[allow(clippy::cast_possible_truncation)]
     const fn idx(&self, hash: Hash) -> usize {
         let key = hash.key as u128;
         let len = self.entries.len() as u128;
@@ -53,11 +54,12 @@ impl TT {
             use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
             let index = self.idx(hash);
             let entry = self.entries.get_unchecked(index);
-            _mm_prefetch::<_MM_HINT_T0>((entry as *const CompressedEntry).cast());
+            _mm_prefetch::<_MM_HINT_T0>(std::ptr::from_ref::<CompressedEntry>(entry).cast());
         }
     }
 
     /// Increment the table age.
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn increment_age(&mut self) {
         self.age = (self.age + 1) & MASK_AGE as u8;
     }
@@ -76,7 +78,7 @@ impl TT {
         if self.age != old.age        // Always replace older entries.
             || hash.key != old.key    // Always replace different positions.
             || bound == Bound::Exact  // Always replace with exact scores.
-            || depth + tt_replace_d_min() + 2 * pv as Depth > old.depth()
+            || depth + tt_replace_d_min() + 2 * Depth::from(pv) > old.depth()
         {
             let new_move = if mov.is_none() && hash.key == old.key { old.mov } else { mov };
             slot.write(TTEntry::new(hash.key, pv, self.age, depth, bound, new_move, eval, value.to_corrected(ply)));

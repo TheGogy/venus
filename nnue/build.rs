@@ -1,22 +1,28 @@
+#[cfg(feature = "embed")]
 use std::env;
+#[cfg(feature = "embed")]
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "embed")]
+const DEFAULT_EVALFILE: &str = "data/Cassini.bin";
+
 fn main() {
+    #[cfg(feature = "embed")]
+    setup_evalfile();
+}
+
+#[cfg(feature = "embed")]
+fn setup_evalfile() {
+    let file = env::var("EVALFILE").unwrap_or_else(|_| DEFAULT_EVALFILE.to_string());
     let cwd = env::current_dir().expect("Failed to get current working directory");
-    let evalfile_rel = env::var("EVALFILE").unwrap_or_else(|_| "data/Cassini.bin".to_string());
 
     // Resolve relative to where the user ran make from.
-    let evalfile_path = if Path::new(&evalfile_rel).is_absolute() {
-        PathBuf::from(&evalfile_rel)
-    } else {
-        cwd.join(&evalfile_rel)
-    };
+    let abs_path = if Path::new(&file).is_absolute() { PathBuf::from(&file) } else { cwd.join(&file) };
 
-    if !evalfile_path.exists() {
-        panic!("EVALFILE path does not exist: {}", evalfile_path.display());
+    if !abs_path.exists() {
+        panic!("EVALFILE path does not exist: {}", abs_path.display());
     }
 
-    let canonical = evalfile_path.canonicalize().expect("Failed to canonicalize EVALFILE path");
-
+    let canonical = abs_path.canonicalize().expect("Failed to canonicalize EVALFILE path");
     println!("cargo:rustc-env=NNUE_EVALFILE={}", canonical.display());
 }

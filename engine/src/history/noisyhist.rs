@@ -14,19 +14,19 @@ pub const CAP_HIST_MAX: i32 = 16384;
 ///
 /// This is used to record the value of captures during the search,
 /// in order to help with move ordering.
-/// We can use Piece::NUM - 1 because kings cannot be captured by a legal move.
+/// We can use [`Piece::NUM`] - 1 because kings cannot be captured by a legal move.
 #[derive(Clone, Debug)]
-pub struct CaptureHist(Box<[[[HistEntry; Piece::NUM - 1]; Square::NUM]; CPiece::NUM]>);
+pub struct NoisyHist(Box<[[[HistEntry; Piece::NUM - 1]; Square::NUM]; CPiece::NUM]>);
 
 // TODO: add tunable history defaults.
-impl Default for CaptureHist {
+impl Default for NoisyHist {
     fn default() -> Self {
         Self(boxed_zeroed())
     }
 }
 
-impl CaptureHist {
-    /// The index into this NoisyHist.
+impl NoisyHist {
+    /// The index into this history.
     /// [piecetype][captured][to]
     fn idx(b: &Board, m: Move) -> (usize, usize, usize) {
         (b.pc_at(m.src()).idx(), m.dst().idx(), b.captured(m).pt().idx())
@@ -41,10 +41,10 @@ impl CaptureHist {
     /// Get a bonus for the given move.
     pub fn get_bonus(&self, b: &Board, m: Move) -> i32 {
         let i = Self::idx(b, m);
-        self.0[i.0][i.1][i.2].0 as i32
+        i32::from(self.0[i.0][i.1][i.2].0)
     }
 
-    /// Update the NoisyHist with the given moves.
+    /// Update the history with the given moves.
     pub fn update(&mut self, b: &Board, best: Move, captures: &MoveBuffer, bonus: i16, malus: i16) {
         for m in captures {
             self.add_bonus(b, *m, -malus);

@@ -2,6 +2,7 @@
 ///
 /// # Examples
 ///
+///```
 /// impl_math_ops! {
 ///     Bitboard,
 ///     BitAnd::bitand,
@@ -16,6 +17,7 @@
 ///     BitOr::bitor,
 ///     BitXor::bitxor
 /// }
+/// ```
 #[macro_export]
 macro_rules! impl_math_ops {
     ($t:ty, $($trait:ident::$fn:ident),*) => {
@@ -34,6 +36,7 @@ macro_rules! impl_math_ops {
             type Output = $t;
 
             #[inline(always)]
+            #[allow(clippy::cast_possible_truncation)]
             fn $fn(self, other: $prim) -> $t {
                 unsafe { std::mem::transmute(std::ops::$trait::$fn(self.0, other as $inner)) }
             }
@@ -55,6 +58,7 @@ macro_rules! impl_math_ops {
 ///
 /// # Examples
 ///
+///```
 /// impl_math_assign_ops! {
 ///     Bitboard,
 ///     BitAndAssign::bitand_assign,
@@ -69,6 +73,7 @@ macro_rules! impl_math_ops {
 ///     BitOrAssign::bitor_assign,
 ///     BitXorAssign::bitxor_assign
 /// }
+/// ```
 #[macro_export]
 macro_rules! impl_math_assign_ops {
     ($t:ty, $($trait:ident::$fn:ident),*) => {
@@ -85,6 +90,7 @@ macro_rules! impl_math_assign_ops {
         $(impl std::ops::$trait<$prim> for $t {
 
             #[inline(always)]
+            #[allow(clippy::cast_possible_truncation)]
             fn $fn(&mut self, other: $prim) {
                 std::ops::$trait::$fn(&mut self.0, other as $inner)
             }
@@ -96,10 +102,12 @@ macro_rules! impl_math_assign_ops {
 ///
 /// # Example:
 ///
+///```
 /// impl_all_math_ops {
 ///     Eval: i32,
-///     [u64, u32, u16, u8, i64, i32, i16, i8]
+///     [i64, i32, i16]
 /// }
+/// ```
 #[macro_export]
 macro_rules! impl_all_math_ops {
     ($t:ty: $inner:ty, [$($prim:ty),*]) => {

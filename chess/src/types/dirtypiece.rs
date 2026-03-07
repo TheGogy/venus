@@ -1,11 +1,11 @@
 use crate::types::{piece::CPiece, square::Square};
 
-/// DirtyPiece enum.
+/// [`DirtyPiece`] enum.
 ///
 /// This represents a feature that we are adding / removing from the NNUE.
 #[derive(Clone, Copy, Debug)]
 pub enum DirtyPieces {
-    /// Normal / Promo / DoublePush.
+    /// Normal / Promo / Double push.
     /// (+moved dst, -moved src)
     Add1Sub1(PcSq, PcSq),
 

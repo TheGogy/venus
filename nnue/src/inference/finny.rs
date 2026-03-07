@@ -2,7 +2,10 @@ use chess::types::{bitboard::Bitboard, board::Board, color::Color, piece::Piece}
 
 use crate::{
     arch::{INPUT_KING_POSNS, NNUEData},
-    inference::{accumulator::*, features::input_bucket},
+    inference::{
+        accumulator::{FullAcc, add1_inplace, add1sub1_inplace, sub1_inplace},
+        features::input_bucket,
+    },
 };
 
 /// Finny entry.
@@ -30,10 +33,10 @@ impl FinnyEntry {
 pub struct FinnyTable(pub Box<[FinnyEntry; INPUT_KING_POSNS]>);
 
 impl FinnyTable {
-    /// Get a FinnyTable from some given NNUE weights.
+    /// Get a [`FinnyTable`] from some given NNUE weights.
     pub fn from_nn(nn: &NNUEData) -> Self {
         let arr = (0..INPUT_KING_POSNS).map(|_| FinnyEntry::from_nn(nn)).collect::<Vec<_>>().into_boxed_slice().try_into().unwrap();
-        FinnyTable(arr)
+        Self(arr)
     }
 
     /// Fully refresh the entry to the given board, and update the accumulator.
@@ -52,7 +55,7 @@ impl FinnyTable {
                 let mut adds = new & !old;
 
                 // Handle both in one go if we can.
-                while adds.any() && subs.any() {
+                while adds.non_empty() && subs.non_empty() {
                     let add = nn.feats_for(ksq, perspective, p, c, adds.lsb());
                     let sub = nn.feats_for(ksq, perspective, p, c, subs.lsb());
 

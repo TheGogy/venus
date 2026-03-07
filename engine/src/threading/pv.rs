@@ -3,7 +3,8 @@ use chess::{
     types::{castling::CastlingMask, moves::Move},
 };
 
-/// PVLine.
+use std::fmt::Write;
+
 /// This allows us to keep track of the current PV.
 #[derive(Clone, Debug)]
 pub struct PVLine {
@@ -37,7 +38,7 @@ impl PVLine {
         let mut s = String::from("pv");
 
         for m in &self.moves[0..self.length] {
-            s.push_str(&format!(" {}", m.to_uci(cm)));
+            let _ = write!(s, " {}", m.to_uci(cm));
         }
 
         s
