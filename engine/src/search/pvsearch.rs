@@ -302,7 +302,6 @@ impl Position {
         let mut quiets_tried = MoveBuffer::default();
 
         let mut moves_tried = 0;
-        let mut moves_exist = false;
 
         let eval_diff = raw_value - t.ss().eval;
 
@@ -315,11 +314,10 @@ impl Position {
 
             // Ignore excluded move.
             if excluded == Some(m) {
-                moves_tried += 1;
                 continue;
             }
 
-            moves_exist = true;
+            moves_tried += 1;
 
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
@@ -359,7 +357,6 @@ impl Position {
                 && mp.stage > MPStage::PvNoisyWin
                 && !self.board.see(m, Eval(-see_margins[usize::from(is_quiet)]))
             {
-                moves_tried += 1;
                 continue;
             }
 
@@ -461,13 +458,13 @@ impl Position {
                 }
             }
             // For moves that can't be reduced, or first move in non-PV, do null-window search
-            else if !NT::PV || moves_tried > 0 {
+            else if !NT::PV || moves_tried > 1 {
                 v = -self.nwsearch(t, tt, tb, child_pv, -alpha, new_depth, !cutnode);
             };
 
             // For the first move in a PV node, or any move that beats alpha,
             // do a full-window search to get the exact score.
-            if NT::PV && (moves_tried == 0 || v > alpha) {
+            if NT::PV && (moves_tried == 1 || v > alpha) {
                 v = -self.pvsearch::<NT::Next>(t, tt, tb, child_pv, -beta, -alpha, new_depth, false);
             }
 
@@ -508,12 +505,10 @@ impl Position {
             } else if m.flag().is_cap() {
                 caps_tried.push(m);
             }
-
-            moves_tried += 1;
         }
 
         // No legal moves: checkmate or stalemate.
-        if !moves_exist {
+        if moves_tried == 0 {
             // If we perform a singular search in a position with only one legal move,
             // we can't make assumptions about that move, so fail low.
             if singular {
