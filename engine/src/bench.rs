@@ -1,4 +1,5 @@
-use std::time::Instant;
+use std::{io::Error, path::PathBuf, time::Instant};
+use utils::parse::parse_file_ignore_hash;
 
 use crate::{interface::Engine, position::Position, tb::probe::SyzygyTB, threading::thread::Thread, tt::table::TT};
 
@@ -10,11 +11,17 @@ impl Engine {
     /// # Panics
     ///     Shouldn't panic, all FENs are valid.
     #[allow(clippy::cast_possible_truncation)]
-    pub fn run_bench() {
+    pub fn run_bench(epd_path: Option<PathBuf>) -> Result<(), Error> {
         let mut total_nodes = 0;
         let mut total_time = 0;
 
-        for fen in FENS {
+        let fens = if let Some(p) = epd_path {
+            parse_file_ignore_hash(p)?
+        } else {
+            FENS.iter().map(|&s| s.to_string()).collect()
+        };
+
+        for fen in fens {
             let tt = TT::default();
             let tb = SyzygyTB::default();
             let mut pos: Position = format!("fen {fen}").parse().unwrap();
@@ -25,9 +32,12 @@ impl Engine {
 
             total_time += start.elapsed().as_micros();
             total_nodes += thread.nodes;
-        }
 
+            println!("{fen:<90} | {:>10}", thread.nodes);
+        }
         println!("{total_nodes} nodes {} nps", total_nodes * 1_000_000 / (total_time as u64).max(1));
+
+        Ok(())
     }
 }
 

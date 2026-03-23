@@ -109,7 +109,7 @@ impl Engine {
 impl Engine {
     /// Handle newgame command.
     fn handle_newgame(&mut self) {
-        self.pos = Position::default();
+        self.pos.reset();
         self.pool.reset();
         self.tt.clear();
     }

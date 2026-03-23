@@ -10,7 +10,7 @@ use crate::{
 
 /// Finny entry.
 /// Stores what the board looked like last refresh, so we only need to apply the difference.
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct FinnyEntry {
     pub acc: FullAcc,
     pub colors: [[Bitboard; Color::NUM]; Color::NUM],
@@ -33,6 +33,12 @@ impl FinnyEntry {
 pub struct FinnyTable(pub Box<[FinnyEntry; INPUT_KING_POSNS]>);
 
 impl FinnyTable {
+    pub fn reset(&mut self) {
+        for e in self.0.iter_mut() {
+            *e = FinnyEntry::default();
+        }
+    }
+
     /// Get a [`FinnyTable`] from some given NNUE weights.
     pub fn from_nn(nn: &NNUEData) -> Self {
         let arr = (0..INPUT_KING_POSNS).map(|_| FinnyEntry::from_nn(nn)).collect::<Vec<_>>().into_boxed_slice().try_into().unwrap();

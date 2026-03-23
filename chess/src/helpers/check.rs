@@ -6,7 +6,6 @@ use crate::{
     types::{
         board::Board,
         moves::{Move, MoveFlag},
-        piece::Piece,
     },
 };
 
@@ -27,7 +26,8 @@ impl Board {
         let (src, dst) = (m.src(), m.dst());
         let (sbb, dbb) = (src.bb(), dst.bb());
 
-        let occ = self.occ() ^ sbb;
+        // Remove source square, add dst square.
+        let occ = self.occ() ^ sbb | dbb;
 
         let pt = self.pc_at(src).pt();
 
@@ -41,7 +41,6 @@ impl Board {
         // and that we have moved out of the way.
         if ((bishop_atk(opp_ksq, occ) & self.diag_bb(stm)).non_empty() || (rook_atk(opp_ksq, occ) & self.orth_bb(stm)).non_empty())
             && (between(opp_ksq, src) & between(opp_ksq, dst)).is_empty()
-            && !(pt == Piece::Pawn && dst.forward(stm) == opp_ksq)
         {
             return true;
         }
@@ -52,8 +51,7 @@ impl Board {
             // we just need to see if it leads to discovered check.
             MoveFlag::EnPassant => {
                 let epsq = dst.forward(opp).bb();
-                let ep_occ = (occ ^ epsq) | dbb;
-
+                let ep_occ = occ ^ epsq;
                 (bishop_atk(opp_ksq, ep_occ) & self.diag_bb(stm)).non_empty() || (rook_atk(opp_ksq, ep_occ) & self.orth_bb(stm)).non_empty()
             }
 

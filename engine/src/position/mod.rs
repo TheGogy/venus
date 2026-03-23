@@ -72,6 +72,12 @@ impl std::str::FromStr for Position {
 }
 
 impl Position {
+    pub fn reset(&mut self) {
+        self.board = Board::default();
+        self.nnue.reset();
+        self.nnue.update_all(&self.board);
+    }
+
     /// Make a null move on the board on the given thread.
     pub fn make_move(&mut self, m: Move, t: &mut Thread) {
         t.move_made(PieceTo::from(&self.board, m));

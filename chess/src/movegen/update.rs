@@ -14,7 +14,7 @@ use crate::{
 /// Contains functions for updating the masks within the provided board state.
 impl Board {
     /// Updates the masks for the given board state.
-    pub(crate) fn update_masks(&self, state: &mut BoardState) {
+    pub fn update_masks(&self, state: &mut BoardState) {
         self.update_attacked(state);
         self.update_checkers(state);
         self.update_kinglines(state);

@@ -312,13 +312,14 @@ impl Position {
         let mut mp = MovePicker::new(SearchType::Pv, in_check, tt_move, Eval::DRAW);
         while let Some(m) = mp.next(&self.board, t) {
             debug_assert!(!m.is_none());
-            moves_exist = true;
 
             // Ignore excluded move.
             if excluded == Some(m) {
                 moves_tried += 1;
                 continue;
             }
+
+            moves_exist = true;
 
             let start_nodes = t.nodes;
             let is_quiet = m.flag().is_quiet();
@@ -478,7 +479,7 @@ impl Position {
 
             if NT::RT {
                 t.tm.update_nodes(m, t.nodes - start_nodes);
-                t.avg_eval = if t.avg_eval.is_valid() { (t.avg_eval + v) / 2 } else { v };
+                t.avg_eval = if t.avg_eval.is_valid() { Eval::midpoint(t.avg_eval, v) } else { v };
             }
 
             // Update best move and alpha if we found a better move.
@@ -513,6 +514,12 @@ impl Position {
 
         // No legal moves: checkmate or stalemate.
         if !moves_exist {
+            // If we perform a singular search in a position with only one legal move,
+            // we can't make assumptions about that move, so fail low.
+            if singular {
+                return alpha;
+            }
+
             return if in_check { Eval::search_mated_in(t.ply) } else { Eval::DRAW };
         }
 

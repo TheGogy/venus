@@ -1,7 +1,10 @@
 use chess::types::{color::Color, square::Square};
 use utils::memory::Align64;
 
-use crate::arch::{L1, NNUEData};
+use crate::{
+    arch::{L1, NNUEData},
+    embed::get_permuted_nnue,
+};
 
 /// Accumulator for each side.
 pub type HalfAcc = Align64<[i16; L1]>;
@@ -11,6 +14,13 @@ pub struct FullAcc {
     pub feats: [HalfAcc; Color::NUM],
     pub correct: [bool; Color::NUM],
     pub ksqs: [Square; Color::NUM],
+}
+
+impl Default for FullAcc {
+    fn default() -> Self {
+        let bias = get_permuted_nnue().ftb;
+        Self { feats: [bias; Color::NUM], correct: [false; Color::NUM], ksqs: [Square::Invalid; Color::NUM] }
+    }
 }
 
 impl FullAcc {

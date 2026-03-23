@@ -45,6 +45,6 @@ impl CorrHist {
 /// Get the correction bonus for this eval difference at this depth.
 #[allow(clippy::cast_possible_truncation)]
 pub fn correction_bonus(best: Eval, stat: Eval, depth: Depth) -> i16 {
-    const MAX_DIFF: i16 = CORR_HIST_MAX as i16 / 4;
-    ((best.0 - stat.0) as i16 * depth / 8).clamp(-MAX_DIFF, MAX_DIFF)
+    const MAX_DIFF: i32 = CORR_HIST_MAX / 4;
+    ((best.0 - stat.0) * depth as i32 / 8).clamp(-MAX_DIFF, MAX_DIFF) as i16
 }
