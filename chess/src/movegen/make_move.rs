@@ -224,7 +224,8 @@ impl Board {
     /// Undo a null move from the board.
     /// WARN: Caller guarantees the board history must have a null move pushed to it.
     pub fn undo_null(&mut self) {
-        debug_assert!(self.history.last().is_some_and(|m| m.mov.is_none()));
+        debug_assert!(!self.history.is_empty());
+        debug_assert!(self.state.mov.is_none());
 
         self.state = self.history.pop().unwrap();
         self.stm = !self.stm;

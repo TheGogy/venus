@@ -39,6 +39,14 @@ impl Default for NNUE {
 }
 
 impl NNUE {
+    /// Reset the NNUE.
+    pub fn reset(&mut self) {
+        self.cache.reset();
+        self.stack = boxed_zeroed();
+        self.dp_stack = [DirtyPieces::None; MAX_ACCS];
+        self.idx = 0;
+    }
+
     /// A move has been made in the position: add [`DirtyPieces`] to the stack.
     pub fn move_made(&mut self, b: &Board, dps: DirtyPieces) {
         self.idx += 1;

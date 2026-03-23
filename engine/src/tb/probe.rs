@@ -1,10 +1,16 @@
 #![allow(clippy::cast_possible_truncation, clippy::upper_case_acronyms)]
 
+use chess::types::{board::Board, castling::CastlingRights, moves::Move};
+use std::sync::atomic::AtomicU64;
+
+#[cfg(feature = "syzygy")]
 use chess::{
     movegen::Allmv,
-    types::{board::Board, castling::CastlingRights, color::Color, moves::Move, piece::Piece, square::Square},
+    types::{color::Color, piece::Piece, square::Square},
 };
-use std::{ffi::CString, ptr, sync::atomic::AtomicU64};
+
+#[cfg(feature = "syzygy")]
+use std::{ffi::CString, ptr};
 
 #[cfg(feature = "syzygy")]
 use crate::tb::binds::{
@@ -42,6 +48,7 @@ pub struct SyzygyTB {
 
 impl SyzygyTB {
     /// Load a syzygy tablebase from the given path.
+    #[allow(unused_variables)]
     pub fn init(&mut self, path: &str) -> bool {
         #[cfg(feature = "syzygy")]
         unsafe {

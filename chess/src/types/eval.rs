@@ -133,6 +133,11 @@ impl Eval {
     pub fn clamped(self) -> Self {
         Self(self.0.clamp(-Self::LONGEST_TB_MATE.0 + 1, Self::LONGEST_TB_MATE.0 - 1))
     }
+
+    /// Gets the midpoint between two evaluations.
+    pub const fn midpoint(a: Self, b: Self) -> Self {
+        Self(i32::midpoint(a.0, b.0))
+    }
 }
 
 /// Display the eval according to UCI format.

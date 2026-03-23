@@ -21,10 +21,10 @@ use super::thread::Thread;
 
 /// Contains all the threads used for searching.
 pub struct ThreadPool {
-    main: Thread,
-    workers: Vec<Thread>,
-    global_stop: Arc<AtomicBool>,
-    global_nodes: Arc<AtomicU64>,
+    pub main: Thread,
+    pub workers: Vec<Thread>,
+    pub global_stop: Arc<AtomicBool>,
+    pub global_nodes: Arc<AtomicU64>,
 }
 
 impl ThreadPool {

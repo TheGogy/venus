@@ -28,10 +28,15 @@ enum Command {
 fn main() {
     let args = Args::parse();
 
-    match args.command {
-        Command::Quantize { infile, outfile } => quantize(&infile, &outfile).unwrap_or_else(|e| e.exit()),
-        Command::Permute { infile, outfile } => permute(&infile, &outfile).unwrap_or_else(|e| e.exit()),
-        Command::Stats { infile } => stats(&infile).unwrap_or_else(|e| e.exit()),
+    let result = match args.command {
+        Command::Quantize { infile, outfile } => quantize(&infile, &outfile),
+        Command::Permute { infile, outfile } => permute(&infile, &outfile),
+        Command::Stats { infile } => stats(&infile),
+    };
+
+    if let Err(e) = result {
+        eprintln!("error: {e}");
+        std::process::exit(1);
     }
 }
 

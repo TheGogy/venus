@@ -115,7 +115,7 @@ impl Position {
             if best_value >= beta {
                 // Adjust beta cutoff values to be more conservative.
                 // This prevents qsearch from returning overly optimistic evaluations.
-                best_value = (best_value + beta) / 2;
+                best_value = Eval::midpoint(best_value, beta);
 
                 // Throw the static eval into the tt if we won't overwrite anything.
                 if tt_depth == -TT_DEPTH_OFFSET {
@@ -195,7 +195,7 @@ impl Position {
         // Adjust beta cutoff values to be more conservative.
         // This prevents qsearch from returning overly optimistic evaluations.
         if best_value >= beta && best_value.nonterminal() {
-            best_value = (best_value + beta) / 2;
+            best_value = Eval::midpoint(best_value, beta);
         }
 
         // Save to TT.
