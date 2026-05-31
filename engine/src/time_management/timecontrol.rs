@@ -78,6 +78,7 @@ impl TimeControl {
     const OVERHEAD: u64 = 32;
 
     /// Get the optimal and maximum time from the time control.
+    #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     pub fn opt_max_time(self, stm: Color) -> (Duration, Duration) {
         match self {
             // These controls do not have maximum time.
@@ -101,25 +102,21 @@ impl TimeControl {
                     inc = 0;
                 }
 
-                let (opt, max) = match movestogo {
-                    Some(mtg) => {
-                        let scale = 0.7 / (mtg.min(50) as f64);
-                        let eight = 0.8 * time as f64;
+                let (opt, max) = if let Some(mtg) = movestogo {
+                    let scale = 0.7 / (mtg.min(50) as f64);
+                    let eight = 0.8 * time as f64;
 
-                        let opt = (scale * time as f64).min(eight);
-                        let max = (5.0 * opt).min(eight);
+                    let opt = (scale * time as f64).min(eight);
+                    let max = (5.0 * opt).min(eight);
 
-                        (opt, max)
-                    }
+                    (opt, max)
+                } else {
+                    let total = ((time / 20) + (inc * 3 / 4)) as f64;
 
-                    None => {
-                        let total = ((time / 20) + (inc * 3 / 4)) as f64;
+                    let opt = total * 0.6;
+                    let max = (2.0 * total).min(time as f64);
 
-                        let opt = total * 0.6;
-                        let max = (2.0 * total).min(time as f64);
-
-                        (opt, max)
-                    }
+                    (opt, max)
                 };
 
                 (Duration::from_millis(opt as u64), Duration::from_millis(max as u64))

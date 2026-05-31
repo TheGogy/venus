@@ -1,26 +1,30 @@
-use std::env::args;
+#![warn(clippy::all, clippy::pedantic)]
 
 use chess::{helpers::see::bench_see, types::board::Board};
+use clap::{Parser, Subcommand};
 
-const HELP_MSG: &str = "Commands:
---help (-h)    Print this message.
---version (-v) Print the current version.
+#[derive(Parser, Debug)]
+#[command(name = "ven-chess")]
+#[command(version, about = "Chess game implementation")]
+struct Args {
+    #[command(subcommand)]
+    command: Command,
+}
 
---perft        Run a perft test.
---see          Run a static eval test.";
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Runs a perft test up to the given depth
+    Perft { depth: usize },
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const PERFT_DEPTH: usize = 7;
-const SEE_ITERS: usize = 10000000;
+    /// Bench the SEE function this many times
+    See { iters: usize },
+}
 
 fn main() {
-    match args().nth(1).as_deref() {
-        Some("--help") | Some("-h") => println!("{HELP_MSG}"),
-        Some("--version") | Some("-v") => println!("{VERSION}"),
+    let args = Args::parse();
 
-        Some("--perft") => _ = Board::default().perft::<false>(PERFT_DEPTH),
-        Some("--see") => bench_see(SEE_ITERS),
-
-        None | Some(&_) => println!("Unknown command! (run '--help')"),
+    match args.command {
+        Command::Perft { depth } => println!("Total: {}", Board::default().perft::<true>(depth)),
+        Command::See { iters } => bench_see(iters),
     }
 }

@@ -1,20 +1,22 @@
+use std::sync::atomic::Ordering;
+
 use chess::types::eval::Eval;
 
 use crate::{
     position::Position,
+    search::Root,
+    tb::probe::{SyzygyTB, TB_HITS},
     threading::{pv::PVLine, thread::Thread},
     tt::table::TT,
-    tunables::params::tunables::*,
+    tunables::params::tunables::{asp_window_base, asp_window_d_min, asp_window_div},
 };
-
-use super::Root;
 
 impl Position {
     /// Iterative deepening loop.
     /// Search at increasing depth until we should stop.
-    pub fn iterative_deepening<const MAIN: bool>(&mut self, t: &mut Thread, tt: &TT) {
+    pub fn iterative_deepening<const MAIN: bool>(&mut self, t: &mut Thread, tt: &TT, tb: &SyzygyTB) {
         while t.should_start_iter() {
-            let eval = self.asp_window(t, tt);
+            let eval = self.asp_window(t, tt, tb);
 
             // If search was stopped (time limit or manually), don't use the incomplete result.
             if t.stop {
@@ -26,11 +28,12 @@ impl Position {
 
             if MAIN {
                 println!(
-                    "info depth {} seldepth {} score {} hashfull {} {} {}",
+                    "info depth {} seldepth {} score {} hashfull {} tbhits {} {} {}",
                     t.depth,
                     t.seldepth,
                     t.eval,
                     tt.hashfull(),
+                    TB_HITS.load(Ordering::Relaxed),
                     t.tm,
                     t.pv.to_uci(&self.board.castlingmask)
                 );
@@ -39,7 +42,7 @@ impl Position {
     }
 
     /// Aspiration window. Keep searching until we find something within the window.
-    fn asp_window(&mut self, t: &mut Thread, tt: &TT) -> Eval {
+    fn asp_window(&mut self, t: &mut Thread, tt: &TT, tb: &SyzygyTB) -> Eval {
         let mut pv = PVLine::default();
         let mut alpha = -Eval::INFINITY;
         let mut beta = Eval::INFINITY;
@@ -57,7 +60,7 @@ impl Position {
 
         loop {
             // Search within the window
-            let v = self.pvsearch::<Root>(t, tt, &mut pv, alpha, beta, search_depth, false);
+            let v = self.pvsearch::<Root>(t, tt, tb, &mut pv, alpha, beta, search_depth, false);
 
             if t.stop {
                 return -Eval::INFINITY;

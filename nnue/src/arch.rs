@@ -1,98 +1,106 @@
-use ::utils::memory::Align64;
-use chess::types::{color::Color, eval::Eval, piece::Piece, square::Square};
+use chess::types::{color::Color, piece::Piece, square::Square};
+use utils::{max, memory::Align64};
 
-use crate::{accumulator::HalfAcc, simd::vi16::CHUNK_SIZE_I16};
+use crate::{simd::simd, utils::make_bucket_map};
 
-// Quantization factors.
+/// Quantization factors.
 pub const SCALE: i32 = 400;
-pub const QA: i32 = 255;
-pub const QB: i32 = 64;
-pub const QAB: i32 = QA * QB;
+pub const FT_QUANT: i32 = 255;
+pub const L1_QUANT: i32 = 64;
 
-// Number of features in the input layer.
-pub const FEATURES: usize = Piece::NUM * Square::NUM * 2;
+/// HACK: This should just be a u32 everywhere, but avx2 decided to be special
+pub const L1Q_BITS: simd::ShiftT = L1_QUANT.trailing_zeros() as simd::ShiftT;
+pub const L1Q_SHIFT: simd::ShiftT = 16 - L1Q_BITS;
 
-// Layer sizes.
-pub const L1: usize = 2048;
+/// Invert quantization steps (clamp by FT_QUANT, downscale by FT_SHIFT, quantize by FT_QUANT * L1_QUANT).
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+pub const L1_DEQUANT: f32 = (1 << L1Q_SHIFT) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
 
-const _: () = assert!(L1 % CHUNK_SIZE_I16 == 0);
+/// Whether to perform FT permutation.
+pub const USE_FTPERM: bool = true;
 
-// King bucket map.
-// We only use the buckets on the A-D files, the E-H files are mirrored, but we want to store them
-// differently in the finny table, so it is easier to store the bucket map like this.
+/// Whether the unquantized output has a king bucket factorizer.
+pub const HAS_FACTORIZER: bool = true;
+
+/// Total input features.
+pub const FEATURES: usize = Color::NUM * Piece::NUM * Square::NUM;
+
+/// Layer sizes.
+pub const L1_LEN: usize = 1792;
+pub const L2_LEN: usize = 32;
+pub const L3_LEN: usize = 32;
+
+const _: () = assert!(L1_LEN.is_multiple_of(simd::CHUNK_SIZE_I16));
+
+/// Helper type for an accumulator for each side.
+pub type HalfAcc = Align64<[i16; L1_LEN]>;
+
+/// Length of L1 for each side.
+pub const PAIRWISE_LEN: usize = L1_LEN / 2;
+
+/// L2 architecture has first half normal, second half squared.
+pub const EFF_L2_LEN: usize = L2_LEN * 2;
+
+/// Input expert map.
 #[rustfmt::skip]
-const BUCKET_MAP: [usize; 64] = [
-    0,  1,  2,  3, 13, 12, 11, 10,
-    4,  4,  5,  5, 15, 15, 14, 14,
-    6,  6,  6,  6, 16, 16, 16, 16,
-    7,  7,  7,  7, 17, 17, 17, 17,
-    8,  8,  8,  8, 18, 18, 18, 18,
-    8,  8,  8,  8, 18, 18, 18, 18,
-    9,  9,  9,  9, 19, 19, 19, 19,
-    9,  9,  9,  9, 19, 19, 19, 19,
+pub const HALF_BUCKET_MAP: [usize; 32] = [
+   0,  1,  2,  3,
+   4,  5,  6,  7,
+   8,  9, 10, 11,
+   8,  9, 10, 11,
+  12, 12, 13, 13,
+  12, 12, 13, 13,
+  14, 14, 15, 15,
+  14, 14, 15, 15,
 ];
 
-pub const NB_INPUT_BUCKETS: usize = 10;
+/// We use 32 King positions defined by [`BUCKET_MAP`].
+/// If the King is on any of the E-H files, we mirror all the features.
+pub const NB_INPUT_BUCKETS: usize = max!(HALF_BUCKET_MAP) + 1;
+pub const INPUT_KING_POSNS: usize = NB_INPUT_BUCKETS * 2;
 pub const NB_OUTPUT_BUCKETS: usize = 8;
 
-/// Weights and biases for the NNUE.
+/// Full input expert map.
+pub const BUCKET_MAP: [usize; Square::NUM] = make_bucket_map(HALF_BUCKET_MAP, NB_INPUT_BUCKETS);
+
+/// Weights and biases for the NNUE ready for inference.
 #[repr(C)]
 #[rustfmt::skip]
 pub struct NNUEData {
-    pub feature_weights: [Align64<[i16; L1]>; FEATURES * NB_INPUT_BUCKETS],
-    pub feature_bias:     Align64<[i16; L1]>,
-    pub output_weights: [[Align64<[i16; L1]>; 2]; NB_OUTPUT_BUCKETS],
-    pub output_bias:              [i16; NB_OUTPUT_BUCKETS],
+    pub ftw: [Align64<[i16; L1_LEN]>; FEATURES * NB_INPUT_BUCKETS],
+    pub ftb:  Align64<[i16; L1_LEN]>,
+    pub l1w: [Align64<[i8 ; L1_LEN *     L2_LEN]>; NB_OUTPUT_BUCKETS],
+    pub l1b: [Align64<[f32; L2_LEN]>;              NB_OUTPUT_BUCKETS],
+    pub l2w: [Align64<[f32; EFF_L2_LEN * L3_LEN]>; NB_OUTPUT_BUCKETS],
+    pub l2b: [Align64<[f32; L3_LEN]>;              NB_OUTPUT_BUCKETS],
+    pub l3w: [Align64<[f32; L3_LEN]>;              NB_OUTPUT_BUCKETS],
+    pub l3b: [f32;                                 NB_OUTPUT_BUCKETS],
 }
 
-// Raw NNUE data.
-pub static NNUE_EMBEDDED: NNUEData = unsafe { std::mem::transmute(*include_bytes!(env!("NNUE_EVALFILE"))) };
-
-impl NNUEData {
-    /// Get the weights for the given feature.
-    pub const fn feats_for(&self, mut ksq: Square, perspective: Color, p: Piece, c: Color, mut s: Square) -> &HalfAcc {
-        const PIECE_STRIDE: usize = Square::NUM;
-        const OPPONENT_STRIDE: usize = Square::NUM * Piece::NUM;
-        const BUCKET_STRIDE: usize = Square::NUM * Piece::NUM * 2;
-
-        if king_mirrored(ksq) {
-            s = s.fliph();
-            ksq = ksq.fliph();
-        }
-
-        let bucket = input_bucket(ksq, perspective);
-        let opponent = c.idx() ^ perspective.idx();
-
-        let idx = bucket * BUCKET_STRIDE + opponent * OPPONENT_STRIDE + p.idx() * PIECE_STRIDE + s.relative(perspective).idx();
-
-        &NNUE_EMBEDDED.feature_weights[idx]
-    }
+/// Weights and biases for the NNUE, quantized and embedded in the executable.
+#[repr(C)]
+#[rustfmt::skip]
+pub struct QuantNNUEData {
+    pub ftw:   [i16; L1_LEN * FEATURES * NB_INPUT_BUCKETS],
+    pub ftb:   [i16; L1_LEN],
+    pub l1w: [[[i8 ; L2_LEN]; NB_OUTPUT_BUCKETS]; L1_LEN],
+    pub l1b:  [[f32; L2_LEN]; NB_OUTPUT_BUCKETS],
+    pub l2w: [[[f32; L3_LEN]; NB_OUTPUT_BUCKETS]; EFF_L2_LEN],
+    pub l2b:  [[f32; L3_LEN]; NB_OUTPUT_BUCKETS],
+    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3_LEN],
+    pub l3b:   [f32; NB_OUTPUT_BUCKETS],
 }
 
-// Whether or not the board should be mirrored.
-pub const fn king_mirrored(ksq: Square) -> bool {
-    ksq.file().idx() > 3
-}
-
-/// Get the current input bucket to use.
-pub const fn input_bucket(ksq: Square, c: Color) -> usize {
-    BUCKET_MAP[ksq.relative(c).idx()]
-}
-
-/// Get the current output bucket to use.
-pub const fn output_bucket_idx(nb_pieces: usize) -> usize {
-    const DIV: usize = usize::div_ceil(32, NB_OUTPUT_BUCKETS);
-    let obkt = (nb_pieces - 2) / DIV;
-    assert!(obkt < NB_OUTPUT_BUCKETS);
-    obkt
-}
-
-/// Whether the king has changed position.
-pub const fn king_changed(ks1: Square, ks2: Square, c: Color) -> bool {
-    (king_mirrored(ks1) != king_mirrored(ks2)) || (input_bucket(ks1, c) != input_bucket(ks2, c))
-}
-
-/// Dequantize the output of the network and turn it to a useable evaluation.
-pub const fn dequantize(sum: i32, obkt: usize) -> Eval {
-    Eval((sum / QA + NNUE_EMBEDDED.output_bias[obkt] as i32) * SCALE / QAB)
+/// Raw output straight from Bullet.
+#[repr(C)]
+#[rustfmt::skip]
+pub struct RawNNUEData {
+    pub ftw:  [[f32; L1_LEN * FEATURES]; NB_INPUT_BUCKETS + (HAS_FACTORIZER as usize)],
+    pub ftb:   [f32; L1_LEN],
+    pub l1w: [[[f32; L2_LEN]; NB_OUTPUT_BUCKETS]; L1_LEN],
+    pub l1b:  [[f32; L2_LEN]; NB_OUTPUT_BUCKETS],
+    pub l2w: [[[f32; L3_LEN]; NB_OUTPUT_BUCKETS]; EFF_L2_LEN],
+    pub l2b:  [[f32; L3_LEN]; NB_OUTPUT_BUCKETS],
+    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3_LEN],
+    pub l3b:   [f32; NB_OUTPUT_BUCKETS],
 }

@@ -1,29 +1,18 @@
-use crate::{
-    defs::MAX_MOVES,
-    movegen::Allmv,
-    types::{board::Board, moves::Move},
-};
+use crate::types::board::Board;
 
 impl Board {
     /// Counts all the legal positions up to a given depth.
     pub fn perft<const PRINT: bool>(&mut self, depth: usize) -> usize {
         let mut total = 0;
 
-        let mut ml = [Move::NONE; MAX_MOVES];
-        let mut nb_moves = 0;
-        self.enumerate_moves::<_, Allmv>(|m| {
-            assert!(nb_moves < MAX_MOVES);
-            ml[nb_moves] = m;
-            nb_moves += 1;
-        });
+        let mvs = self.gen_moves();
 
         if depth <= 1 {
-            return nb_moves;
+            return mvs.len();
         }
 
-        assert!(nb_moves <= MAX_MOVES);
-        for m in ml[..nb_moves].iter() {
-            self.make_move(*m);
+        for m in mvs {
+            self.make_move(m);
             let n = self.perft::<false>(depth - 1);
             self.undo_move();
 
@@ -40,7 +29,7 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::types::board::Board;
 
     #[test]
     fn test_perft() {

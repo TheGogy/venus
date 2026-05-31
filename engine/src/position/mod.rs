@@ -1,6 +1,6 @@
 pub mod eval;
 
-use chess::types::{board::Board, moves::Move, zobrist::Hash};
+use chess::types::{board::Board, color::Color, moves::Move, zobrist::Hash};
 use nnue::net::NNUE;
 
 use crate::{history::conthist::PieceTo, threading::thread::Thread};
@@ -8,7 +8,7 @@ use crate::{history::conthist::PieceTo, threading::thread::Thread};
 /// Position.
 /// This contains a representation of the board itself and the NNUE updated with the most recently
 /// evaluated board.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Position {
     pub board: Board,
     nnue: NNUE,
@@ -61,7 +61,7 @@ impl std::str::FromStr for Position {
                     None => return Err("Invalid move!"),
                 };
             }
-        };
+        }
 
         // Setup NNUE.
         let mut net = NNUE::default();
@@ -72,6 +72,7 @@ impl std::str::FromStr for Position {
 }
 
 impl Position {
+    /// Reset the board back to the starting position.
     pub fn reset(&mut self) {
         self.board = Board::default();
         self.nnue.reset();
@@ -107,5 +108,15 @@ impl Position {
     /// Get the current board hash.
     pub fn hash(&self) -> Hash {
         self.board.state.hash
+    }
+
+    /// Get the current side to move.
+    pub fn stm(&self) -> Color {
+        self.board.stm
+    }
+
+    /// Fully refreshes the NNUE to the current board state.
+    pub fn reinit_nnue(&mut self) {
+        self.nnue.update_all(&self.board);
     }
 }

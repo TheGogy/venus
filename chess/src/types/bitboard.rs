@@ -1,10 +1,11 @@
 use core::fmt;
 
-use crate::{impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
-
-use super::{
-    rank_file::{File, Rank},
-    square::Square,
+use crate::{
+    impl_all_math_ops, impl_math_assign_ops, impl_math_ops,
+    types::{
+        rank_file::{File, Rank},
+        square::Square,
+    },
 };
 
 /// Bitboard.
@@ -22,8 +23,8 @@ impl Bitboard {
     pub const DP: [Self; 2] = [Rank::R3.bb(), Rank::R6.bb()]; // Double push ranks.
 
     // Light and dark squares.
-    pub const WHITE_SQ: Self = Self(0xaa55aa55aa55aa55);
-    pub const BLACK_SQ: Self = Self(0x55aa55aa55aa55aa);
+    pub const WHITE_SQ: Self = Self(0xAA55_AA55_AA55_AA55);
+    pub const BLACK_SQ: Self = Self(0x55AA_55AA_55AA_55AA);
 
     /// If the bitboard is empty.
     pub const fn is_empty(self) -> bool {
@@ -31,7 +32,7 @@ impl Bitboard {
     }
 
     /// Whether the bitboard contains any value.
-    pub const fn any(self) -> bool {
+    pub const fn non_empty(self) -> bool {
         self.0 != 0
     }
 
@@ -42,12 +43,12 @@ impl Bitboard {
 
     /// Set the bit at the given index.
     pub const fn add(&mut self, s: Square) {
-        self.0 |= s.bb().0
+        self.0 |= s.bb().0;
     }
 
     /// Pop the bit at the given index.
     pub const fn pop(&mut self, s: Square) {
-        self.0 &= !s.bb().0
+        self.0 &= !s.bb().0;
     }
 
     /// Get the bit at the current index.
@@ -56,13 +57,14 @@ impl Bitboard {
     }
 
     /// Get the least significant bit.
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn lsb(self) -> Square {
         Square::from_raw(self.0.trailing_zeros() as u8)
     }
 
     /// Pop the least significant bit.
     pub const fn pop_lsb(&mut self) {
-        self.0 &= self.0 - 1
+        self.0 &= self.0 - 1;
     }
 
     /// Get the number of bits set.
@@ -76,7 +78,7 @@ impl Bitboard {
         F: FnMut(Square),
     {
         let mut bb = *self;
-        while bb.any() {
+        while bb.non_empty() {
             f(bb.lsb());
             bb.pop_lsb();
         }
@@ -96,7 +98,7 @@ impl Bitboard {
 
 impl_all_math_ops! {
     Bitboard: u64,
-    [u64, usize]
+    [u64]
 }
 
 impl std::ops::Not for Bitboard {
@@ -112,7 +114,7 @@ impl fmt::Display for Bitboard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = String::new();
         for rank in (0..8).rev() {
-            output.push_str(&(rank + 1).to_string()); // Rank label
+            output.push_str(&(rank + 1).to_string());
             output.push(' ');
 
             for file in 0..8 {
@@ -125,7 +127,7 @@ impl fmt::Display for Bitboard {
 
             output.push('\n');
         }
-        output.push_str("  a b c d e f g h\n"); // Column labels
+        output.push_str("  a b c d e f g h\n");
 
         write!(f, "{output}")
     }

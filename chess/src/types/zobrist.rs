@@ -2,7 +2,7 @@ use core::fmt;
 
 use utils::rng::next_rng;
 
-use super::{
+use crate::types::{
     castling::CastlingRights,
     color::Color,
     piece::{CPiece, Piece},
@@ -31,7 +31,7 @@ impl fmt::Display for Hash {
 impl Hash {
     /// Toggle the color bits after a given move.
     pub const fn toggle_color(&mut self) {
-        self.key ^= COLOR_KEY
+        self.key ^= COLOR_KEY;
     }
 
     /// Toggle a piece on a square.
@@ -42,13 +42,13 @@ impl Hash {
         if p.pt() == Piece::Pawn {
             self.pawn_key ^= k;
         } else {
-            self.non_pawn_key[p.color().idx()] ^= k
+            self.non_pawn_key[p.color().idx()] ^= k;
         }
     }
 
     /// Toggle castling rights on or off.
     pub const fn toggle_castling(&mut self, cr: CastlingRights) {
-        self.key ^= CASTLING_KEYS[cr.idx()]
+        self.key ^= CASTLING_KEYS[cr.idx()];
     }
 
     /// Toggle en passant on or off for a given square.
@@ -60,12 +60,12 @@ impl Hash {
 }
 
 /// The bits to toggle on or off for a different color.
-pub(crate) static COLOR_KEY: u64 = 0x83690DB1CD7C6C5;
+pub(crate) static COLOR_KEY: u64 = 0x0836_90DB_1CD7_C6C5;
 
 /// The bits to toggle on or off if a given piece is on a given square.
 pub(crate) static PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
     let mut piece_sq = [[0; Square::NUM]; CPiece::NUM];
-    let mut state = 0xDE0D71DD0844AD02;
+    let mut state = 0xDE0D_71DD_0844_AD02;
 
     let mut p = 0;
     while p < CPiece::NUM {
@@ -84,7 +84,7 @@ pub(crate) static PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
 /// The bits to toggle on or off when we have some castling rights.
 static CASTLING_KEYS: [u64; CastlingRights::NUM] = {
     let mut castling = [0; CastlingRights::NUM];
-    let mut state = 0xAC3B55E231CE6ABB;
+    let mut state = 0xAC3B_55E2_31CE_6ABB;
     let mut i = 0;
     while i < CastlingRights::NUM {
         castling[i] = state;
@@ -99,7 +99,7 @@ static CASTLING_KEYS: [u64; CastlingRights::NUM] = {
 /// When EP is unset, this should be zero.
 static EN_PASSANT_KEYS: [u64; File::NUM + 1] = {
     let mut en_passant = [0; File::NUM + 1];
-    let mut state = 0x38550AD083D94048;
+    let mut state = 0x3855_0AD0_83D9_4048;
 
     let mut i = 0;
     while i < File::NUM {

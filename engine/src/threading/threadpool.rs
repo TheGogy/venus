@@ -10,24 +10,22 @@ use std::{
 
 use chess::types::moves::Move;
 
+use super::thread::Thread;
 use crate::{
     position::Position,
+    tb::probe::{SyzygyTB, TB_HITS, WDL},
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
     tt::table::TT,
 };
 
-use super::thread::Thread;
-
-/// ThreadPool struct.
 /// Contains all the threads used for searching.
 pub struct ThreadPool {
-    main: Thread,
-    workers: Vec<Thread>,
-    global_stop: Arc<AtomicBool>,
-    global_nodes: Arc<AtomicU64>,
+    pub main: Thread,
+    pub workers: Vec<Thread>,
+    pub global_stop: Arc<AtomicBool>,
+    pub global_nodes: Arc<AtomicU64>,
 }
 
-/// ThreadPool management.
 impl ThreadPool {
     /// Initialize a threadpool.
     pub fn new(global_stop: Arc<AtomicBool>) -> Self {
@@ -45,19 +43,34 @@ impl ThreadPool {
     pub fn reset(&mut self) {
         self.resize(self.workers.len());
     }
-
-    /// The total number of thread workers.
-    pub const fn nb_workers(&self) -> usize {
-        self.workers.len()
-    }
 }
 
 /// Searching.
 impl ThreadPool {
     /// Starts searching the given position.
-    pub fn go(&mut self, pos: &mut Position, tc: TimeControl, tt: &TT) -> Move {
+    pub fn go(&mut self, pos: &mut Position, tc: TimeControl, tt: &TT, tb: &SyzygyTB) -> Move {
+        // Check tablebase before searching anything.
+        if let Some(res) = tb.probe_root(&pos.board) {
+            let eval_wdl = match res.wdl {
+                WDL::Win => "cp 20000 wdl 1000 0 0",
+                WDL::Draw => "cp 0 wdl 0 1000 0",
+                WDL::Loss => "cp -20000 wdl 0 0 1000",
+            };
+
+            println!(
+                "info depth 0 seldepth 0 score {} hashfull 0 tbhits 1 {} pv {}",
+                eval_wdl,
+                self.main.tm,
+                res.mov.to_uci(&pos.board.castlingmask)
+            );
+
+            return res.mov;
+        }
+
+        TB_HITS.store(0, Ordering::SeqCst);
+
         self.setup_threads(pos, tc);
-        self.deploy_threads(pos, tt);
+        self.deploy_threads(pos, tt, tb);
 
         self.select_move()
     }
@@ -66,7 +79,7 @@ impl ThreadPool {
     fn setup_threads(&mut self, pos: &mut Position, tc: TimeControl) {
         let halfmoves = pos.board.state.halfmoves;
 
-        self.main.tm = TimeManager::new(self.global_stop.clone(), self.global_nodes.clone(), tc, pos.board.stm);
+        self.main.tm = TimeManager::new(self.global_stop.clone(), self.global_nodes.clone(), tc, pos.stm());
 
         // Prepare main thread.
         self.main.prepare_search(halfmoves);
@@ -75,21 +88,21 @@ impl ThreadPool {
         self.workers.iter_mut().for_each(|t| t.prepare_search(halfmoves));
 
         // Store limits.
-        self.global_stop.store(false, Ordering::Relaxed);
-        self.global_nodes.store(0, Ordering::Relaxed);
+        self.global_stop.store(false, Ordering::SeqCst);
+        self.global_nodes.store(0, Ordering::SeqCst);
     }
 
     /// Deploys all threads searching in the given position.
-    fn deploy_threads(&mut self, pos: &mut Position, tt: &TT) {
+    fn deploy_threads(&mut self, pos: &mut Position, tt: &TT, tb: &SyzygyTB) {
         thread::scope(|scope| {
             for worker in &mut self.workers {
                 let mut worker_pos = pos.clone();
                 scope.spawn(move || {
-                    worker_pos.iterative_deepening::<false>(worker, tt);
+                    worker_pos.iterative_deepening::<false>(worker, tt, tb);
                 });
             }
 
-            pos.iterative_deepening::<true>(&mut self.main, tt);
+            pos.iterative_deepening::<true>(&mut self.main, tt, tb);
             self.global_stop.store(true, Ordering::Relaxed);
         });
     }
@@ -100,15 +113,13 @@ impl ThreadPool {
         let max_depth = all_threads.clone().map(|thread| thread.depth).max().unwrap_or(0);
 
         // Count votes from all the threads at the max depth.
-        let move_counts = all_threads.filter(|thread| thread.depth == max_depth).map(|thread| thread.best_move()).fold(
-            HashMap::new(),
-            |mut counts, mv| {
+        let move_counts =
+            all_threads.filter(|thread| thread.depth == max_depth).map(Thread::best_move).fold(HashMap::new(), |mut counts, mv| {
                 *counts.entry(mv).or_insert(0) += 1;
                 counts
-            },
-        );
+            });
 
         // Select the move with the highest count.
-        move_counts.into_iter().max_by_key(|&(_, count)| count).map(|(mv, _)| mv).unwrap_or(Move::NONE)
+        move_counts.into_iter().max_by_key(|&(_, count)| count).map_or(Move::NONE, |(mv, _)| mv)
     }
 }

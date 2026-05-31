@@ -125,7 +125,7 @@ impl MovePicker {
 mod tests {
     use chess::types::{moves::MoveFlag, square::Square};
 
-    use super::*;
+    use crate::movepick::{Eval, MPStage, Move, MovePicker, SearchType};
 
     #[test]
     fn test_movepick_construction() {

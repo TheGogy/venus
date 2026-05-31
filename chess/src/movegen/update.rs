@@ -14,7 +14,7 @@ use crate::{
 /// Contains functions for updating the masks within the provided board state.
 impl Board {
     /// Updates the masks for the given board state.
-    pub(crate) fn update_masks(&self, state: &mut BoardState) {
+    pub fn update_masks(&self, state: &mut BoardState) {
         self.update_attacked(state);
         self.update_checkers(state);
         self.update_kinglines(state);
@@ -90,7 +90,7 @@ impl Board {
 
         // We have already determined if we are in check with update_checkers; don't do these
         // lookups unless absolutely necessary.
-        if state.checkers.any() {
+        if state.checkers.non_empty() {
             state.checkmask = self.pc_bb(opp, Piece::Pawn) & pawn_atk(self.stm, ksqs[self.stm.idx()])
                             | self.pc_bb(opp, Piece::Knight) & knight_atk(ksqs[self.stm.idx()])
         }

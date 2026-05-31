@@ -10,7 +10,7 @@ use crate::types::{
 impl Board {
     /// Make a move in the current position.
     pub fn make_move(&mut self, m: Move) -> DirtyPieces {
-        assert!(!m.is_none());
+        debug_assert!(!m.is_none());
 
         let flag = m.flag();
         let (src, dst) = (m.src(), m.dst());
@@ -44,7 +44,7 @@ impl Board {
             // Normal move: increment halfmove clock.
             MoveFlag::Normal => {
                 if pc.pt() == Piece::Pawn {
-                    state.halfmoves = 0
+                    state.halfmoves = 0;
                 }
                 dp = DirtyPieces::Add1Sub1((pc, dst), (pc, src));
             }
@@ -136,6 +136,8 @@ impl Board {
     }
 
     /// Undo a move on the board.
+    /// WARN: Caller guarantees there must be at least one move in the board history, and that the
+    /// previous position is valid.
     pub fn undo_move(&mut self) {
         let m = self.state.mov;
 
@@ -144,7 +146,7 @@ impl Board {
         let mut piece = self.get_piece(dst);
         let cap = self.state.cap;
 
-        // SAFETY: This will only be called when there is a valid move in the history.
+        // SAFETY: Caller guarantees this will only be called when there is a valid move in the history.
         let state = self.history.pop().unwrap();
 
         // Update stm.
@@ -211,13 +213,20 @@ impl Board {
         // Update masks for movegen.
         self.update_masks(&mut state);
 
+        // Add null move.
+        state.mov = Move::NONE;
+
         // Set current state and push old state to history.
         let old_state = std::mem::replace(&mut self.state, state);
         self.history.push(old_state);
     }
 
     /// Undo a null move from the board.
+    /// WARN: Caller guarantees the board history must have a null move pushed to it.
     pub fn undo_null(&mut self) {
+        debug_assert!(!self.history.is_empty());
+        debug_assert!(self.state.mov.is_none());
+
         self.state = self.history.pop().unwrap();
         self.stm = !self.stm;
     }

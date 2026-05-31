@@ -1,8 +1,5 @@
-use crate::{impl_from_type, impl_lists};
+use crate::{impl_from_type, impl_lists, types::color::Color};
 
-use super::color::Color;
-
-/// Piece.
 /// Represents a piece, and is ordered by increasing value.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
@@ -17,7 +14,6 @@ pub enum Piece {
     None,
 }
 
-/// CPiece.
 /// Represents a piece and a color.
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -36,43 +32,43 @@ pub enum CPiece {
 impl Piece {
     const UCI_CHAR: &str = "pnbrqk ";
 
-    /// Iterate over all Pieces.
+    /// Iterate over all [`Piece`]s.
     pub fn iter() -> impl Iterator<Item = Self> {
         (0..6).map(Self::from_raw)
     }
 
-    /// Get the UCI character for this Piece.
+    /// Get the UCI character for this [`Piece`].
     pub fn to_char(self) -> char {
-        Self::UCI_CHAR.chars().nth(self as usize).expect("Invalid piece!")
+        Self::UCI_CHAR.chars().nth(self as usize).unwrap_or('?')
     }
 }
 
 impl CPiece {
     const UCI_CHAR: &str = "PpNnBbRrQqKk ";
 
-    /// The color of this CPiece.
+    /// The color of this [`CPiece`].
     pub const fn color(self) -> Color {
         Color::from_raw(self as u8 & 1)
     }
 
-    /// The type of this CPiece.
+    /// The type of this [`CPiece`].
     pub const fn pt(self) -> Piece {
         Piece::from_raw(self as u8 >> 1)
     }
 
-    /// Create a CPiece from a Color and a Piece.
+    /// Create a [`CPiece`] from a [`Color`] and a [`Piece`].
     pub const fn create(c: Color, p: Piece) -> Self {
         Self::from_raw(((p as u8) << 1) + c as u8)
     }
 
-    /// Iterate over all CPieces.
+    /// Iterate over all [`CPiece`]s.
     pub fn iter() -> impl Iterator<Item = Self> {
         (0..12).map(Self::from_raw)
     }
 
-    /// Get the UCI character for this CPiece.
+    /// Get the UCI character for this [`CPiece`].
     pub fn to_char(self) -> char {
-        Self::UCI_CHAR.chars().nth(self as usize).expect("Invalid CPiece!")
+        Self::UCI_CHAR.chars().nth(self as usize).unwrap_or('?')
     }
 }
 
@@ -91,10 +87,10 @@ impl_lists! {CPiece, 12}
 
 impl_from_type! {
     Piece, u8, 6,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
+    [u8]
 }
 
 impl_from_type! {
     CPiece, u8, 12,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize]
+    [u8, usize]
 }

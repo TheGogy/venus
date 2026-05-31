@@ -4,10 +4,10 @@
 /// but with tune flags they can be altered at runtime.
 ///
 /// The step size for each value should be ~1/20 of the range.
-/// Refer to https://github.com/AndyGrant/OpenBench/wiki/SPSA-Tuning-Workloads#spsa-hyperparameters
+/// Refer to <https://github.com/AndyGrant/OpenBench/wiki/SPSA-Tuning-Workloads#spsa-hyperparameters>
 ///
 /// # Example
-///
+/// ```
 /// //  name:      type = val, min, max, step;
 /// init_tunables! {
 ///     val_pawn:   i32 = 200, 150, 250, 5;
@@ -16,7 +16,7 @@
 ///     val_rook:   i32 = 1300, 1200, 1500, 10;
 ///     val_queen:  i32 = 2500, 2400, 2600, 10;
 /// }
-///
+///```
 #[macro_export]
 macro_rules! init_tunables {
     ($($name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr;)*) => {

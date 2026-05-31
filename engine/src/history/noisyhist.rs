@@ -1,0 +1,57 @@
+use chess::types::{
+    board::Board,
+    moves::Move,
+    piece::{CPiece, Piece},
+    square::Square,
+};
+use utils::memory::boxed_zeroed;
+
+use crate::history::{HistEntry, movebuffer::MoveBuffer};
+
+pub const CAP_HIST_MAX: i32 = 16384;
+
+/// Capture history.
+///
+/// This is used to record the value of captures during the search,
+/// in order to help with move ordering.
+/// We can use [`Piece::NUM`] - 1 because kings cannot be captured by a legal move.
+#[derive(Clone, Debug)]
+pub struct NoisyHist(Box<[[[HistEntry; Piece::NUM - 1]; Square::NUM]; CPiece::NUM]>);
+
+// TODO: add tunable history defaults.
+impl Default for NoisyHist {
+    fn default() -> Self {
+        Self(boxed_zeroed())
+    }
+}
+
+impl NoisyHist {
+    /// The index into this history.
+    /// [piecetype][captured][to]
+    fn idx(b: &Board, m: Move) -> (usize, usize, usize) {
+        (b.pc_at(m.src()).idx(), m.dst().idx(), b.captured(m).pt().idx())
+    }
+
+    /// Add a bonus to the given move.
+    fn add_bonus(&mut self, b: &Board, m: Move, bonus: i16) {
+        let i = Self::idx(b, m);
+        self.0[i.0][i.1][i.2].gravity::<CAP_HIST_MAX>(bonus);
+    }
+
+    /// Get a bonus for the given move.
+    pub fn get_bonus(&self, b: &Board, m: Move) -> i32 {
+        let i = Self::idx(b, m);
+        i32::from(self.0[i.0][i.1][i.2].0)
+    }
+
+    /// Update the history with the given moves.
+    pub fn update(&mut self, b: &Board, best: Move, captures: &MoveBuffer, bonus: i16, malus: i16) {
+        for m in captures {
+            self.add_bonus(b, *m, -malus);
+        }
+
+        if best.flag().is_cap() {
+            self.add_bonus(b, best, bonus);
+        }
+    }
+}

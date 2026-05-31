@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Hash};
 
-use super::bits;
+use crate::tt::bits;
 
 /// TT Bound.
 /// Upper: search at this position fails high.
@@ -63,7 +63,7 @@ pub const TT_DEPTH_OFFSET: Depth = 3;
 
 impl TTEntry {
     /// Make a new TT entry.
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub const fn new(key: u64, pv: bool, age: u8, d: Depth, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
         let depth = (d + TT_DEPTH_OFFSET) as u8;
         Self { key, pv, age, depth, bound, mov, eval: eval.0 as i16, value: value.0 as i16 }

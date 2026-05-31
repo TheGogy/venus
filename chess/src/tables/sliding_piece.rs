@@ -8,7 +8,7 @@ use crate::types::{
 };
 
 /// Runs before main.
-#[ctor]
+#[ctor(unsafe)]
 fn init() {
     init_attack_lookups();
 }
@@ -259,8 +259,10 @@ const ROOK_SHIFTS: [u64; 64] = [
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::assert_bitboard_eq;
+    use crate::{
+        assert_bitboard_eq,
+        tables::sliding_piece::{Bitboard, Square, between, bishop_atk, bishop_atk_init, rook_atk, rook_atk_init},
+    };
 
     #[test]
     fn test_rook_basic_movements() {

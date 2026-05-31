@@ -1,8 +1,17 @@
 [package]
 name = "nnue"
-version = "0.3.0"
+version = "0.5.3"
 edition = "2024"
+
+[lib]
+doctest = false
 
 [dependencies]
 utils = { path = "../utils" }
 chess = { path = "../chess" }
+clap = { version = "4.6.1", features = ["derive"] }
+
+[features]
+embed = []
+embed_direct = []
+nnz_logging = []

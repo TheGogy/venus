@@ -81,11 +81,11 @@ struct CuckooTable {
 }
 
 const fn h1(k: u64) -> usize {
-    (k & 0x1fff) as usize
+    (k & 0x1FFF) as usize
 }
 
 const fn h2(k: u64) -> usize {
-    ((k >> 16) & 0x1fff) as usize
+    ((k >> 16) & 0x1FFF) as usize
 }
 
 static CUCKOO: CuckooTable = {

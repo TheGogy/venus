@@ -1,14 +1,16 @@
 use std::ops::Not;
 
-use crate::{impl_all_math_ops, impl_math_assign_ops, impl_math_ops, tables::sliding_piece::between};
-
-use super::{
-    bitboard::Bitboard,
-    board::Board,
-    color::Color,
-    piece::{CPiece, Piece},
-    rank_file::{File, Rank},
-    square::Square,
+use crate::{
+    impl_all_math_ops, impl_math_assign_ops, impl_math_ops,
+    tables::sliding_piece::between,
+    types::{
+        bitboard::Bitboard,
+        board::Board,
+        color::Color,
+        piece::{CPiece, Piece},
+        rank_file::{File, Rank},
+        square::Square,
+    },
 };
 
 /// Castling rights.
@@ -16,7 +18,7 @@ use super::{
 ///
 /// Represented as:
 /// [wk][bk][wq][bq]
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub struct CastlingRights(pub u8);
 
 impl CastlingRights {
@@ -49,12 +51,12 @@ impl CastlingRights {
 
     /// Whether the given color has kingside castling.
     pub const fn has_ks(self, c: Color) -> bool {
-        self.0 & (0b0001 << c.idx() as u8) != 0
+        self.0 & Self::MASKS[0][c.idx()].0 != 0
     }
 
     /// Whether the given color has queenside castling.
     pub const fn has_qs(self, c: Color) -> bool {
-        self.0 & (0b0100 << c.idx() as u8) != 0
+        self.0 & Self::MASKS[1][c.idx()].0 != 0
     }
 
     /// Gets the mask for a given color and side.
@@ -69,14 +71,14 @@ impl_all_math_ops! {
 }
 
 impl Not for CastlingRights {
-    type Output = CastlingRights;
+    type Output = Self;
 
     fn not(self) -> Self {
         Self(!self.0)
     }
 }
 
-/// CastlingMask. This allows us to efficiently update the castling rights after a move.
+/// This allows us to efficiently update the castling rights after a move.
 ///
 /// mask:  The castling mask map that we can use to swap out our castling rights.
 /// rooks: The rook starting squares. [ wk , bk , wq , bq ]
@@ -96,7 +98,6 @@ impl Default for CastlingMask {
     }
 }
 
-/// CastlingRights implementations.
 impl CastlingMask {
     /// Get the mask of the rights to zero out after a move.
     pub fn zero_out(&self, src: Square, dst: Square) -> CastlingRights {
@@ -104,7 +105,7 @@ impl CastlingMask {
     }
 
     /// Get the source and destination squares for the rook given a king destination.
-    /// Assumes that king_to is legal.
+    /// Assumes that [`king_to`] is legal.
     pub const fn rook_src_dst(&self, king_to: Square) -> (Square, Square) {
         match king_to {
             Square::G1 => (self.rooks[0], Square::F1),
@@ -146,7 +147,7 @@ impl CastlingMask {
 ///
 /// Fischer Random chess is supported. It uses the following format:
 ///
-/// 1. If the rook used for castling is the closest rook to the side, normal KQkq is used.
+/// 1. If the rook used for castling is the closest rook to the side, normal "KQkq" is used.
 ///
 /// 2. If the rook is NOT the closest to the side, we use the file.
 ///    Again, uppercase for white, lowercase for black.
@@ -171,20 +172,20 @@ impl CastlingRights {
                     while b.pc_at(sq) != rook {
                         sq = sq.prev();
                     }
-                    (sq, CastlingRights::get_mask(c, false))
+                    (sq, Self::get_mask(c, false))
                 }
                 'Q' => {
                     let mut sq = Square::A1.relative(c);
                     while b.pc_at(sq) != rook {
                         sq = sq.next();
                     }
-                    (sq, CastlingRights::get_mask(c, true))
+                    (sq, Self::get_mask(c, true))
                 }
 
                 'A'..='H' => {
                     c_mask.frc = true;
                     let sq = Square::make(Rank::R1.relative(c), File::from_raw(t as u8 - b'A'));
-                    (sq, CastlingRights::get_mask(c, ksq > sq))
+                    (sq, Self::get_mask(c, ksq > sq))
                 }
 
                 _ => return Err("Invalid Castling Rights!"),
@@ -203,7 +204,7 @@ impl CastlingRights {
 ///
 /// This uses the following format:
 ///
-/// 1. If the castling squares are the valid square (wk = H1, wq = A1, etc) then use KQkq.
+/// 1. If the castling squares are the valid square (wk = H1, wq = A1, etc) then use "KQkq".
 /// 2. Otherwise, use rook file.
 impl CastlingRights {
     pub fn to_str(self, b: &Board) -> String {

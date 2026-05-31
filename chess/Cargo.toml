@@ -1,12 +1,17 @@
 [package]
 name = "chess"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 authors = ["TheGogy"]
 
 [dependencies]
-ctor = "0.4.3"
+ctor = "1.0.7"
 utils = { path = "../utils" }
+clap = { version = "4.6.1", features = ["derive"] }
+arrayvec = "0.7.6"
+
+[lib]
+doctest = false
 
 [features]
 full_tests = []

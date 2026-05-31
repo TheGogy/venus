@@ -1,5 +1,6 @@
 use chess::types::{Depth, board::Board, eval::Eval, moves::Move};
 
+#[allow(clippy::wildcard_imports)]
 use crate::{threading::thread::Thread, tunables::params::tunables::*};
 
 /// Reverse futility pruning.
@@ -7,9 +8,9 @@ use crate::{threading::thread::Thread, tunables::params::tunables::*};
 // we're likely to exceed beta, we can return beta immediately.
 #[rustfmt::skip]
 pub fn can_apply_rfp(depth: Depth, improving: bool, opp_worsening: bool, eval: Eval, beta: Eval) -> bool {
-    let rfp_margin = rfp_mult() * Eval(depth as i32) 
-                   - rfp_improving_margin() * Eval(improving as i32)
-                   - rfp_worsening_margin() * Eval(opp_worsening as i32);
+    let rfp_margin = rfp_mult() * Eval(i32::from(depth))
+                   - rfp_improving_margin() * Eval(i32::from(improving))
+                   - rfp_worsening_margin() * Eval(i32::from(opp_worsening));
     !eval.is_win() && !beta.is_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
 }
 
@@ -17,7 +18,7 @@ pub fn can_apply_rfp(depth: Depth, improving: bool, opp_worsening: bool, eval: E
 // If our static eval is far below alpha, do a quick qsearch to see
 // if we can improve the position through tactics.
 pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
-    !alpha.is_win() && eval < alpha - rz_base() - rz_mult() * (depth * depth) as i32
+    !alpha.is_win() && eval < alpha - rz_base() - rz_mult() * i32::from(depth * depth)
 }
 
 /// Null move pruning.
@@ -26,7 +27,7 @@ pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
 pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
     depth >= nmp_d_min()
         && t.ply_from_null > 0
-        && eval + nmp_improving_margin() * improving as i32 >= beta
+        && eval + nmp_improving_margin() * i32::from(improving) >= beta
         && !b.only_king_pawns_left()
         && !beta.is_loss()
 }
@@ -35,7 +36,7 @@ pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval:
 // If we don't have a good move from the TT, reduce depth slightly
 // to avoid spending too much time on potentially uninteresting positions.
 pub fn can_apply_iir(depth: Depth, is_pv: bool, cutnode: bool, tt_move: Move) -> bool {
-    (is_pv || cutnode) && tt_move.is_none() && depth >= iir_d_min() + 2 * cutnode as Depth
+    (is_pv || cutnode) && tt_move.is_none() && depth >= iir_d_min() + 2 * Depth::from(cutnode)
 }
 
 /// History Pruning.
@@ -56,7 +57,7 @@ pub fn can_apply_lmp(depth: Depth, moves_tried: usize, lmp_margin: usize) -> boo
 /// If our score is significantly below alpha, then this position is probably bad, then we should
 /// skip the quiet moves.
 pub fn can_apply_fp(depth: Depth, r: i32, eval: Eval, alpha: Eval) -> bool {
-    let lmr_depth = depth as i32 - (r / LMR_SCALE);
+    let lmr_depth = i32::from(depth) - (r / LMR_SCALE);
     let fp_margin = Eval(fp_base() + lmr_depth * fp_mult());
 
     lmr_depth <= fp_d_min() && eval + fp_margin < alpha
@@ -65,7 +66,7 @@ pub fn can_apply_fp(depth: Depth, r: i32, eval: Eval, alpha: Eval) -> bool {
 /// Late move reductions.
 /// Reduce the search depth for moves with bad move ordering.
 pub fn can_apply_lmr(depth: Depth, moves_tried: usize, is_pv: bool) -> bool {
-    depth >= 2 && moves_tried >= lmr_m_min() + is_pv as usize
+    depth >= 2 && moves_tried >= lmr_m_min() + usize::from(is_pv)
 }
 
 pub const LMR_SCALE: i32 = 1024;
@@ -80,6 +81,7 @@ pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> i32 {
     }
 
     #[cfg(feature = "tune")]
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
     {
         if depth == 0 || moves_tried == 0 {
             return 0;
@@ -88,6 +90,6 @@ pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> i32 {
         let lmr_base = lmr_base() as f32 / 1024.0;
         let lmr_mult = lmr_mult() as f32 / 1024.0;
 
-        (lmr_base + (depth as f32).ln() * (moves_tried as f32).ln() / lmr_mult) as i32 * LMR_SCALE
+        (lmr_base + f32::from(depth).ln() * (moves_tried as f32).ln() / lmr_mult) as i32 * LMR_SCALE
     }
 }

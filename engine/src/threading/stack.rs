@@ -3,9 +3,7 @@ use chess::{
     types::{eval::Eval, moves::Move},
 };
 
-use crate::history::conthist::PieceTo;
-
-use super::thread::Thread;
+use crate::{history::conthist::PieceTo, threading::thread::Thread};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SearchStackEntry {

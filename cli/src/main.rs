@@ -1,42 +1,52 @@
-use std::env::args;
+use std::path::PathBuf;
 
+use clap::{Parser, Subcommand};
 use cli::uci::UCIReader;
-use engine::{VERSION, interface::Engine};
-
+use engine::bench::run_bench;
 #[cfg(feature = "tune")]
 use engine::tunables::params::tunables;
 
-const HELP_MSG: &str = "Commands:
-(no args)      Run the UCI interface.
+#[derive(Parser, Debug)]
+#[command(name = "Venus")]
+#[command(version, about = "A strong NNUE chess engine.")]
+struct Args {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
 
---help (-h)    Print this message.
---version (-v) Print the current version.
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Runs a benchmark against a number of set test positions
+    Bench { epd: Option<PathBuf> },
 
-bench          Run the benchmarking suite.";
-
-#[cfg(feature = "tune")]
-const TUNE_HELP_MSG: &str = "
-spsa-json      Output the SPSA tuning parameters in json format.
-spsa-txt       Output the SPSA tuning parameters in raw format.
-";
-
-#[cfg(not(feature = "tune"))]
-const TUNE_HELP_MSG: &str = "";
+    /// Outputs a list of the SPSA parameters for openbench
+    #[cfg(feature = "tune")]
+    Spsa,
+}
 
 fn main() {
-    match args().nth(1).as_deref() {
-        // CLI args
-        Some("--help") | Some("-h") => println!("{HELP_MSG}{TUNE_HELP_MSG}"),
-        Some("--version") | Some("-v") => println!("{VERSION}"),
+    #[cfg(not(feature = "embed"))]
+    println!("WARNING: engine does not have eval network. If you want to build the engine, make sure to build with the 'embed' feature.");
 
-        // SPSA
+    let args = Args::parse();
+
+    let result = match args.command {
+        Some(Command::Bench { epd }) => run_bench(epd),
+
         #[cfg(feature = "tune")]
-        Some("spsa") => println!("{}", tunables::spsa_output_txt()),
+        Some(Command::Spsa) => {
+            println!("{}", tunables::spsa_output_txt());
+            Ok(())
+        }
 
-        // Benchmarking
-        Some("bench") => Engine::run_bench(),
+        None => {
+            UCIReader::default().run();
+            Ok(())
+        }
+    };
 
-        Some(&_) => println!("Unknown command! (run '--help')"),
-        None => UCIReader::default().run(),
+    if let Err(e) = result {
+        eprintln!("error: {e}");
+        std::process::exit(1);
     }
 }

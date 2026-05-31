@@ -10,9 +10,9 @@ use std::{
 
 #[cfg(feature = "tune")]
 use crate::tunables::params::tunables;
-
 use crate::{
     position::Position,
+    tb::probe::SyzygyTB,
     threading::{thread::Thread, threadpool::ThreadPool},
     time_management::timecontrol::TimeControl,
     tt::table::TT,
@@ -25,6 +25,7 @@ pub struct Engine {
     pub pos: Position,
     pub pool: ThreadPool,
     pub tt: TT,
+    pub tb: SyzygyTB,
 }
 
 /// Engine interface.
@@ -67,7 +68,7 @@ impl EngineInterface {
     pub fn handle_command(&self, command: EngineCommand) {
         match command {
             EngineCommand::Stop => self.stop.store(true, Ordering::Relaxed),
-            cmd => self.tx.send(cmd).unwrap(),
+            cmd => self.tx.send(cmd).unwrap_or_else(|_| println!("Failed to send command!")),
         }
     }
 }
@@ -75,7 +76,7 @@ impl EngineInterface {
 impl Engine {
     /// Run the engine.
     fn run(rx: mpsc::Receiver<EngineCommand>, stop: Arc<AtomicBool>) {
-        let mut controller = Self { pos: Position::default(), pool: ThreadPool::new(stop), tt: TT::default() };
+        let mut controller = Self { pos: Position::default(), pool: ThreadPool::new(stop), tt: TT::default(), tb: SyzygyTB::default() };
 
         for c in rx {
             controller.handle_command(c);
@@ -87,16 +88,18 @@ impl Engine {
     fn handle_command(&mut self, command: EngineCommand) {
         match command {
             EngineCommand::NewGame       => self.handle_newgame(),
-            EngineCommand::SetOpt(n, v)  => self.handle_setopt(n, v),
+            EngineCommand::SetOpt(n, v)  => self.handle_setopt(&n, &v),
             EngineCommand::Position(pos) => self.pos = *pos,
             EngineCommand::Go(tc)        => self.handle_go(tc),
             EngineCommand::Perft(d)      => self.handle_perft::<false>(d),
             EngineCommand::PerftMp(d)    => self.handle_perft::<true>(d),
             EngineCommand::Eval          => self.handle_eval(),
-            EngineCommand::Move(m)       => self.handle_move(m),
+            EngineCommand::Move(m)       => self.handle_move(&m),
             EngineCommand::Undo          => self.handle_undo(),
             EngineCommand::Print         => println!("{}", self.pos.board),
-            _ => println!("Unknown command!")
+
+            // Should have been handled already.
+            EngineCommand::Stop          => unreachable!()
         }
     }
 }
@@ -113,7 +116,7 @@ impl Engine {
     /// Handle go command.
     fn handle_go(&mut self, tc: TimeControl) {
         self.tt.increment_age();
-        let bestmove = self.pool.go(&mut self.pos, tc, &self.tt);
+        let bestmove = self.pool.go(&mut self.pos, tc, &self.tt, &self.tb);
         println!("bestmove {}", bestmove.to_uci(&self.pos.board.castlingmask));
     }
 
@@ -128,17 +131,22 @@ impl Engine {
         println!("  nodes: {total}");
         println!("  time:  {duration:?}");
         println!("  perf:  {perf} Mnps");
+        println!("  mp?:   {MP}");
         println!("{:=^1$}", " <> ", 25);
     }
 
     /// Handle eval command.
     fn handle_eval(&mut self) {
+        if self.pos.board.in_check() {
+            println!("NOTE: In check - board will not be evaluated.");
+        }
+
         println!("{}", self.pos.evaluate());
     }
 
     /// Handle setopt command.
-    fn handle_setopt(&mut self, n: String, v: String) {
-        match &n[..] {
+    fn handle_setopt(&mut self, n: &str, v: &str) {
+        match n {
             "Threads" => {
                 if let Ok(size) = v.parse::<usize>()
                     && size > 0
@@ -167,9 +175,17 @@ impl Engine {
                 }
             }
 
+            "SyzygyPath" => {
+                if self.tb.init(v) {
+                    println!("info string found syzygy tb at {v} ({}-man)", self.tb.max_pcs);
+                } else {
+                    println!("info string could not find syzygy tb at {v}");
+                }
+            }
+
             #[cfg(feature = "tune")]
             _ => {
-                if tunables::set_tunable(&n, &v).is_err() {
+                if tunables::set_tunable(n, v).is_err() {
                     println!("Unsupported option: {n}!");
                 }
             }
@@ -180,13 +196,10 @@ impl Engine {
     }
 
     /// Handle move command.
-    fn handle_move(&mut self, m: String) {
-        let mv = match self.pos.board.find_move(&m) {
-            Some(m) => m,
-            None => {
-                println!("Move not found!");
-                return;
-            }
+    fn handle_move(&mut self, m: &str) {
+        let Some(mv) = self.pos.board.find_move(m) else {
+            println!("Move not found!");
+            return;
         };
         self.pos.make_move(mv, &mut Thread::placeholder());
     }
@@ -194,13 +207,5 @@ impl Engine {
     /// Handle undo command.
     fn handle_undo(&mut self) {
         self.pos.undo_move(&mut Thread::placeholder());
-    }
-
-    /// The maximum available workers on this machine.
-    pub fn max_workers() -> usize {
-        match std::thread::available_parallelism() {
-            Ok(n) => n.into(),
-            Err(_) => 0,
-        }
     }
 }

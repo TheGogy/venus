@@ -12,14 +12,14 @@ pub enum Color {
 
 impl Color {
     /// Iterate over both colors.
-    pub fn iter() -> impl Iterator<Item = Color> {
-        [Color::White, Color::Black].into_iter()
+    pub fn iter() -> impl Iterator<Item = Self> {
+        [Self::White, Self::Black].into_iter()
     }
 }
 
 /// Toggle the current color.
 impl Not for Color {
-    type Output = Color;
+    type Output = Self;
 
     fn not(self) -> Self {
         Self::from_raw(1 ^ self as u8)
@@ -30,12 +30,12 @@ impl_lists! {Color, 2}
 
 impl_from_type! {
     Color, u8, 2,
-    [i64, i32, i16, i8, u64, u32, u16, u8, usize, bool]
+    [u8, bool]
 }
 
 /// Get a color from a character.
-/// 'w' => Color::White,
-/// 'b' => Color::Black
+/// 'w' => [`Color::White`],
+/// 'b' => [`Color::Black`]
 impl TryFrom<char> for Color {
     type Error = &'static str;
 

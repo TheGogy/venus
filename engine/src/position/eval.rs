@@ -1,4 +1,7 @@
-use crate::{threading::thread::Thread, tunables::params::tunables::*};
+use crate::{
+    threading::thread::Thread,
+    tunables::params::tunables::{ms_base, ms_bishop, ms_knight, ms_queen, ms_rook},
+};
 
 use super::Position;
 use chess::types::{eval::Eval, piece::Piece};
@@ -19,6 +22,7 @@ impl Position {
     }
 
     /// Adjust the evaluation according to correction history and 50 move rule scaling.
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     pub fn adjust_eval(&mut self, t: &mut Thread, mut v: Eval) -> Eval {
         // Scale down the eval if we're just shuffling pieces back and forth and not making
         // progress.
@@ -33,11 +37,12 @@ impl Position {
 
     /// Get the material scale for the position.
     #[rustfmt::skip]
+    #[allow(clippy::cast_possible_wrap)]
     fn material_scale(&self) -> i32 {
         let total_material =
             self.board.p_bb(Piece::Knight).nbits() as i32 * ms_knight() +
             self.board.p_bb(Piece::Bishop).nbits() as i32 * ms_bishop() +
-            self.board.p_bb(Piece::Rook).nbits()   as i32 * ms_rook() +
+            self.board.p_bb(Piece::Rook).nbits()   as i32 * ms_rook()   +
             self.board.p_bb(Piece::Queen).nbits()  as i32 * ms_queen();
 
         ms_base() + (total_material / 32)

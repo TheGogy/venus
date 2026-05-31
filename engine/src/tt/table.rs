@@ -1,11 +1,12 @@
-use crate::tunables::params::tunables::tt_replace_d_min;
-
-use super::{
-    bits::MASK_AGE,
-    entry::{Bound, CompressedEntry, TTEntry},
-};
-
 use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Hash};
+
+use crate::{
+    tt::{
+        bits::MASK_AGE,
+        entry::{Bound, CompressedEntry, TTEntry},
+    },
+    tunables::params::tunables::tt_replace_d_min,
+};
 
 /// Transposition table.
 pub struct TT {
@@ -26,6 +27,14 @@ impl TT {
     /// Default size in MB for the table.
     pub const DEFAULT_SIZE: usize = 16;
 
+    /// Create a TT with the given size.
+    pub fn with_size(size_mb: usize) -> Self {
+        let mut tt = Self { entries: Vec::new(), age: 0 };
+
+        tt.resize(size_mb);
+        tt
+    }
+
     /// Resize the table to the given size (mb).
     pub fn resize(&mut self, new_size_mb: usize) {
         let entries_count = (new_size_mb << 20) / size_of::<CompressedEntry>();
@@ -33,6 +42,7 @@ impl TT {
     }
 
     /// Get the index for a given hash.
+    #[allow(clippy::cast_possible_truncation)]
     const fn idx(&self, hash: Hash) -> usize {
         let key = hash.key as u128;
         let len = self.entries.len() as u128;
@@ -53,11 +63,12 @@ impl TT {
             use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
             let index = self.idx(hash);
             let entry = self.entries.get_unchecked(index);
-            _mm_prefetch::<_MM_HINT_T0>((entry as *const CompressedEntry).cast());
+            _mm_prefetch::<_MM_HINT_T0>(std::ptr::from_ref::<CompressedEntry>(entry).cast());
         }
     }
 
     /// Increment the table age.
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn increment_age(&mut self) {
         self.age = (self.age + 1) & MASK_AGE as u8;
     }
@@ -76,7 +87,7 @@ impl TT {
         if self.age != old.age        // Always replace older entries.
             || hash.key != old.key    // Always replace different positions.
             || bound == Bound::Exact  // Always replace with exact scores.
-            || depth + tt_replace_d_min() + 2 * pv as Depth > old.depth()
+            || depth + tt_replace_d_min() + 2 * Depth::from(pv) > old.depth()
         {
             let new_move = if mov.is_none() && hash.key == old.key { old.mov } else { mov };
             slot.write(TTEntry::new(hash.key, pv, self.age, depth, bound, new_move, eval, value.to_corrected(ply)));
@@ -94,11 +105,12 @@ impl TT {
 
 #[cfg(test)]
 mod tests {
+    use chess::types::{eval::Eval, moves::Move, zobrist::Hash};
+
     use crate::tt::{
         entry::{Bound, CompressedEntry},
         table::TT,
     };
-    use chess::types::{eval::Eval, moves::Move, zobrist::Hash};
 
     #[test]
     fn test_tt_init() {

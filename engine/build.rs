@@ -1,6 +1,15 @@
 use std::{env, error::Error, fs::File, io::Write, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    write_lmr_table()?;
+
+    #[cfg(feature = "syzygy")]
+    setup_fathom()?;
+
+    Ok(())
+}
+
+fn write_lmr_table() -> Result<(), Box<dyn Error>> {
     const LMR_BASE: f32 = 887.0 / 1024.0;
     const LMR_MULT: f32 = 2003.0 / 1024.0;
 
@@ -18,6 +27,35 @@ fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = env::var("OUT_DIR")?;
     let out_path = PathBuf::from(out_dir).join("lmr.bin");
     File::create(out_path)?.write_all(lmr)?;
+
+    Ok(())
+}
+
+#[cfg(feature = "syzygy")]
+fn setup_fathom() -> Result<(), Box<dyn Error>> {
+    // Write bindings.
+    let binds = bindgen::Builder::default()
+        .header("./external/Fathom/src/tbprobe.h")
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .layout_tests(false)
+        .generate()
+        .unwrap();
+
+    binds.write_to_file("./src/tb/binds.rs").unwrap();
+
+    // Compile Fathom.
+    let cc = &mut cc::Build::new();
+    cc.file("./external/Fathom/src/tbprobe.c");
+    cc.include("./external/Fathom/src/");
+
+    // The functions are safe! Their readme says so!
+    cc.define("_CRT_SECURE_NO_WARNINGS", None);
+
+    let target_cpu = std::env::var("TARGET_CPU").unwrap_or("native".to_string());
+    cc.flag(format!("-march={}", target_cpu));
+    cc.flag("-march=native");
+    cc.flag("-w");
+    cc.compile("fathom");
 
     Ok(())
 }

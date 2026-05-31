@@ -1,8 +1,10 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::missing_errors_doc)]
+
 use crate::init_tunables;
 
 // See [init_tunables].
 //
-// https://github.com/AndyGrant/OpenBench/wiki/SPSA-Tuning-Workloads
+// <https://github.com/AndyGrant/OpenBench/wiki/SPSA-Tuning-Workloads>
 //
 // Use the following naming convention:
 //

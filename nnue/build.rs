@@ -1,22 +1,23 @@
+#[cfg(feature = "embed")]
 use std::env;
-use std::path::{Path, PathBuf};
+#[cfg(feature = "embed")]
+use std::path::PathBuf;
 
 fn main() {
-    let cwd = env::current_dir().expect("Failed to get current working directory");
-    let evalfile_rel = env::var("EVALFILE").unwrap_or_else(|_| "data/vega-ft3.bin".to_string());
+    #[cfg(feature = "embed")]
+    setup_evalfile();
+}
 
-    // Resolve relative to where the user ran make from.
-    let evalfile_path = if Path::new(&evalfile_rel).is_absolute() {
-        PathBuf::from(&evalfile_rel)
-    } else {
-        cwd.join(&evalfile_rel)
-    };
+#[cfg(feature = "embed")]
+fn setup_evalfile() {
+    let path = PathBuf::from(env::var("EVALFILE").expect("Must define EVALFILE"));
+    assert!(path.is_absolute(), "EVALFILE must be absolute");
 
-    if !evalfile_path.exists() {
-        panic!("EVALFILE path does not exist: {}", evalfile_path.display());
+    if !path.exists() {
+        panic!("EVALFILE path does not exist: {}", path.display());
     }
 
-    let canonical = evalfile_path.canonicalize().expect("Failed to canonicalize EVALFILE path");
-
-    println!("cargo:rustc-env=NNUE_EVALFILE={}", canonical.display());
+    let canonical = path.canonicalize().expect("Failed to canonicalize EVALFILE path");
+    println!("cargo:rerun-if-env-changed=EVALFILE");
+    println!("cargo:rerun-if-changed={}", canonical.display());
 }

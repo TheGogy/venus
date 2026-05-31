@@ -54,10 +54,10 @@ impl MoveList {
         self.swap(cur, best_idx);
 
         if IS_LEFT {
-            self.cur += 1
+            self.cur += 1;
         } else {
             // SAFETY: If we are on the right hand side, self.cur is guaranteed to be > 0.
-            self.cur -= 1
+            self.cur -= 1;
         }
 
         self.mvs[cur]

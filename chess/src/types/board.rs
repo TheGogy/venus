@@ -1,16 +1,20 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::movegen::Allmv;
+use arrayvec::ArrayVec;
 
-use super::{
-    bitboard::Bitboard,
-    castling::{CastlingMask, CastlingRights},
-    color::Color,
-    moves::{Move, MoveFlag},
-    piece::{CPiece, Piece},
-    square::Square,
-    zobrist::Hash,
+use crate::{
+    defs::MAX_MOVES,
+    movegen::Allmv,
+    types::{
+        bitboard::Bitboard,
+        castling::{CastlingMask, CastlingRights},
+        color::Color,
+        moves::{Move, MoveFlag},
+        piece::{CPiece, Piece},
+        square::Square,
+        zobrist::Hash,
+    },
 };
 
 /// Board State struct.
@@ -95,7 +99,7 @@ impl Default for Board {
 ///    w = white, b = black
 ///
 /// 3. Castling rights:
-///    See [CastlingRights].
+///    See [`CastlingRights`].
 ///    This handles both regular and FRC castling.
 ///
 /// 4. En passant:
@@ -197,14 +201,14 @@ impl Board {
                 let square = Square::from_raw(rank * 8 + file);
                 let piece = self.pc_map[square.idx()];
 
-                if piece != CPiece::None {
+                if piece == CPiece::None {
+                    empty += 1;
+                } else {
                     if empty > 0 {
                         fen.push_str(&empty.to_string());
                         empty = 0;
                     }
                     fen.push(piece.to_char());
-                } else {
-                    empty += 1;
                 }
             }
 
@@ -226,7 +230,7 @@ impl Board {
             self.piece_placement_str(),
             self.stm,
             self.state.castling.to_str(self),
-            if self.state.epsq != Square::Invalid { format!("{}", self.state.epsq) } else { "-".to_string() },
+            if self.state.epsq == Square::Invalid { "-".to_string() } else { format!("{}", self.state.epsq) },
             self.state.halfmoves,
             self.state.fullmoves
         )
@@ -368,6 +372,18 @@ impl Board {
     pub fn only_king_pawns_left(&self) -> bool {
         let stm = self.stm;
         (self.c_bb(stm) ^ self.pc_bb(stm, Piece::King) ^ self.pc_bb(stm, Piece::Pawn)).is_empty()
+    }
+
+    /// Generate all legal moves in the position.
+    pub fn gen_moves(&self) -> ArrayVec<Move, MAX_MOVES> {
+        let mut mvs = ArrayVec::new();
+        self.enumerate_moves::<_, Allmv>(|m| unsafe { mvs.push_unchecked(m) });
+        mvs
+    }
+
+    /// Whether the position has any legal moves remaining.
+    pub fn has_moves(&self) -> bool {
+        !self.gen_moves().is_empty()
     }
 }
 

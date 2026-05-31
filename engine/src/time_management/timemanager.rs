@@ -9,7 +9,7 @@ use std::{
 
 use chess::types::{Depth, color::Color, moves::Move, square::Square};
 
-use super::timecontrol::TimeControl;
+use crate::time_management::timecontrol::TimeControl;
 
 #[derive(Clone, Debug)]
 pub struct TimeManager {
@@ -33,7 +33,7 @@ impl fmt::Display for TimeManager {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let elapsed = self.elapsed().as_millis().max(1);
         let nodes = self.global_nodes();
-        let nps = (nodes as u128 * 1000) / elapsed;
+        let nps = (u128::from(nodes) * 1000) / elapsed;
 
         write!(f, "nodes {nodes} nps {nps} time {elapsed}")
     }
@@ -43,6 +43,7 @@ impl TimeManager {
     const FREQUENCY: u64 = 2048;
 
     /// Initialize a new time manager.
+    #[allow(clippy::large_stack_arrays)]
     pub fn new(global_stop: Arc<AtomicBool>, global_nodes: Arc<AtomicU64>, tc: TimeControl, stm: Color) -> Self {
         let (opt, max) = tc.opt_max_time(stm);
         let start = Instant::now();
@@ -50,12 +51,18 @@ impl TimeManager {
         Self { start, tc, opt, max, global_stop, global_nodes, last_check: 0, move_nodes: [[0; Square::NUM]; Square::NUM] }
     }
 
-    /// Initialize a new time manager that only searches to a fixed depth.
-    pub fn fixed_depth(depth: Depth) -> Self {
-        Self::new(Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)), TimeControl::FixedDepth(depth), Color::White)
+    /// Change the time controls.
+    #[allow(clippy::large_stack_arrays)]
+    pub fn set_tc(&mut self, tc: TimeControl, stm: Color) {
+        (self.opt, self.max) = tc.opt_max_time(stm);
+        self.start = Instant::now();
+        self.tc = tc;
+        self.global_stop.store(false, Ordering::SeqCst);
+        self.global_nodes.store(0, Ordering::SeqCst);
     }
 
     /// Whether we should start the given iteration.
+    #[allow(clippy::cast_precision_loss)]
     pub fn should_start_iter(&mut self, depth: Depth, nodes: u64, best_move: Move) -> bool {
         if self.is_stopped() {
             return false;
@@ -118,7 +125,6 @@ impl TimeManager {
     }
 }
 
-// Helper methods.
 impl TimeManager {
     /// Whether the stop flag has been raised.
     pub fn is_stopped(&self) -> bool {
