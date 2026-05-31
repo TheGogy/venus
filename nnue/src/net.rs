@@ -2,7 +2,6 @@ use chess::{
     defs::MAX_PLY,
     types::{board::Board, color::Color, dirtypiece::DirtyPieces, eval::Eval},
 };
-
 use utils::memory::boxed_zeroed;
 
 use crate::{

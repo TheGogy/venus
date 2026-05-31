@@ -3,7 +3,7 @@ use crate::types::{piece::CPiece, square::Square};
 /// [`DirtyPiece`] enum.
 ///
 /// This represents a feature that we are adding / removing from the NNUE.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum DirtyPieces {
     /// Normal / Promo / Double push.
     /// (+moved dst, -moved src)
@@ -18,6 +18,7 @@ pub enum DirtyPieces {
     Add2Sub2(PcSq, PcSq, PcSq, PcSq),
 
     /// Placeholder for default values. Should never be used.
+    #[default]
     None,
 }
 
