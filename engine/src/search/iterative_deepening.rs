@@ -4,13 +4,12 @@ use chess::types::eval::Eval;
 
 use crate::{
     position::Position,
+    search::Root,
     tb::probe::{SyzygyTB, TB_HITS},
     threading::{pv::PVLine, thread::Thread},
     tt::table::TT,
     tunables::params::tunables::{asp_window_base, asp_window_d_min, asp_window_div},
 };
-
-use super::Root;
 
 impl Position {
     /// Iterative deepening loop.

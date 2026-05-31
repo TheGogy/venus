@@ -6,7 +6,7 @@ use chess::types::{
 };
 use utils::memory::boxed_zeroed;
 
-use super::{HistEntry, movebuffer::MoveBuffer};
+use crate::history::{HistEntry, movebuffer::MoveBuffer};
 
 pub const CAP_HIST_MAX: i32 = 16384;
 

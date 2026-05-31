@@ -1,4 +1,9 @@
 /target
 /build
 /Books
-Venus
+/data
+/venv
+
+Venus*
+coactivations.txt
+net.bin

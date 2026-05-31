@@ -24,7 +24,7 @@ fn main() {
     let args = Args::parse();
 
     match args.command {
-        Command::Perft { depth } => _ = Board::default().perft::<true>(depth),
+        Command::Perft { depth } => println!("Total: {}", Board::default().perft::<true>(depth)),
         Command::See { iters } => bench_see(iters),
     }
 }

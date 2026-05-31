@@ -6,6 +6,7 @@ use chess::{
 use crate::{
     movepick::{MovePicker, SearchType},
     position::Position,
+    search::NodeType,
     threading::thread::Thread,
     tt::{
         entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_QS, TT_DEPTH_UNSEARCHED},
@@ -13,8 +14,6 @@ use crate::{
     },
     tunables::params::tunables::{fp_qs_base, sp_qs_margin},
 };
-
-use super::NodeType;
 
 impl Position {
     /// Quiescence search.

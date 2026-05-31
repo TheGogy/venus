@@ -1,4 +1,4 @@
-use super::{bitboard::Bitboard, color::Color, rank_file::File, square::Square};
+use crate::types::{bitboard::Bitboard, color::Color, rank_file::File, square::Square};
 
 /// Direction enum.
 #[rustfmt::skip]
@@ -93,7 +93,7 @@ impl Square {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::types::{direction::Direction, square::Square};
 
     #[test]
     fn test_add_dir() {

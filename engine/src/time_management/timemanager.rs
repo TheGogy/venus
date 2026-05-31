@@ -9,7 +9,7 @@ use std::{
 
 use chess::types::{Depth, color::Color, moves::Move, square::Square};
 
-use super::timecontrol::TimeControl;
+use crate::time_management::timecontrol::TimeControl;
 
 #[derive(Clone, Debug)]
 pub struct TimeManager {
@@ -49,6 +49,16 @@ impl TimeManager {
         let start = Instant::now();
 
         Self { start, tc, opt, max, global_stop, global_nodes, last_check: 0, move_nodes: [[0; Square::NUM]; Square::NUM] }
+    }
+
+    /// Change the time controls.
+    #[allow(clippy::large_stack_arrays)]
+    pub fn set_tc(&mut self, tc: TimeControl, stm: Color) {
+        (self.opt, self.max) = tc.opt_max_time(stm);
+        self.start = Instant::now();
+        self.tc = tc;
+        self.global_stop.store(false, Ordering::SeqCst);
+        self.global_nodes.store(0, Ordering::SeqCst);
     }
 
     /// Whether we should start the given iteration.

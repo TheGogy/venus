@@ -1,6 +1,7 @@
-use crate::impl_from_type;
-
-use super::{castling::CastlingMask, piece::Piece, square::Square};
+use crate::{
+    impl_from_type,
+    types::{castling::CastlingMask, piece::Piece, square::Square},
+};
 
 /// Moves (encoded as u16)
 /// bits  0 - 5  : from square

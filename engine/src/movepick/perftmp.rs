@@ -3,9 +3,11 @@ use chess::{
     types::{eval::Eval, moves::Move},
 };
 
-use crate::{position::Position, threading::thread::Thread};
-
-use super::{MovePicker, SearchType};
+use crate::{
+    movepick::{MovePicker, SearchType},
+    position::Position,
+    threading::thread::Thread,
+};
 
 impl Position {
     /// Counts all the legal positions up to a given depth using the move picker.

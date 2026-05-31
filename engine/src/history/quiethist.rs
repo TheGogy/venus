@@ -1,7 +1,7 @@
 use chess::types::{color::Color, moves::Move, square::Square};
 use utils::memory::boxed_zeroed;
 
-use super::{HistEntry, movebuffer::MoveBuffer};
+use crate::history::{HistEntry, movebuffer::MoveBuffer};
 
 /// Quiet history.
 ///

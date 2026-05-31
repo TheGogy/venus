@@ -10,14 +10,13 @@ use std::{
 
 use chess::types::moves::Move;
 
+use super::thread::Thread;
 use crate::{
     position::Position,
     tb::probe::{SyzygyTB, TB_HITS, WDL},
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
     tt::table::TT,
 };
-
-use super::thread::Thread;
 
 /// Contains all the threads used for searching.
 pub struct ThreadPool {
@@ -80,7 +79,7 @@ impl ThreadPool {
     fn setup_threads(&mut self, pos: &mut Position, tc: TimeControl) {
         let halfmoves = pos.board.state.halfmoves;
 
-        self.main.tm = TimeManager::new(self.global_stop.clone(), self.global_nodes.clone(), tc, pos.board.stm);
+        self.main.tm = TimeManager::new(self.global_stop.clone(), self.global_nodes.clone(), tc, pos.stm());
 
         // Prepare main thread.
         self.main.prepare_search(halfmoves);
@@ -114,13 +113,11 @@ impl ThreadPool {
         let max_depth = all_threads.clone().map(|thread| thread.depth).max().unwrap_or(0);
 
         // Count votes from all the threads at the max depth.
-        let move_counts = all_threads.filter(|thread| thread.depth == max_depth).map(super::thread::Thread::best_move).fold(
-            HashMap::new(),
-            |mut counts, mv| {
+        let move_counts =
+            all_threads.filter(|thread| thread.depth == max_depth).map(Thread::best_move).fold(HashMap::new(), |mut counts, mv| {
                 *counts.entry(mv).or_insert(0) += 1;
                 counts
-            },
-        );
+            });
 
         // Select the move with the highest count.
         move_counts.into_iter().max_by_key(|&(_, count)| count).map_or(Move::NONE, |(mv, _)| mv)

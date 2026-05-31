@@ -76,7 +76,7 @@ impl NNUE {
     }
 
     /// Refresh the accumulator to match the current board by applying [`DirtyPieces`].
-    fn refresh(&mut self, b: &Board) {
+    fn update_incremental(&mut self, b: &Board) {
         for c in Color::iter() {
             if self.stack[self.idx].correct[c.idx()] {
                 continue;
@@ -142,7 +142,7 @@ impl NNUE {
 
     /// Evaluate the board using the NNUE.
     pub fn evaluate(&mut self, b: &Board) -> Eval {
-        self.refresh(b);
+        self.update_incremental(b);
 
         let obkt = output_bucket(b.occ().nbits() as usize);
         let acc = &self.stack[self.idx];

@@ -1,6 +1,7 @@
-use crate::{impl_from_type, impl_lists};
-
-use super::{bitboard::Bitboard, color::Color};
+use crate::{
+    impl_from_type, impl_lists,
+    types::{bitboard::Bitboard, color::Color},
+};
 
 /// File enum.
 ///
@@ -78,7 +79,7 @@ impl File {
 impl Rank {
     /// Directly convert a rank to a bitboard.
     pub const fn bb(self) -> Bitboard {
-        Bitboard(0xff << (8 * self as u8))
+        Bitboard(0xFF << (8 * self as u8))
     }
 
     /// Get the file from that color's perspective.

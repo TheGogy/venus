@@ -2,8 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 use cli::uci::UCIReader;
-use engine::interface::Engine;
-
+use engine::bench::run_bench;
 #[cfg(feature = "tune")]
 use engine::tunables::params::tunables;
 
@@ -32,7 +31,7 @@ fn main() {
     let args = Args::parse();
 
     let result = match args.command {
-        Some(Command::Bench { epd }) => Engine::run_bench(epd),
+        Some(Command::Bench { epd }) => run_bench(epd),
 
         #[cfg(feature = "tune")]
         Some(Command::Spsa) => {

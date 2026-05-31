@@ -88,6 +88,11 @@ pub mod simd {
         unsafe { _mm256_mulhi_epi16(x, y) }
     }
 
+    /// Sums two vectors together.
+    pub fn add_f32(x: FVec, y: FVec) -> FVec {
+        unsafe { _mm256_add_ps(x, y) }
+    }
+
     /// Multiplies two vectors together.
     pub fn mul_f32(x: FVec, y: FVec) -> FVec {
         unsafe { _mm256_mul_ps(x, y) }
@@ -116,6 +121,11 @@ pub mod simd {
     /// Clamps a vector between two values.
     pub fn clamp_f32(v: FVec, min: FVec, max: FVec) -> FVec {
         unsafe { _mm256_min_ps(max, _mm256_max_ps(v, min)) }
+    }
+
+    /// Retuns min of two values.
+    pub fn min_f32(x: FVec, y: FVec) -> FVec {
+        unsafe { _mm256_min_ps(x, y) }
     }
 
     /// Shift left by <SHIFT> and pad with 0s.

@@ -1,8 +1,12 @@
 #![warn(clippy::all, clippy::pedantic)]
 
-use clap::{Parser, Subcommand, error::Result};
-use nnue::arch::{QuantNNUEData, RawNNUEData};
 use std::path::PathBuf;
+
+use clap::{Parser, Subcommand, error::Result};
+use nnue::{
+    arch::{QuantNNUEData, RawNNUEData},
+    preprocess::load_write::LoadWrite,
+};
 use utils::memory::Align64;
 
 #[derive(Parser, Debug)]
@@ -67,7 +71,7 @@ where
     #[allow(clippy::cast_precision_loss)]
     let len: f64 = vals.len() as f64;
 
-    let mut sum = 0f64;
+    let mut sum = 0.0f64;
     let mut min = f64::INFINITY;
     let mut max = f64::NEG_INFINITY;
 
@@ -107,7 +111,7 @@ where
 
 fn stats(file: &PathBuf) -> Result<()> {
     let quant_data = QuantNNUEData::load_from_file(file)?;
-    let nn = quant_data.permute();
+    let nn = quant_data.prepare_nnue();
     println!("--- ft biases ---");
     print_stats_1d("ft biases", &nn.ftb.0);
     print_stats_2d("l1 weights", &nn.l1w);

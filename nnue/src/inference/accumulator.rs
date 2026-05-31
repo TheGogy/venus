@@ -1,13 +1,9 @@
 use chess::types::{color::Color, square::Square};
-use utils::memory::Align64;
 
 use crate::{
-    arch::{L1, NNUEData},
+    arch::{HalfAcc, L1_LEN, NNUEData},
     embed::get_permuted_nnue,
 };
-
-/// Accumulator for each side.
-pub type HalfAcc = Align64<[i16; L1]>;
 
 #[derive(Clone, Debug)]
 pub struct FullAcc {
@@ -30,37 +26,37 @@ impl FullAcc {
 }
 
 pub fn add1_inplace(acc: &mut HalfAcc, add0: &HalfAcc) {
-    for i in 0..L1 {
+    for i in 0..L1_LEN {
         acc[i] += add0[i];
     }
 }
 
 pub fn sub1_inplace(acc: &mut HalfAcc, sub0: &HalfAcc) {
-    for i in 0..L1 {
+    for i in 0..L1_LEN {
         acc[i] -= sub0[i];
     }
 }
 
 pub fn add1sub1_inplace(acc: &mut HalfAcc, add0: &HalfAcc, sub0: &HalfAcc) {
-    for i in 0..L1 {
+    for i in 0..L1_LEN {
         acc[i] += add0[i] - sub0[i];
     }
 }
 
 pub fn add1sub1(dst: &mut HalfAcc, src: &HalfAcc, add0: &HalfAcc, sub0: &HalfAcc) {
-    for i in 0..L1 {
+    for i in 0..L1_LEN {
         dst[i] = src[i] + add0[i] - sub0[i];
     }
 }
 
 pub fn add1sub2(dst: &mut HalfAcc, src: &HalfAcc, add0: &HalfAcc, sub0: &HalfAcc, sub1: &HalfAcc) {
-    for i in 0..L1 {
+    for i in 0..L1_LEN {
         dst[i] = src[i] + add0[i] - sub0[i] - sub1[i];
     }
 }
 
 pub fn add2sub2(dst: &mut HalfAcc, src: &HalfAcc, add0: &HalfAcc, add1: &HalfAcc, sub0: &HalfAcc, sub1: &HalfAcc) {
-    for i in 0..L1 {
+    for i in 0..L1_LEN {
         dst[i] = src[i] + add0[i] + add1[i] - sub0[i] - sub1[i];
     }
 }

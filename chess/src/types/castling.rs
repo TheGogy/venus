@@ -1,14 +1,16 @@
 use std::ops::Not;
 
-use crate::{impl_all_math_ops, impl_math_assign_ops, impl_math_ops, tables::sliding_piece::between};
-
-use super::{
-    bitboard::Bitboard,
-    board::Board,
-    color::Color,
-    piece::{CPiece, Piece},
-    rank_file::{File, Rank},
-    square::Square,
+use crate::{
+    impl_all_math_ops, impl_math_assign_ops, impl_math_ops,
+    tables::sliding_piece::between,
+    types::{
+        bitboard::Bitboard,
+        board::Board,
+        color::Color,
+        piece::{CPiece, Piece},
+        rank_file::{File, Rank},
+        square::Square,
+    },
 };
 
 /// Castling rights.

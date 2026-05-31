@@ -20,11 +20,10 @@ use crate::{
         noisyhist::NoisyHist,
         quiethist::QuietHist,
     },
+    threading::{pv::PVLine, stack::SearchStackEntry},
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
     tunables::params::tunables::{hist_corr_other, hist_corr_pawn},
 };
-
-use super::{pv::PVLine, stack::SearchStackEntry};
 
 #[derive(Clone, Debug)]
 pub struct Thread {
@@ -89,13 +88,9 @@ impl Thread {
         Self::new(TimeManager::new(Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)), TimeControl::Infinite, Color::White))
     }
 
-    pub fn fixed_depth(depth: Depth) -> Self {
-        Self::new(TimeManager::new(
-            Arc::new(AtomicBool::new(false)),
-            Arc::new(AtomicU64::new(0)),
-            TimeControl::FixedDepth(depth),
-            Color::White,
-        ))
+    /// Creates a new thread that searches up to a given time control.
+    pub fn from_tc(tc: TimeControl, stm: Color) -> Self {
+        Self::new(TimeManager::new(Arc::new(AtomicBool::new(false)), Arc::new(AtomicU64::new(0)), tc, stm))
     }
 
     /// Whether we should start the next iteration.
@@ -123,6 +118,7 @@ impl Thread {
         self.ply_from_null = halfmoves;
         self.nodes = 0;
         self.stop = false;
+        self.pv.clear();
     }
 
     /// Tell the thread that a move has been made.

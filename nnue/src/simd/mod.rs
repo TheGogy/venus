@@ -16,8 +16,6 @@ pub use avx512f::*;
 pub mod simd {
     pub const ARCH_NAME: &str = "fallback";
     pub const CHUNK_SIZE_I16: usize = 1;
-    pub const NB_PACKUS_REGS: usize = 1;
-    pub const PACKUS_ORDER: [usize; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
 
     pub type ShiftT = u32;
 

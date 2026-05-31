@@ -10,7 +10,6 @@ use std::{
 
 #[cfg(feature = "tune")]
 use crate::tunables::params::tunables;
-
 use crate::{
     position::Position,
     tb::probe::SyzygyTB,

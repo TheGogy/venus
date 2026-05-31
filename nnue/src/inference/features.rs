@@ -1,9 +1,6 @@
 use chess::types::{color::Color, piece::Piece, rank_file::File, square::Square};
 
-use crate::{
-    arch::{BUCKET_MAP, FEATURES, NB_OUTPUT_BUCKETS, NNUEData},
-    inference::accumulator::HalfAcc,
-};
+use crate::arch::{BUCKET_MAP, FEATURES, HalfAcc, NB_OUTPUT_BUCKETS, NNUEData};
 
 impl NNUEData {
     /// Get the weights for the given feature.

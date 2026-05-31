@@ -2,7 +2,9 @@
 
 use utils::memory::boxed_zeroed;
 
-use crate::arch::{FEATURES, FT_QUANT, L1, L1_QUANT, L2, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, QuantNNUEData, RawNNUEData};
+use crate::arch::{
+    FEATURES, FT_QUANT, HAS_FACTORIZER, L1_LEN, L1_QUANT, L2_LEN, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, QuantNNUEData, RawNNUEData,
+};
 
 impl RawNNUEData {
     /// Quantize a network from Bullet and save it in a format that we can use for inference.
@@ -10,19 +12,23 @@ impl RawNNUEData {
         let mut out: Box<QuantNNUEData> = boxed_zeroed();
 
         // Quantize FT weights.
-        for i in 0..L1 * FEATURES * NB_INPUT_BUCKETS {
-            out.ftw[i] = (self.ftw[i] * FT_QUANT as f32).round() as i16;
+        for bkt in 0..NB_INPUT_BUCKETS {
+            for feat in 0..L1_LEN * FEATURES {
+                // Add in the feature factorizer if we're using it.
+                let v = if HAS_FACTORIZER { self.ftw[bkt + 1][feat] + self.ftw[0][feat] } else { self.ftw[bkt][feat] };
+                out.ftw[bkt * (L1_LEN * FEATURES) + feat] = (v * FT_QUANT as f32).round() as i16;
+            }
         }
 
         // Quantize FT biases.
-        for i in 0..L1 {
+        for i in 0..L1_LEN {
             out.ftb[i] = (self.ftb[i] * FT_QUANT as f32).round() as i16;
         }
 
         // Quantize L1 weights.
         for b in 0..NB_OUTPUT_BUCKETS {
-            for i in 0..L1 {
-                for j in 0..L2 {
+            for i in 0..L1_LEN {
+                for j in 0..L2_LEN {
                     out.l1w[i][b][j] = (self.l1w[i][b][j] * L1_QUANT as f32).round() as i8;
                 }
             }

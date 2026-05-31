@@ -1,4 +1,5 @@
 use crate::{
+    movegen::MgType,
     tables::{
         leaping_piece::{king_atk, knight_atk, pawn_atk},
         sliding_piece::{bishop_atk, rook_atk},
@@ -12,8 +13,6 @@ use crate::{
         square::Square,
     },
 };
-
-use super::MgType;
 
 /// Move generation functions.
 impl Board {

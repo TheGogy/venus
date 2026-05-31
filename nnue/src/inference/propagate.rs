@@ -1,6 +1,5 @@
 #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
 pub use fallback::*;
-
 #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
 pub use simdvec::*;
 
@@ -8,46 +7,47 @@ pub use simdvec::*;
 mod fallback {
     use utils::memory::Align64;
 
-    use crate::{arch::*, inference::accumulator::HalfAcc, simd::simd};
-
-    const L1_OFF: usize = L1 / 2;
+    use crate::{
+        arch::{EFF_L2_LEN, FT_QUANT, HalfAcc, L1_DEQUANT, L1_LEN, L1Q_BITS, L2_LEN, L3_LEN, NNUEData, PAIRWISE_LEN},
+        simd::simd,
+    };
 
     #[allow(clippy::needless_range_loop)]
     pub fn propagate_all_layers(nn: &NNUEData, stm: &HalfAcc, opp: &HalfAcc, obkt: usize) -> f32 {
-        let mut ft_out = Align64([0; L1]);
-        let mut l1_out = Align64([0.0; L2]);
-        let mut l2_out = Align64([0.0; L3]);
+        let mut ft_out = Align64([0; L1_LEN]);
+        let mut l1_out = Align64([0.0; EFF_L2_LEN]);
+        let mut l2_out = Align64([0.0; L3_LEN]);
 
         // ------------- Feature Transform --------------
 
-        // SF style pairwise multiplied CReLU.
         let mut activate = |acc: &HalfAcc, offset: usize| {
-            for i in 0..L1_OFF {
+            for i in 0..PAIRWISE_LEN {
                 let x = (acc[i] as i32).clamp(0, FT_QUANT);
-                let y = (acc[i + L1_OFF] as i32).clamp(0, FT_QUANT);
+                let y = (acc[i + PAIRWISE_LEN] as i32).clamp(0, FT_QUANT);
                 ft_out[offset + i] = ((x * y) >> (16 - L1Q_BITS)) as u8;
             }
         };
 
         activate(stm, 0);
-        activate(opp, L1_OFF);
+        activate(opp, PAIRWISE_LEN);
 
         // --------------------- L1 ---------------------
 
-        let mut vals = [0; L2];
+        let mut vals = [0; L2_LEN];
 
         // Affine transform.
-        for i in 0..L1 {
-            for j in 0..L2 {
-                vals[j] += nn.l1w[obkt][j * L1 + i] as i32 * ft_out[i] as i32;
+        for i in 0..L1_LEN {
+            for j in 0..L2_LEN {
+                vals[j] += nn.l1w[obkt][i * L2_LEN + j] as i32 * ft_out[i] as i32;
             }
         }
 
-        // Dequantize and SCReLU.
-        for i in 0..L2 {
-            let v = vals[i] as f32 * L1_DEQUANT + nn.l1b[obkt][i];
-            let clip = v.clamp(0.0, 1.0);
-            l1_out[i] = clip * clip;
+        // Dequantize and activate.
+        for i in 0..L2_LEN {
+            let v = (vals[i] as f32).mul_add(L1_DEQUANT, nn.l1b[obkt][i]);
+
+            l1_out[i] = v.clamp(0.0, 1.0);
+            l1_out[i + L2_LEN] = (v * v).clamp(0.0, 1.0);
         }
 
         // --------------------- L2 ---------------------
@@ -55,27 +55,29 @@ mod fallback {
         let mut vals = nn.l2b[obkt];
 
         // Affine transform.
-        for i in 0..L2 {
-            for j in 0..L3 {
-                vals[j] += l1_out[i] * nn.l2w[obkt][j + i * L3];
+        for i in 0..EFF_L2_LEN {
+            for j in 0..L3_LEN {
+                vals[j] = l1_out[i].mul_add(nn.l2w[obkt][i * L3_LEN + j], vals[j]);
             }
         }
 
         // SCReLU.
-        for i in 0..L3 {
+        for i in 0..L3_LEN {
             let clip = vals[i].clamp(0.0, 1.0);
             l2_out[i] = clip * clip;
         }
 
         // --------------------- L3 ---------------------
 
-        let mut l3_prods = [0.0; L3];
-        for i in 0..L3 {
-            l3_prods[i] = l2_out[i] * nn.l3w[obkt][i];
+        let mut l3_prods = [0.0; L3_LEN];
+
+        // Affine transform with skip conn.
+        for i in 0..L3_LEN {
+            l3_prods[i] = (l1_out[i] + l2_out[i]) * nn.l3w[obkt][i];
         }
 
         // Ensure same order of operations
-        simd::reduce_add(&mut l3_prods, L3) + nn.l3b[obkt]
+        simd::reduce_add(&mut l3_prods, L3_LEN) + nn.l3b[obkt]
     }
 }
 
@@ -83,13 +85,13 @@ mod fallback {
 mod simdvec {
     use utils::memory::Align64;
 
+    #[cfg(feature = "nnz_logging")]
+    use crate::inference::sparse::NNZ_TRACKER;
     use crate::{
-        arch::{FT_QUANT, L1, L1_DEQUANT, L1Q_BITS, L2, L3, NNUEData},
-        inference::{accumulator::HalfAcc, sparse::SparseMat},
-        simd::simd::{self, CHUNK_SIZE_F32, cvt_i32_f32},
+        arch::{EFF_L2_LEN, FT_QUANT, HalfAcc, L1_DEQUANT, L1_LEN, L1Q_BITS, L2_LEN, L3_LEN, NNUEData, PAIRWISE_LEN},
+        inference::sparse::SparseMat,
+        simd::simd,
     };
-
-    const L1_OFF: usize = L1 / 2;
 
     #[allow(
         clippy::erasing_op,
@@ -101,46 +103,45 @@ mod simdvec {
         clippy::cast_ptr_alignment
     )]
     pub fn propagate_all_layers(nn: &NNUEData, stm: &HalfAcc, opp: &HalfAcc, obkt: usize) -> f32 {
-        let mut ft_out = Align64([0u8; L1]);
-        let mut l1_out = Align64([0.0; L2]);
-        let mut l2_out = Align64([0.0; L3]);
+        let mut ft_out = Align64([0u8; L1_LEN]);
+        let mut l1_out = Align64([0.0; EFF_L2_LEN]);
+        let mut l2_out = Align64([0.0; L3_LEN]);
 
         let mut sparse = SparseMat::default();
 
         let zero_i = simd::zeroed_i();
         let zero_f = simd::zeroed_f();
         let one_f = simd::from_val_f32(1.0);
-        let ftqa = simd::from_val_i16(FT_QUANT as i16);
+        let ft_quant = simd::from_val_i16(FT_QUANT as i16);
         let dequant = simd::from_val_f32(L1_DEQUANT);
 
         // ------------- Feature Transform --------------
 
         unsafe {
-            // SF style pairwise multiplied CReLU.
-            let mut activate = |acc: &HalfAcc, offset: usize| {
-                let aptr = acc.as_ptr();
-                let optr = ft_out.as_mut_ptr();
+            let mut activate = |accumulator: &HalfAcc, offset: usize| {
+                let acc = accumulator.as_ptr();
+                let ft_out_ptr = ft_out.as_mut_ptr();
 
-                for i in (0..L1_OFF).step_by(simd::CHUNK_SIZE_I16 * 4) {
-                    let x0 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 0));
-                    let x1 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 1));
-                    let x2 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 2));
-                    let x3 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 3));
+                for i in (0..PAIRWISE_LEN).step_by(simd::CHUNK_SIZE_I16 * 4) {
+                    let x0 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 0));
+                    let x1 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 1));
+                    let x2 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 2));
+                    let x3 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 3));
 
-                    let y0 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 0 + L1_OFF));
-                    let y1 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 1 + L1_OFF));
-                    let y2 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 2 + L1_OFF));
-                    let y3 = simd::from_ptr_i16(aptr.add(i + simd::CHUNK_SIZE_I16 * 3 + L1_OFF));
+                    let y0 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 0 + PAIRWISE_LEN));
+                    let y1 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 1 + PAIRWISE_LEN));
+                    let y2 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 2 + PAIRWISE_LEN));
+                    let y3 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 3 + PAIRWISE_LEN));
 
-                    let x0_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x0, zero_i, ftqa));
-                    let x1_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x1, zero_i, ftqa));
-                    let x2_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x2, zero_i, ftqa));
-                    let x3_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x3, zero_i, ftqa));
+                    let x0_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x0, zero_i, ft_quant));
+                    let x1_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x1, zero_i, ft_quant));
+                    let x2_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x2, zero_i, ft_quant));
+                    let x3_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x3, zero_i, ft_quant));
 
-                    let y0_clip = simd::min_i16(y0, ftqa);
-                    let y1_clip = simd::min_i16(y1, ftqa);
-                    let y2_clip = simd::min_i16(y2, ftqa);
-                    let y3_clip = simd::min_i16(y3, ftqa);
+                    let y0_clip = simd::min_i16(y0, ft_quant);
+                    let y1_clip = simd::min_i16(y1, ft_quant);
+                    let y2_clip = simd::min_i16(y2, ft_quant);
+                    let y3_clip = simd::min_i16(y3, ft_quant);
 
                     let xy0 = simd::mulhi_i16(x0_clip, y0_clip);
                     let xy1 = simd::mulhi_i16(x1_clip, y1_clip);
@@ -150,30 +151,33 @@ mod simdvec {
                     let prod_u8_01 = simd::packus_i16_u8(xy0, xy1);
                     let prod_u8_23 = simd::packus_i16_u8(xy2, xy3);
 
-                    simd::to_ptr_u8(optr.add(offset + i).cast(), prod_u8_01);
-                    simd::to_ptr_u8(optr.add(offset + i + simd::CHUNK_SIZE_U8).cast(), prod_u8_23);
+                    simd::to_ptr_u8(ft_out_ptr.add(offset + i).cast(), prod_u8_01);
+                    simd::to_ptr_u8(ft_out_ptr.add(offset + i + simd::CHUNK_SIZE_U8).cast(), prod_u8_23);
 
                     sparse.update(prod_u8_01, prod_u8_23);
                 }
             };
 
             activate(stm, 0);
-            activate(opp, L1_OFF);
+            activate(opp, PAIRWISE_LEN);
         }
+
+        #[cfg(feature = "nnz_logging")]
+        NNZ_TRACKER.with_borrow_mut(|t| t.update(&ft_out, sparse.count));
 
         // --------------------- L1 ---------------------
 
-        let mut vals = Align64([0; L2]);
+        let mut acts = Align64([0; L2_LEN]);
 
-        let ft_out_32 = unsafe { &*ft_out.as_ptr().cast::<Align64<[i32; L1 / 4]>>() };
+        let ft_out_32 = unsafe { &*ft_out.as_ptr().cast::<Align64<[i32; L1_LEN / 4]>>() };
 
         let full_chunks = sparse.count - (sparse.count % 4);
 
         unsafe {
-            let vptr = vals.as_mut_ptr();
-            let wptr = nn.l1w[obkt].as_ptr();
-            let bptr = nn.l1b[obkt].as_ptr();
-            let optr = l1_out.as_mut_ptr();
+            let acts_ptr = acts.as_mut_ptr();
+            let weight_ptr = nn.l1w[obkt].as_ptr();
+            let bias_ptr = nn.l1b[obkt].as_ptr();
+            let l1_out_ptr = l1_out.as_mut_ptr();
 
             // Affine transform (full chunks).
             for c in (0..full_chunks).step_by(4) {
@@ -187,20 +191,15 @@ mod simdvec {
                 let ft2 = simd::from_val_i32(*ft_out_32.get_unchecked(idx_2));
                 let ft3 = simd::from_val_i32(*ft_out_32.get_unchecked(idx_3));
 
-                for i in 0..L2 / simd::CHUNK_SIZE_F32 {
-                    let v = simd::from_ptr_i32(vptr.add(i * simd::CHUNK_SIZE_F32));
+                for i in 0..L2_LEN / simd::CHUNK_SIZE_F32 {
+                    let x = simd::from_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32));
 
-                    let w0 = simd::from_ptr_i8(wptr.add(idx_0 * L2 * 4 + i * simd::CHUNK_SIZE_U8));
-                    let w1 = simd::from_ptr_i8(wptr.add(idx_1 * L2 * 4 + i * simd::CHUNK_SIZE_U8));
-                    let w2 = simd::from_ptr_i8(wptr.add(idx_2 * L2 * 4 + i * simd::CHUNK_SIZE_U8));
-                    let w3 = simd::from_ptr_i8(wptr.add(idx_3 * L2 * 4 + i * simd::CHUNK_SIZE_U8));
+                    let x = simd::dpbusd_i32(x, ft0, simd::from_ptr_i8(weight_ptr.add(idx_0 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
+                    let x = simd::dpbusd_i32(x, ft1, simd::from_ptr_i8(weight_ptr.add(idx_1 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
+                    let x = simd::dpbusd_i32(x, ft2, simd::from_ptr_i8(weight_ptr.add(idx_2 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
+                    let x = simd::dpbusd_i32(x, ft3, simd::from_ptr_i8(weight_ptr.add(idx_3 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
 
-                    let v = simd::dpbusd_i32(v, ft0, w0);
-                    let v = simd::dpbusd_i32(v, ft1, w1);
-                    let v = simd::dpbusd_i32(v, ft2, w2);
-                    let v = simd::dpbusd_i32(v, ft3, w3);
-
-                    simd::to_ptr_i32(vptr.add(i * simd::CHUNK_SIZE_F32), v);
+                    simd::to_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32), x);
                 }
             }
 
@@ -208,56 +207,57 @@ mod simdvec {
             for c in full_chunks..sparse.count {
                 let idx = sparse.index_for(c);
                 let ft = simd::from_val_i32(*ft_out_32.get_unchecked(idx));
-                for i in 0..L2 / simd::CHUNK_SIZE_F32 {
-                    let v = simd::from_ptr_i32(vptr.add(i * simd::CHUNK_SIZE_F32));
-                    let w = simd::from_ptr_i8(wptr.add(idx * L2 * 4 + i * simd::CHUNK_SIZE_U8));
+                for i in 0..L2_LEN / simd::CHUNK_SIZE_F32 {
+                    let x = simd::from_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32));
+                    let wgt = simd::from_ptr_i8(weight_ptr.add(idx * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8));
 
-                    let v = simd::dpbusd_i32(v, ft, w);
-                    simd::to_ptr_i32(vptr.add(i * simd::CHUNK_SIZE_F32), v);
+                    let x = simd::dpbusd_i32(x, ft, wgt);
+                    simd::to_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32), x);
                 }
             }
 
-            // Dequantize and SCReLU.
-            for i in (0..L2).step_by(CHUNK_SIZE_F32) {
-                let val = simd::from_ptr_i32(vptr.add(i));
-                let val_f = cvt_i32_f32(val);
-                let bias = simd::from_ptr_f32(bptr.add(i));
+            // Dequantize and activate.
+            for i in (0..L2_LEN).step_by(simd::CHUNK_SIZE_F32) {
+                let val = simd::cvt_i32_f32(simd::from_ptr_i32(acts_ptr.add(i)));
+                let bias = simd::from_ptr_f32(bias_ptr.add(i));
 
-                let p = simd::fmadd_f32(val_f, dequant, bias);
-                let c = simd::clamp_f32(p, zero_f, one_f);
-                let out = simd::mul_f32(c, c);
-                simd::to_ptr_f32(optr.add(i), out);
+                let x = simd::fmadd_f32(val, dequant, bias);
+                let x_sq = simd::mul_f32(x, x);
+
+                simd::to_ptr_f32(l1_out_ptr.add(i), simd::clamp_f32(x, zero_f, one_f));
+                simd::to_ptr_f32(l1_out_ptr.add(i + L2_LEN), simd::min_f32(x_sq, one_f));
             }
         }
 
         // --------------------- L2 ---------------------
 
         unsafe {
-            let bptr = nn.l2b[obkt].clone().as_mut_ptr();
-            let wptr = nn.l2w[obkt].as_ptr();
-            let optr = l2_out.as_mut_ptr();
+            let mut vals = nn.l2b[obkt];
+            let act_ptr = vals.as_mut_ptr();
+
+            let weight_ptr = nn.l2w[obkt].as_ptr();
+
+            let l2_out_ptr = l2_out.as_mut_ptr();
 
             // Affine transform.
-            for i in 0..L2 {
+            for i in 0..EFF_L2_LEN {
                 let input = simd::from_val_f32(l1_out[i]);
 
-                for j in (0..L3).step_by(simd::CHUNK_SIZE_F32) {
-                    let w = simd::from_ptr_f32(wptr.add(j + i * L3));
-                    let b = simd::from_ptr_f32(bptr.add(j));
-                    let r = simd::fmadd_f32(input, w, b);
-                    simd::to_ptr_f32(bptr.add(j), r);
+                for j in (0..L3_LEN).step_by(simd::CHUNK_SIZE_F32) {
+                    let wgt = simd::from_ptr_f32(weight_ptr.add(i * L3_LEN + j));
+                    let bias = simd::from_ptr_f32(act_ptr.add(j));
+                    let x = simd::fmadd_f32(input, wgt, bias);
+                    simd::to_ptr_f32(act_ptr.add(j), x);
                 }
             }
 
-            let zero = simd::zeroed_f();
-            let one = simd::from_val_f32(1.0);
-
             // SCReLU.
-            for i in (0..L3).step_by(simd::CHUNK_SIZE_F32) {
-                let x = simd::from_ptr_f32(bptr.add(i));
-                let clip = simd::clamp_f32(x, zero, one);
+            for i in (0..L3_LEN).step_by(simd::CHUNK_SIZE_F32) {
+                let x = simd::from_ptr_f32(act_ptr.add(i));
+                let clip = simd::clamp_f32(x, zero_f, one_f);
+
                 let sqr = simd::mul_f32(clip, clip);
-                simd::to_ptr_f32(optr.add(i), sqr);
+                simd::to_ptr_f32(l2_out_ptr.add(i), sqr);
             }
         }
 
@@ -266,14 +266,17 @@ mod simdvec {
         unsafe {
             let mut sum = simd::zeroed_f();
 
-            let iptr = l2_out.as_ptr();
-            let wptr = nn.l3w[obkt].as_ptr();
+            let l1_out_ptr = l1_out.as_ptr();
+            let l2_out_ptr = l2_out.as_ptr();
+            let weight_ptr = nn.l3w[obkt].as_ptr();
 
-            // Affine transform.
-            for i in (0..L3).step_by(simd::CHUNK_SIZE_F32) {
-                let x = simd::from_ptr_f32(iptr.add(i));
-                let w = simd::from_ptr_f32(wptr.add(i));
-                sum = simd::fmadd_f32(x, w, sum);
+            // Affine with skip conn.
+            for i in (0..L3_LEN).step_by(simd::CHUNK_SIZE_F32) {
+                let x = simd::from_ptr_f32(l1_out_ptr.add(i));
+                let y = simd::from_ptr_f32(l2_out_ptr.add(i));
+                let wgt = simd::from_ptr_f32(weight_ptr.add(i));
+
+                sum = simd::fmadd_f32(simd::add_f32(x, y), wgt, sum);
             }
 
             simd::reduce_add_f32(sum) + nn.l3b[obkt]

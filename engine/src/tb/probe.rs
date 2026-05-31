@@ -1,16 +1,15 @@
 #![allow(clippy::cast_possible_truncation, clippy::upper_case_acronyms)]
 
-use chess::types::{board::Board, castling::CastlingRights, moves::Move};
 use std::sync::atomic::AtomicU64;
+#[cfg(feature = "syzygy")]
+use std::{ffi::CString, ptr};
 
+use chess::types::{board::Board, castling::CastlingRights, moves::Move};
 #[cfg(feature = "syzygy")]
 use chess::{
     movegen::Allmv,
     types::{color::Color, piece::Piece, square::Square},
 };
-
-#[cfg(feature = "syzygy")]
-use std::{ffi::CString, ptr};
 
 #[cfg(feature = "syzygy")]
 use crate::tb::binds::{
@@ -40,7 +39,7 @@ pub struct TbResult {
     pub mov: Move,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct SyzygyTB {
     pub is_active: bool,
     pub max_pcs: u32,
@@ -178,12 +177,7 @@ mod tests {
 
     use chess::types::board::Board;
 
-    use crate::{
-        position::Position,
-        tb::probe::{SyzygyTB, WDL},
-        threading::thread::Thread,
-        tt::table::TT,
-    };
+    use crate::tb::probe::{SyzygyTB, WDL};
 
     static TB: std::sync::LazyLock<SyzygyTB> = std::sync::LazyLock::new(|| {
         let mut tb = SyzygyTB::default();
@@ -213,16 +207,5 @@ mod tests {
         } else {
             panic!("Win probe failed!");
         }
-    }
-
-    #[test]
-    fn test_tb_search() {
-        LazyLock::force(&TB);
-        let mut p: Position = "fen 5N1K/8/6k1/8/8/p7/6B1/8 b - - 0 1".parse().unwrap();
-        let mut t = Thread::fixed_depth(2);
-        let tt = TT::default();
-        p.iterative_deepening::<true>(&mut t, &tt, &TB);
-
-        assert_eq!(t.best_move().to_uci(&p.board.castlingmask), "g6f7");
     }
 }

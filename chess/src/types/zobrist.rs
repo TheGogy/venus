@@ -2,7 +2,7 @@ use core::fmt;
 
 use utils::rng::next_rng;
 
-use super::{
+use crate::types::{
     castling::CastlingRights,
     color::Color,
     piece::{CPiece, Piece},

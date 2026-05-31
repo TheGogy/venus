@@ -1,7 +1,7 @@
 use chess::types::{Depth, color::Color, eval::Eval};
 use utils::memory::boxed_zeroed;
 
-use super::HistEntry;
+use crate::history::HistEntry;
 
 const CORR_HIST_SIZE: usize = 32768;
 const CORR_HIST_MAX: i32 = 1024;

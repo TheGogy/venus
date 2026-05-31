@@ -1,10 +1,11 @@
 use core::fmt;
 
-use crate::{impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
-
-use super::{
-    rank_file::{File, Rank},
-    square::Square,
+use crate::{
+    impl_all_math_ops, impl_math_assign_ops, impl_math_ops,
+    types::{
+        rank_file::{File, Rank},
+        square::Square,
+    },
 };
 
 /// Bitboard.
@@ -22,8 +23,8 @@ impl Bitboard {
     pub const DP: [Self; 2] = [Rank::R3.bb(), Rank::R6.bb()]; // Double push ranks.
 
     // Light and dark squares.
-    pub const WHITE_SQ: Self = Self(0xaa55_aa55_aa55_aa55);
-    pub const BLACK_SQ: Self = Self(0x55aa_55aa_55aa_55aa);
+    pub const WHITE_SQ: Self = Self(0xAA55_AA55_AA55_AA55);
+    pub const BLACK_SQ: Self = Self(0x55AA_55AA_55AA_55AA);
 
     /// If the bitboard is empty.
     pub const fn is_empty(self) -> bool {

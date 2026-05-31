@@ -1,7 +1,7 @@
 use chess::types::{board::Board, moves::Move, piece::CPiece, square::Square};
 use utils::memory::boxed_zeroed;
 
-use super::{HistEntry, movebuffer::MoveBuffer};
+use crate::history::{HistEntry, movebuffer::MoveBuffer};
 
 const CONT_HIST_MAX: i32 = 16384;
 pub const CONT_NUM: usize = 2;

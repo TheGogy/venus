@@ -1,9 +1,10 @@
-use utils::memory::{Align64, boxed_zeroed};
+#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+use utils::memory::Align64;
+use utils::memory::boxed_zeroed;
 
-use crate::{
-    arch::{FEATURES, L1, L2, L3, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, NNUEData, QuantNNUEData},
-    simd::simd,
-};
+use crate::arch::{EFF_L2_LEN, FEATURES, L1_LEN, L2_LEN, L3_LEN, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, NNUEData, QuantNNUEData};
+#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+use crate::simd::simd;
 
 impl QuantNNUEData {
     /// Helper function to permute ft weights/biases for packus.
@@ -12,32 +13,27 @@ impl QuantNNUEData {
     /// Packus interleaves each block of 128 from a and b, but we want them
     /// to be consecutive - so we un-interleave them now so that they'll be properly concatenated.
     #[allow(clippy::needless_range_loop)]
+    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
     fn permute_packus(&self, out: &mut Box<NNUEData>) {
         const PACKUS_CHUNK: usize = 8;
-        let mut regs = [[0i16; PACKUS_CHUNK]; simd::NB_PACKUS_REGS];
 
-        let mut permute_chunk = |src: &[i16], dst: &mut Align64<[i16; L1]>, base: usize| {
-            // Read chunks in order.
-            for j in 0..simd::NB_PACKUS_REGS {
-                let start = base + j * PACKUS_CHUNK;
-                regs[j].copy_from_slice(&src[start..start + PACKUS_CHUNK]);
-            }
-            // Write chunks according to PACKUS_ORDER.
-            for j in 0..simd::NB_PACKUS_REGS {
-                let start = base + j * PACKUS_CHUNK;
-                dst[start..start + PACKUS_CHUNK].copy_from_slice(&regs[simd::PACKUS_ORDER[j]]);
+        let permute_chunk = |src: &[i16], dst: &mut Align64<[i16; L1_LEN]>, base: usize| {
+            for (d, &s) in simd::PACKUS_ORDER.iter().enumerate() {
+                let src_idx = base + s * PACKUS_CHUNK;
+                let dst_idx = base + d * PACKUS_CHUNK;
+                dst[dst_idx..dst_idx + PACKUS_CHUNK].copy_from_slice(&src[src_idx..src_idx + PACKUS_CHUNK]);
             }
         };
 
-        // Repermute feature transform weights.
+        // Permute feature transform weights.
         for feat in 0..NB_INPUT_BUCKETS * FEATURES {
-            for i in (0..L1 / PACKUS_CHUNK).step_by(simd::NB_PACKUS_REGS) {
-                permute_chunk(&self.ftw[feat * L1..], &mut out.ftw[feat], i * PACKUS_CHUNK);
+            for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::NB_PACKUS_REGS) {
+                permute_chunk(&self.ftw[feat * L1_LEN..], &mut out.ftw[feat], i * PACKUS_CHUNK);
             }
         }
 
-        // Repermute feature transform bias.
-        for i in (0..L1 / PACKUS_CHUNK).step_by(simd::NB_PACKUS_REGS) {
+        // Permute feature transform bias.
+        for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::NB_PACKUS_REGS) {
             permute_chunk(&self.ftb, &mut out.ftb, i * PACKUS_CHUNK);
         }
     }
@@ -50,52 +46,52 @@ impl QuantNNUEData {
         #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
         self.permute_packus(&mut out);
 
-        // Transpose L1 weights.
-        #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+        #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                self.ftw.as_ptr() as *const i16,
+                out.ftw.as_mut_ptr() as *mut i16,
+                L1_LEN * FEATURES * NB_INPUT_BUCKETS,
+            );
+            out.ftb.copy_from_slice(&self.ftb);
+        }
+
         for b in 0..NB_OUTPUT_BUCKETS {
-            for i in (0..L1).step_by(4) {
-                for j in 0..L2 {
+            // Transpose L1 weights.
+            #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+            for i in (0..L1_LEN).step_by(4) {
+                for j in 0..L2_LEN {
                     for k in 0..4 {
-                        out.l1w[b][i * L2 + j * 4 + k] = self.l1w[i + k][b][j];
+                        out.l1w[b][i * L2_LEN + j * 4 + k] = self.l1w[i + k][b][j];
                     }
                 }
             }
-        }
 
-        #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
-        for b in 0..NB_OUTPUT_BUCKETS {
-            for i in 0..L1 {
-                for j in 0..L2 {
-                    out.l1w[b][i * L2 + j] = self.l1w[i][b][j];
+            // Transpose L1 weights.
+            #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
+            for i in 0..L1_LEN {
+                for j in 0..L2_LEN {
+                    out.l1w[b][i * L2_LEN + j] = self.l1w[i][b][j];
                 }
-            }
-        }
-
-        // The rest of the positions are the same for manual SIMD and autovec.
-        for b in 0..NB_OUTPUT_BUCKETS {
-            // Copy over L1 biases.
-            for i in 0..L2 {
-                out.l1b[b][i] = self.l1b[b][i];
             }
 
             // Transpose L2 weights.
-            for i in 0..L2 {
-                for j in 0..L3 {
-                    out.l2w[b][i * L3 + j] = self.l2w[i][b][j];
+            for i in 0..EFF_L2_LEN {
+                for j in 0..L3_LEN {
+                    out.l2w[b][i * L3_LEN + j] = self.l2w[i][b][j];
                 }
             }
 
-            // Copy over L2 biases.
-            for i in 0..L3 {
-                out.l2b[b][i] = self.l2b[b][i];
-            }
-
             // Transpose L3 weights.
-            for i in 0..L3 {
+            for i in 0..L3_LEN {
                 out.l3w[b][i] = self.l3w[i][b];
             }
+        }
 
-            // Copy over L3 biases.
+        // Copy in the biases.
+        for b in 0..NB_OUTPUT_BUCKETS {
+            out.l1b[b].copy_from_slice(&self.l1b[b]);
+            out.l2b[b].copy_from_slice(&self.l2b[b]);
             out.l3b[b] = self.l3b[b];
         }
 

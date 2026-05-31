@@ -1,6 +1,4 @@
-use crate::{impl_from_type, impl_lists};
-
-use super::color::Color;
+use crate::{impl_from_type, impl_lists, types::color::Color};
 
 /// Represents a piece, and is ordered by increasing value.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

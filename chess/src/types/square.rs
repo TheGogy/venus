@@ -1,12 +1,13 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::{impl_from_type, impl_lists};
-
-use super::{
-    bitboard::Bitboard,
-    color::Color,
-    rank_file::{File, Rank},
+use crate::{
+    impl_from_type, impl_lists,
+    types::{
+        bitboard::Bitboard,
+        color::Color,
+        rank_file::{File, Rank},
+    },
 };
 
 /// Square enum.

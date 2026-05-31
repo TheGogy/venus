@@ -3,15 +3,14 @@ use std::{
     str::SplitWhitespace,
 };
 
+#[cfg(feature = "tune")]
+use engine::tunables::params::tunables;
 use engine::{
     VERSION,
     interface::{EngineCommand, EngineInterface},
     position::Position,
     time_management::timecontrol::TimeControl,
 };
-
-#[cfg(feature = "tune")]
-use engine::tunables::params::tunables;
 
 pub const NAME: &str = "Venus";
 
@@ -60,19 +59,19 @@ impl UCIReader {
 
         match tokens.next() {
             Some(cmd) => match cmd {
-                "isready"     => println!("readyok"),
-                "uci"         => self.cmd_uci(),
-                "ucinewgame"  => self.interface.handle_command(EngineCommand::NewGame),
-                "stop"        => self.interface.handle_command(EngineCommand::Stop),
-                "eval"        => self.interface.handle_command(EngineCommand::Eval),
-                "print" | "p" => self.interface.handle_command(EngineCommand::Print),
-                "perft"       => return self.cmd_perft(&mut tokens),
-                "perftmp"     => return self.cmd_perftmp(&mut tokens),
-                "go"          => return self.cmd_go(&mut tokens),
-                "position"    => return self.cmd_position(&mut tokens),
-                "setoption"   => return self.cmd_setoption(&mut tokens),
-                "move"        => return self.cmd_move(&mut tokens),
-                "undo"        => self.interface.handle_command(EngineCommand::Undo),
+                "isready"        => println!("readyok"),
+                "uci"            => self.cmd_uci(),
+                "ucinewgame"     => self.interface.handle_command(EngineCommand::NewGame),
+                "stop"           => self.interface.handle_command(EngineCommand::Stop),
+                "eval"           => self.interface.handle_command(EngineCommand::Eval),
+                "print" | "p"    => self.interface.handle_command(EngineCommand::Print),
+                "perft"          => return self.cmd_perft(&mut tokens),
+                "perftmp"        => return self.cmd_perftmp(&mut tokens),
+                "go"             => return self.cmd_go(&mut tokens),
+                "position" | "b" => return self.cmd_position(&mut tokens),
+                "setoption"      => return self.cmd_setoption(&mut tokens),
+                "move" | "m"     => return self.cmd_move(&mut tokens),
+                "undo" | "u"     => self.interface.handle_command(EngineCommand::Undo),
                 _ => return Err("Unknown command!")
             },
             None => return Err("Empty command!"),

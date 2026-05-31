@@ -1,89 +1,106 @@
-use ::utils::memory::Align64;
 use chess::types::{color::Color, piece::Piece, square::Square};
+use utils::{max, memory::Align64};
 
-use crate::simd::simd;
+use crate::{simd::simd, utils::make_bucket_map};
 
-// Quantization factors.
+/// Quantization factors.
 pub const SCALE: i32 = 400;
 pub const FT_QUANT: i32 = 255;
 pub const L1_QUANT: i32 = 64;
 
-// HACK: This should just be a u32 everywhere, but avx2 decided to be special
+/// HACK: This should just be a u32 everywhere, but avx2 decided to be special
 pub const L1Q_BITS: simd::ShiftT = L1_QUANT.trailing_zeros() as simd::ShiftT;
+pub const L1Q_SHIFT: simd::ShiftT = 16 - L1Q_BITS;
 
-// Invert quantization steps (clamp by FT_QUANT, downscale by FT_SHIFT, quantize by FT_QUANT * L1_QUANT).
+/// Invert quantization steps (clamp by FT_QUANT, downscale by FT_SHIFT, quantize by FT_QUANT * L1_QUANT).
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-pub const L1_DEQUANT: f32 = (1 << (16 - L1Q_BITS)) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
+pub const L1_DEQUANT: f32 = (1 << L1Q_SHIFT) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
 
-// Layer sizes.
+/// Whether to perform FT permutation.
+pub const USE_FTPERM: bool = true;
+
+/// Whether the unquantized output has a king bucket factorizer.
+pub const HAS_FACTORIZER: bool = true;
+
+/// Total input features.
 pub const FEATURES: usize = Color::NUM * Piece::NUM * Square::NUM;
-pub const L1: usize = 1792;
-pub const L2: usize = 16;
-pub const L3: usize = 32;
 
-const _: () = assert!(L1.is_multiple_of(simd::CHUNK_SIZE_I16));
+/// Layer sizes.
+pub const L1_LEN: usize = 1792;
+pub const L2_LEN: usize = 32;
+pub const L3_LEN: usize = 32;
 
-// King bucket map.
-// We only use the buckets on the A-D files, the E-H files are mirrored and go to the same bucket
-// on the opposite side - but we want to store them separately in the finny table, so it is easier
-// to store the bucket map like this.
+const _: () = assert!(L1_LEN.is_multiple_of(simd::CHUNK_SIZE_I16));
+
+/// Helper type for an accumulator for each side.
+pub type HalfAcc = Align64<[i16; L1_LEN]>;
+
+/// Length of L1 for each side.
+pub const PAIRWISE_LEN: usize = L1_LEN / 2;
+
+/// L2 architecture has first half normal, second half squared.
+pub const EFF_L2_LEN: usize = L2_LEN * 2;
+
+/// Input expert map.
 #[rustfmt::skip]
-pub const BUCKET_MAP: [usize; 64] = [
-  0,  1,  2,  3,  19, 18, 17, 16,
-  4,  5,  6,  7,  23, 22, 21, 20,
-  8,  8,  9,  9,  25, 25, 24, 24,
-  10, 10, 11, 11, 27, 27, 26, 26,
-  12, 12, 13, 13, 29, 29, 28, 28,
-  12, 12, 13, 13, 29, 29, 28, 28,
-  14, 14, 15, 15, 31, 31, 30, 30,
-  14, 14, 15, 15, 31, 31, 30, 30
+pub const HALF_BUCKET_MAP: [usize; 32] = [
+   0,  1,  2,  3,
+   4,  5,  6,  7,
+   8,  9, 10, 11,
+   8,  9, 10, 11,
+  12, 12, 13, 13,
+  12, 12, 13, 13,
+  14, 14, 15, 15,
+  14, 14, 15, 15,
 ];
 
 /// We use 32 King positions defined by [`BUCKET_MAP`].
 /// If the King is on any of the E-H files, we mirror all the features.
-pub const INPUT_KING_POSNS: usize = 32;
-pub const NB_INPUT_BUCKETS: usize = INPUT_KING_POSNS / 2;
+pub const NB_INPUT_BUCKETS: usize = max!(HALF_BUCKET_MAP) + 1;
+pub const INPUT_KING_POSNS: usize = NB_INPUT_BUCKETS * 2;
 pub const NB_OUTPUT_BUCKETS: usize = 8;
+
+/// Full input expert map.
+pub const BUCKET_MAP: [usize; Square::NUM] = make_bucket_map(HALF_BUCKET_MAP, NB_INPUT_BUCKETS);
 
 /// Weights and biases for the NNUE ready for inference.
 #[repr(C)]
 #[rustfmt::skip]
 pub struct NNUEData {
-    pub ftw: [Align64<[i16; L1]>; FEATURES * NB_INPUT_BUCKETS],
-    pub ftb:  Align64<[i16; L1]>,
-    pub l1w: [Align64<[i8 ; L1 * L2]>; NB_OUTPUT_BUCKETS],
-    pub l1b: [Align64<[f32; L2]>;      NB_OUTPUT_BUCKETS],
-    pub l2w: [Align64<[f32; L2 * L3]>; NB_OUTPUT_BUCKETS],
-    pub l2b: [Align64<[f32; L3]>;      NB_OUTPUT_BUCKETS],
-    pub l3w: [Align64<[f32; L3]>;      NB_OUTPUT_BUCKETS],
-    pub l3b: [f32;                     NB_OUTPUT_BUCKETS],
-}
-
-/// Raw output straight from Bullet.
-/// Factoriser merged in bullet output.
-#[repr(C)]
-#[rustfmt::skip]
-pub struct RawNNUEData {
-    pub ftw:   [f32; L1 * FEATURES * NB_INPUT_BUCKETS],
-    pub ftb:   [f32; L1],
-    pub l1w: [[[f32; L2]; NB_OUTPUT_BUCKETS]; L1],
-    pub l1b:  [[f32; L2]; NB_OUTPUT_BUCKETS],
-    pub l2w: [[[f32; L3]; NB_OUTPUT_BUCKETS]; L2],
-    pub l2b:  [[f32; L3]; NB_OUTPUT_BUCKETS],
-    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3],
-    pub l3b:   [f32; NB_OUTPUT_BUCKETS],
+    pub ftw: [Align64<[i16; L1_LEN]>; FEATURES * NB_INPUT_BUCKETS],
+    pub ftb:  Align64<[i16; L1_LEN]>,
+    pub l1w: [Align64<[i8 ; L1_LEN *     L2_LEN]>; NB_OUTPUT_BUCKETS],
+    pub l1b: [Align64<[f32; L2_LEN]>;              NB_OUTPUT_BUCKETS],
+    pub l2w: [Align64<[f32; EFF_L2_LEN * L3_LEN]>; NB_OUTPUT_BUCKETS],
+    pub l2b: [Align64<[f32; L3_LEN]>;              NB_OUTPUT_BUCKETS],
+    pub l3w: [Align64<[f32; L3_LEN]>;              NB_OUTPUT_BUCKETS],
+    pub l3b: [f32;                                 NB_OUTPUT_BUCKETS],
 }
 
 /// Weights and biases for the NNUE, quantized and embedded in the executable.
 #[repr(C)]
 #[rustfmt::skip]
 pub struct QuantNNUEData {
-    pub ftw:   [i16; L1 * FEATURES * NB_INPUT_BUCKETS],
-    pub ftb:   [i16; L1],
-    pub l1w: [[[i8 ; L2]; NB_OUTPUT_BUCKETS]; L1],
-    pub l1b:  [[f32; L2]; NB_OUTPUT_BUCKETS],
-    pub l2w: [[[f32; L3]; NB_OUTPUT_BUCKETS]; L2],
-    pub l2b:  [[f32; L3]; NB_OUTPUT_BUCKETS],
-    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3],
+    pub ftw:   [i16; L1_LEN * FEATURES * NB_INPUT_BUCKETS],
+    pub ftb:   [i16; L1_LEN],
+    pub l1w: [[[i8 ; L2_LEN]; NB_OUTPUT_BUCKETS]; L1_LEN],
+    pub l1b:  [[f32; L2_LEN]; NB_OUTPUT_BUCKETS],
+    pub l2w: [[[f32; L3_LEN]; NB_OUTPUT_BUCKETS]; EFF_L2_LEN],
+    pub l2b:  [[f32; L3_LEN]; NB_OUTPUT_BUCKETS],
+    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3_LEN],
+    pub l3b:   [f32; NB_OUTPUT_BUCKETS],
+}
+
+/// Raw output straight from Bullet.
+#[repr(C)]
+#[rustfmt::skip]
+pub struct RawNNUEData {
+    pub ftw:  [[f32; L1_LEN * FEATURES]; NB_INPUT_BUCKETS + (HAS_FACTORIZER as usize)],
+    pub ftb:   [f32; L1_LEN],
+    pub l1w: [[[f32; L2_LEN]; NB_OUTPUT_BUCKETS]; L1_LEN],
+    pub l1b:  [[f32; L2_LEN]; NB_OUTPUT_BUCKETS],
+    pub l2w: [[[f32; L3_LEN]; NB_OUTPUT_BUCKETS]; EFF_L2_LEN],
+    pub l2b:  [[f32; L3_LEN]; NB_OUTPUT_BUCKETS],
+    pub l3w:  [[f32; NB_OUTPUT_BUCKETS]; L3_LEN],
     pub l3b:   [f32; NB_OUTPUT_BUCKETS],
 }

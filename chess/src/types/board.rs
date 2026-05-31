@@ -1,16 +1,20 @@
 use core::fmt;
 use std::str::FromStr;
 
-use crate::movegen::Allmv;
+use arrayvec::ArrayVec;
 
-use super::{
-    bitboard::Bitboard,
-    castling::{CastlingMask, CastlingRights},
-    color::Color,
-    moves::{Move, MoveFlag},
-    piece::{CPiece, Piece},
-    square::Square,
-    zobrist::Hash,
+use crate::{
+    defs::MAX_MOVES,
+    movegen::Allmv,
+    types::{
+        bitboard::Bitboard,
+        castling::{CastlingMask, CastlingRights},
+        color::Color,
+        moves::{Move, MoveFlag},
+        piece::{CPiece, Piece},
+        square::Square,
+        zobrist::Hash,
+    },
 };
 
 /// Board State struct.
@@ -368,6 +372,18 @@ impl Board {
     pub fn only_king_pawns_left(&self) -> bool {
         let stm = self.stm;
         (self.c_bb(stm) ^ self.pc_bb(stm, Piece::King) ^ self.pc_bb(stm, Piece::Pawn)).is_empty()
+    }
+
+    /// Generate all legal moves in the position.
+    pub fn gen_moves(&self) -> ArrayVec<Move, MAX_MOVES> {
+        let mut mvs = ArrayVec::new();
+        self.enumerate_moves::<_, Allmv>(|m| unsafe { mvs.push_unchecked(m) });
+        mvs
+    }
+
+    /// Whether the position has any legal moves remaining.
+    pub fn has_moves(&self) -> bool {
+        !self.gen_moves().is_empty()
     }
 }
 

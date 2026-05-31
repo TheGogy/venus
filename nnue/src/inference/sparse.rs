@@ -1,6 +1,11 @@
+#[cfg(feature = "nnz_logging")]
+use std::cell::RefCell;
+
 use utils::memory::Align64;
 
-use crate::{arch::L1, simd::simd};
+#[cfg(feature = "nnz_logging")]
+use crate::arch::USE_FTPERM;
+use crate::{arch::L1_LEN, simd::simd};
 
 #[repr(C, align(64))]
 struct NonZeroIndicies {
@@ -35,7 +40,7 @@ const NNZ_OFFSETS: NonZeroIndicies = {
 const NNZ_PER_CHUNK: usize = simd::CHUNK_SIZE_I32 / 4;
 
 pub struct SparseMat {
-    pub indices: Align64<[u16; L1 / 4]>,
+    pub indices: Align64<[u16; L1_LEN / 4]>,
     pub count: usize,
 
     base: v128::IVec,
@@ -43,7 +48,7 @@ pub struct SparseMat {
 
 impl Default for SparseMat {
     fn default() -> Self {
-        Self { indices: Align64([0; L1 / 4]), count: 0, base: v128::zeroed_i() }
+        Self { indices: Align64([0; L1_LEN / 4]), count: 0, base: v128::zeroed_i() }
     }
 }
 
@@ -56,7 +61,7 @@ impl SparseMat {
             let iptr = self.indices.as_mut_ptr();
 
             for i in 0..NNZ_PER_CHUNK {
-                let byte = (mask >> (i * 8)) & 0xff;
+                let byte = (mask >> (i * 8)) & 0xFF;
                 let nnz_idxs = NNZ_OFFSETS.get_idxs(byte);
                 let offset_idxs = v128::add_i16(nnz_idxs, self.base);
 
@@ -99,4 +104,66 @@ mod v128 {
     pub fn add_i16(x: IVec, y: IVec) -> IVec {
         unsafe { _mm_add_epi16(x, y) }
     }
+}
+
+#[cfg(feature = "nnz_logging")]
+const PAIRWISE_LEN: usize = L1_LEN / 2;
+
+#[cfg(feature = "nnz_logging")]
+pub struct NNZPermTracker {
+    pub coactivations: Box<[[u64; PAIRWISE_LEN]; PAIRWISE_LEN]>,
+
+    pub count: usize,
+    pub total: usize,
+}
+
+#[cfg(feature = "nnz_logging")]
+impl Default for NNZPermTracker {
+    fn default() -> Self {
+        Self { count: 0, total: 0, coactivations: vec![[0u64; PAIRWISE_LEN]; PAIRWISE_LEN].into_boxed_slice().try_into().unwrap() }
+    }
+}
+
+#[cfg(feature = "nnz_logging")]
+impl NNZPermTracker {
+    /// Track the current nonzero indices.
+    pub fn update(&mut self, ft_out: &Align64<[u8; L1_LEN]>, sparse_count: usize) {
+        let mut counts = [0u64; PAIRWISE_LEN];
+
+        for (i, &act) in ft_out.iter().enumerate() {
+            counts[i % PAIRWISE_LEN] += (act != 0) as u64;
+        }
+
+        for i in 0..PAIRWISE_LEN {
+            if counts[i] != 0 {
+                for j in 0..PAIRWISE_LEN {
+                    self.coactivations[i][j] += counts[i] * counts[j];
+                }
+            }
+        }
+
+        self.count += sparse_count;
+        self.total += L1_LEN / 4;
+    }
+
+    /// Dump logs to file for processing.
+    pub fn dump_stats(&mut self) -> Result<(), std::io::Error> {
+        println!("Acts done:  {}", self.count);
+        println!("Total acts: {}", self.total);
+        println!("Nnz ratio:  {:.5}", self.count as f64 / self.total as f64);
+
+        if USE_FTPERM {
+            println!("Indices permuted! Coactivations will be incorrect.");
+            return Ok(());
+        }
+
+        println!("Writing nnz logs to coactivations.txt...");
+        std::fs::write("coactivations.txt", format!("{:?}", self.coactivations))
+    }
+}
+
+// WARN: NOT MULTITHREADED!!!
+#[cfg(feature = "nnz_logging")]
+thread_local! {
+    pub static NNZ_TRACKER: RefCell<NNZPermTracker> = RefCell::new(NNZPermTracker::default());
 }

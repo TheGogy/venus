@@ -86,6 +86,11 @@ impl Eval {
         self.0 <= -Self::LONGEST_TB_MATE.0
     }
 
+    /// Whether this score implies someone has found mate.
+    pub const fn terminal(self) -> bool {
+        self.0.abs() >= Self::LONGEST_TB_MATE.0
+    }
+
     /// Whether this score implies that the game has not been confirmed as mate.
     pub const fn nonterminal(self) -> bool {
         self.0.abs() < Self::LONGEST_TB_MATE.0

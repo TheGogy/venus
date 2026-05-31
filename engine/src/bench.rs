@@ -1,34 +1,54 @@
-use std::time::Instant;
+use std::{path::PathBuf, time::Instant};
 
-use crate::{interface::Engine, position::Position, tb::probe::SyzygyTB, threading::thread::Thread, tt::table::TT};
+#[cfg(feature = "nnz_logging")]
+use nnue::inference::sparse::NNZ_TRACKER;
+use utils::parse::parse_file_ignore_hash;
+
+use crate::{position::Position, tb::probe::SyzygyTB, threading::thread::Thread, time_management::timecontrol::TimeControl, tt::table::TT};
 
 // NOTE:  Make sure that bench depth is at least as high as the highest of any min depths in tuning.
+#[cfg(not(feature = "nnz_logging"))]
 const BENCH_DEPTH: i16 = 14;
 
-impl Engine {
-    /// Runs a benchmark of the engine on a number of positions.
-    /// # Panics
-    ///     Shouldn't panic, all FENs are valid.
-    #[allow(clippy::cast_possible_truncation)]
-    pub fn run_bench() {
-        let mut total_nodes = 0;
-        let mut total_time = 0;
+// Use a lower depth if we just want to record neuron coactivations.
+#[cfg(feature = "nnz_logging")]
+const BENCH_DEPTH: i16 = 10;
 
-        for fen in FENS {
-            let tt = TT::default();
-            let tb = SyzygyTB::default();
-            let mut pos: Position = format!("fen {fen}").parse().unwrap();
-            let mut thread = Thread::fixed_depth(BENCH_DEPTH);
+/// Runs a benchmark of the engine on a number of positions.
+/// # Panics
+///     Shouldn't panic, all FENs are valid.
+#[allow(clippy::cast_possible_truncation)]
+pub fn run_bench(epd_path: Option<PathBuf>) -> anyhow::Result<()> {
+    let mut total_nodes = 0;
+    let mut total_time = 0;
 
-            let start = Instant::now();
-            pos.iterative_deepening::<false>(&mut thread, &tt, &tb);
+    let fens = if let Some(p) = epd_path {
+        parse_file_ignore_hash(p)?
+    } else {
+        FENS.iter().map(|&s| s.to_string()).collect()
+    };
 
-            total_time += start.elapsed().as_micros();
-            total_nodes += thread.nodes;
-        }
+    for fen in fens {
+        let tt = TT::default();
+        let tb = SyzygyTB::default();
+        let mut pos: Position = format!("fen {fen}").parse().unwrap();
+        let mut thread = Thread::from_tc(TimeControl::FixedDepth(BENCH_DEPTH), pos.stm());
 
-        println!("{total_nodes} nodes {} nps", total_nodes * 1_000_000 / (total_time as u64).max(1));
+        let start = Instant::now();
+        pos.iterative_deepening::<false>(&mut thread, &tt, &tb);
+
+        total_time += start.elapsed().as_micros();
+        total_nodes += thread.nodes;
+
+        println!("{fen:<90} | {:>10}", thread.nodes);
     }
+
+    println!("{total_nodes} nodes {} nps", total_nodes * 1_000_000 / (total_time as u64).max(1));
+
+    #[cfg(feature = "nnz_logging")]
+    NNZ_TRACKER.with_borrow_mut(|t| t.dump_stats())?;
+
+    Ok(())
 }
 
 const FENS: &[&str] = &[

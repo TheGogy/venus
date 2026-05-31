@@ -1,8 +1,8 @@
 pub mod simd {
     use std::arch::x86_64::{
-        __m512, __m512i, __mmask16, __mmask32, _mm512_cmpgt_epi32_mask, _mm512_cvtepi32_ps, _mm512_dpbusd_epi32, _mm512_fmadd_ps,
-        _mm512_load_ps, _mm512_load_si512, _mm512_max_epi16, _mm512_max_ps, _mm512_min_epi16, _mm512_min_ps, _mm512_mul_ps,
-        _mm512_mulhi_epi16, _mm512_packus_epi16, _mm512_reduce_add_ps, _mm512_set1_epi16, _mm512_set1_epi32, _mm512_set1_ps,
+        __m512, __m512i, __mmask16, __mmask32, _mm512_add_ps, _mm512_cmpgt_epi32_mask, _mm512_cvtepi32_ps, _mm512_dpbusd_epi32,
+        _mm512_fmadd_ps, _mm512_load_ps, _mm512_load_si512, _mm512_max_epi16, _mm512_max_ps, _mm512_min_epi16, _mm512_min_ps,
+        _mm512_mul_ps, _mm512_mulhi_epi16, _mm512_packus_epi16, _mm512_reduce_add_ps, _mm512_set1_epi16, _mm512_set1_epi32, _mm512_set1_ps,
         _mm512_setzero_ps, _mm512_setzero_si512, _mm512_slli_epi16, _mm512_store_ps, _mm512_store_si512,
     };
     pub type IVec = __m512i;
@@ -98,6 +98,11 @@ pub mod simd {
         unsafe { _mm512_mul_ps(x, y) }
     }
 
+    /// Sums two vectors together.
+    pub fn add_f32(x: FVec, y: FVec) -> FVec {
+        unsafe { _mm512_add_ps(x, y) }
+    }
+
     /// Multiplies x and y and adds to z.
     pub fn fmadd_f32(x: FVec, y: FVec, z: FVec) -> FVec {
         unsafe { _mm512_fmadd_ps(x, y, z) }
@@ -121,6 +126,11 @@ pub mod simd {
     /// Clamps a vector between two values.
     pub fn clamp_f32(v: FVec, min: FVec, max: FVec) -> FVec {
         unsafe { _mm512_min_ps(max, _mm512_max_ps(v, min)) }
+    }
+
+    /// Retuns min of two values.
+    pub fn min_f32(x: FVec, y: FVec) -> FVec {
+        unsafe { _mm512_min_ps(x, y) }
     }
 
     /// Shift left by <SHIFT> and pad with 0s.
