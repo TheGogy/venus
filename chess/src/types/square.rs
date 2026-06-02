@@ -2,7 +2,7 @@ use core::fmt;
 use std::str::FromStr;
 
 use crate::{
-    impl_from_type, impl_lists,
+    impl_from_type,
     types::{
         bitboard::Bitboard,
         color::Color,
@@ -27,6 +27,10 @@ pub enum Square {
     A8, B8, C8, D8, E8, F8, G8, H8,
     #[default]
     Invalid
+}
+
+impl_from_type! {
+    Square, u8, 64
 }
 
 impl Square {
@@ -92,8 +96,6 @@ impl Square {
     }
 }
 
-impl_lists! {Square, 64}
-
 /// Convert a string to a Square
 impl FromStr for Square {
     type Err = &'static str;
@@ -126,9 +128,4 @@ impl fmt::Display for Square {
         let rank = self.rank() as u8;
         write!(f, "{}{}", (b'a' + file) as char, (b'1' + rank) as char)
     }
-}
-
-impl_from_type! {
-    Square, u8, 64,
-    [u8]
 }

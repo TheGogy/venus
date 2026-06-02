@@ -1,146 +1,60 @@
-/// Implements math operations for a given type, and all operations with a primitive.
+/// Implements math and math-assign operations for a newtype wrapper and its inner primitive.
 ///
-/// # Examples
+/// Each pair is `Op::op / OpAssign::op_assign`.  You can supply any subset of pairs, or use
+/// [`impl_all_math_ops!`] to get the full standard set.
 ///
-///```
+/// # Example
+/// ```
 /// impl_math_ops! {
-///     Bitboard,
-///     BitAnd::bitand,
-///     BitOr::bitor,
-///     BitXor::bitxor
-/// }
-///
-/// impl_math_ops! {
-///     Bitboard: u64
-///     u64,
-///     BitAnd::bitand,
-///     BitOr::bitor,
-///     BitXor::bitxor
+///     Bitboard: u64,
+///     BitAnd::bitand / BitAndAssign::bitand_assign,
+///     BitOr::bitor   / BitOrAssign::bitor_assign,
 /// }
 /// ```
 #[macro_export]
 macro_rules! impl_math_ops {
-    ($t:ty, $($trait:ident::$fn:ident),*) => {
-        $(impl std::ops::$trait for $t {
+    ($t:ty: $inner:ty, $($trait:ident::$fn:ident / $assign:ident::$assign_fn:ident),* $(,)?) => {$(
+        impl std::ops::$trait for $t {
             type Output = Self;
-
             #[inline(always)]
-            fn $fn(self, other: Self) -> Self::Output {
-                Self(std::ops::$trait::$fn(self.0, other.0))
-            }
-        })*
-    };
-
-    ($t:ty: $inner:ty, $prim:ty, $($trait:ident::$fn:ident),*) => {
-        $(impl std::ops::$trait<$prim> for $t {
-            type Output = $t;
-
+            fn $fn(self, rhs: Self) -> Self { Self(std::ops::$trait::$fn(self.0, rhs.0)) }
+        }
+        impl std::ops::$trait<$inner> for $t {
+            type Output = Self;
             #[inline(always)]
-            #[allow(clippy::cast_possible_truncation)]
-            fn $fn(self, other: $prim) -> $t {
-                unsafe { std::mem::transmute(std::ops::$trait::$fn(self.0, other as $inner)) }
-            }
-        })*
-
-        $(impl std::ops::$trait<$t> for $prim {
-            type Output = $prim;
-
+            fn $fn(self, rhs: $inner) -> Self { Self(std::ops::$trait::$fn(self.0, rhs)) }
+        }
+        impl std::ops::$assign for $t {
             #[inline(always)]
-            fn $fn(self, other: $t) -> $prim {
-                #[allow(clippy::useless_transmute)]
-                unsafe { std::mem::transmute(std::ops::$trait::$fn(self, other.0 as $prim)) }
-            }
-        })*
-    };
+            fn $assign_fn(&mut self, rhs: Self) { std::ops::$assign::$assign_fn(&mut self.0, rhs.0) }
+        }
+        impl std::ops::$assign<$inner> for $t {
+            #[inline(always)]
+            fn $assign_fn(&mut self, rhs: $inner) { std::ops::$assign::$assign_fn(&mut self.0, rhs) }
+        }
+    )*};
 }
 
-/// Implements math assignment operations for a given type, and all operations with a primitive.
+/// Implements the full set of standard math operations for a newtype wrapper.
 ///
-/// # Examples
-///
-///```
-/// impl_math_assign_ops! {
-///     Bitboard,
-///     BitAndAssign::bitand_assign,
-///     BitOrAssign::bitor_assign,
-///     BitXorAssign::bitxor_assign
-/// }
-///
-/// impl_math_assign_ops! {
-///     Bitboard: u64
-///     u64,
-///     BitAndAssign::bitand_assign,
-///     BitOrAssign::bitor_assign,
-///     BitXorAssign::bitxor_assign
-/// }
+/// # Example
 /// ```
-#[macro_export]
-macro_rules! impl_math_assign_ops {
-    ($t:ty, $($trait:ident::$fn:ident),*) => {
-        $(impl std::ops::$trait for $t {
-
-            #[inline(always)]
-            fn $fn(&mut self, other: Self) {
-                std::ops::$trait::$fn(&mut self.0, other.0)
-            }
-        })*
-    };
-
-    ($t:ty: $inner:ty, $prim:ty, $($trait:ident::$fn:ident),*) => {
-        $(impl std::ops::$trait<$prim> for $t {
-
-            #[inline(always)]
-            #[allow(clippy::cast_possible_truncation)]
-            fn $fn(&mut self, other: $prim) {
-                std::ops::$trait::$fn(&mut self.0, other as $inner)
-            }
-        })*
-    };
-}
-
-/// Implement all math and math assign operations between a type and some primitives.
-///
-/// # Example:
-///
-///```
-/// impl_all_math_ops {
-///     Eval: i32,
-///     [i64, i32, i16]
-/// }
+/// impl_all_math_ops!(Eval: i32);
 /// ```
 #[macro_export]
 macro_rules! impl_all_math_ops {
-    ($t:ty: $inner:ty, [$($prim:ty),*]) => {
-        impl_math_ops! {
-            $t,
-            BitAnd::bitand, BitOr::bitor, BitXor::bitxor,
-            Shl::shl, Shr::shr,
-            Add::add, Sub::sub, Mul::mul, Div::div
+    ($t:ty: $inner:ty) => {
+        $crate::impl_math_ops! {
+            $t: $inner,
+            BitAnd::bitand  / BitAndAssign::bitand_assign,
+            BitOr::bitor    / BitOrAssign::bitor_assign,
+            BitXor::bitxor  / BitXorAssign::bitxor_assign,
+            Shl::shl        / ShlAssign::shl_assign,
+            Shr::shr        / ShrAssign::shr_assign,
+            Add::add        / AddAssign::add_assign,
+            Sub::sub        / SubAssign::sub_assign,
+            Mul::mul        / MulAssign::mul_assign,
+            Div::div        / DivAssign::div_assign,
         }
-
-        impl_math_assign_ops! {
-            $t,
-            BitAndAssign::bitand_assign, BitOrAssign::bitor_assign, BitXorAssign::bitxor_assign,
-            ShlAssign::shl_assign, ShrAssign::shr_assign,
-            AddAssign::add_assign, SubAssign::sub_assign, MulAssign::mul_assign, DivAssign::div_assign
-        }
-
-        $(
-            impl_math_ops! {
-                $t: $inner,
-                $prim,
-                BitAnd::bitand, BitOr::bitor, BitXor::bitxor,
-                Shl::shl, Shr::shr,
-                Add::add, Sub::sub, Mul::mul, Div::div
-            }
-
-            impl_math_assign_ops! {
-                $t: $inner,
-                $prim,
-                BitAndAssign::bitand_assign, BitOrAssign::bitor_assign, BitXorAssign::bitxor_assign,
-                ShlAssign::shl_assign, ShrAssign::shr_assign,
-                AddAssign::add_assign, SubAssign::sub_assign, MulAssign::mul_assign, DivAssign::div_assign
-            }
-        )*
     };
 }

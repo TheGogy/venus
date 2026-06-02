@@ -1,5 +1,5 @@
 use crate::{
-    impl_from_type, impl_lists,
+    impl_from_type,
     types::{bitboard::Bitboard, color::Color},
 };
 
@@ -13,6 +13,10 @@ pub enum File {
     FA, FB, FC, FD, FE, FF, FG, FH
 }
 
+impl_from_type! {
+    File, u8, 8
+}
+
 /// Rank enum.
 ///
 /// These are the rows on the chess board.
@@ -23,6 +27,10 @@ pub enum Rank {
     R1, R2, R3, R4, R5, R6, R7, R8
 }
 
+impl_from_type! {
+    Rank, u8, 8
+}
+
 /// Get a File from a character.
 impl TryFrom<char> for File {
     type Error = &'static str;
@@ -30,7 +38,7 @@ impl TryFrom<char> for File {
     fn try_from(c: char) -> Result<Self, Self::Error> {
         let index = (c.to_ascii_uppercase() as u8).wrapping_sub(b'A');
         match index {
-            0..7 => Ok(Self::from(index)),
+            0..7 => Ok(Self::from_raw(index)),
             _ => Err("Unknown file!"),
         }
     }
@@ -43,23 +51,10 @@ impl TryFrom<char> for Rank {
     fn try_from(c: char) -> Result<Self, Self::Error> {
         let index = (c as u8).wrapping_sub(b'1');
         match index {
-            0..7 => Ok(Self::from(index)),
+            0..7 => Ok(Self::from_raw(index)),
             _ => Err("Unknown file!"),
         }
     }
-}
-
-impl_lists! {File, 8}
-impl_lists! {Rank, 8}
-
-impl_from_type! {
-    File, u8, 8,
-    [u8]
-}
-
-impl_from_type! {
-    Rank, u8, 8,
-    [u8]
 }
 
 /// File implemenatations.

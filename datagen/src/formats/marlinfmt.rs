@@ -86,12 +86,12 @@ impl MarlinFmt {
         occ.bitloop(|s| {
             let marlin_pc = self.pcs[i / 2] >> ((i % 2) * 4) & 0xF;
 
-            let c = Color::from(marlin_pc >> 3);
+            let c = Color::from_raw(marlin_pc >> 3);
             let p = if marlin_pc & 0b111 == Self::UNMOVED_ROOK {
                 castling_squares.push(s);
                 Piece::Rook
             } else {
-                Piece::from(marlin_pc & 0b111)
+                Piece::from_raw(marlin_pc & 0b111)
             };
 
             let pc = CPiece::create(c, p);
@@ -113,13 +113,13 @@ impl MarlinFmt {
 
         state.hash.toggle_castling(c_rights);
 
-        let c = Color::from(self.stm_epsq >> 7);
+        let c = Color::from_raw(self.stm_epsq >> 7);
         b.stm = c;
         if c == Color::White {
             state.hash.toggle_color();
         }
 
-        let epsq = Square::from(self.stm_epsq & 0x7F);
+        let epsq = Square::from_raw(self.stm_epsq & 0x7F);
         if epsq != Square::Invalid {
             state.epsq = epsq;
             state.hash.toggle_ep(epsq);

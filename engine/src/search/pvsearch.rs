@@ -381,7 +381,7 @@ impl Position {
                 && tt_bound.has(Bound::Lower)
                 && tt_depth >= depth - 3
             {
-                let ext_beta = (tt_value - depth * ext_mult()).max(-Eval::INFINITY);
+                let ext_beta = (tt_value - i32::from(depth * ext_mult())).max(-Eval::INFINITY);
 
                 // Search all moves except the TT move at reduced depth.
                 t.ss_mut().excluded = Some(tt_move);
@@ -458,7 +458,7 @@ impl Position {
                 // Re-search at full depth if the reduced search suggests the move is good.
                 if v > alpha {
                     new_depth += Depth::from(v > best_value + lmr_ver_e_min() + 2 * i32::from(new_depth));
-                    new_depth -= Depth::from(v < best_value + new_depth);
+                    new_depth -= Depth::from(v < best_value + i32::from(new_depth));
                     if r > 1 {
                         v = -self.nwsearch(t, tt, tb, child_pv, -alpha, new_depth, !cutnode);
                     }

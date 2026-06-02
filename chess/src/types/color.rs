@@ -1,6 +1,6 @@
 use std::{fmt, ops::Not};
 
-use crate::{impl_from_type, impl_lists};
+use crate::impl_from_type;
 
 /// Color. This represents the two sides, White and Black.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -8,6 +8,10 @@ use crate::{impl_from_type, impl_lists};
 pub enum Color {
     White = 0,
     Black = 1,
+}
+
+impl_from_type! {
+    Color, u8, 2
 }
 
 impl Color {
@@ -24,13 +28,6 @@ impl Not for Color {
     fn not(self) -> Self {
         Self::from_raw(1 ^ self as u8)
     }
-}
-
-impl_lists! {Color, 2}
-
-impl_from_type! {
-    Color, u8, 2,
-    [u8, bool]
 }
 
 /// Get a color from a character.

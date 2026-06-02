@@ -50,7 +50,7 @@ impl Board {
         }
 
         // Stop if opponent is winning.
-        let mut balance = move_val - threshold;
+        let mut balance = move_val - threshold.0;
         if balance < 0 {
             return false;
         }

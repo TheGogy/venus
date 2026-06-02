@@ -145,8 +145,8 @@ impl SyzygyTB {
 
             let dtz = (res & TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_SHIFT;
 
-            let src = Square::from(((res & TB_RESULT_FROM_MASK) >> TB_RESULT_FROM_SHIFT) as u8);
-            let dst = Square::from(((res & TB_RESULT_TO_MASK) >> TB_RESULT_TO_SHIFT) as u8);
+            let src = Square::from_raw(((res & TB_RESULT_FROM_MASK) >> TB_RESULT_FROM_SHIFT) as u8);
+            let dst = Square::from_raw(((res & TB_RESULT_TO_MASK) >> TB_RESULT_TO_SHIFT) as u8);
             let promo = match (res & TB_RESULT_PROMOTES_MASK) >> TB_RESULT_PROMOTES_SHIFT {
                 TB_PROMOTES_QUEEN => Piece::Queen,
                 TB_PROMOTES_ROOK => Piece::Rook,

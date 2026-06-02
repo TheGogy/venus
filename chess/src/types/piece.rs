@@ -1,4 +1,4 @@
-use crate::{impl_from_type, impl_lists, types::color::Color};
+use crate::{impl_from_type, types::color::Color};
 
 /// Represents a piece, and is ordered by increasing value.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -14,6 +14,10 @@ pub enum Piece {
     None,
 }
 
+impl_from_type! {
+    Piece, u8, 6
+}
+
 /// Represents a piece and a color.
 #[rustfmt::skip]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -27,6 +31,10 @@ pub enum CPiece {
     WKing,   BKing,
     #[default]
     None
+}
+
+impl_from_type! {
+    CPiece, u8, 12
 }
 
 impl Piece {
@@ -78,19 +86,6 @@ impl TryFrom<char> for CPiece {
     /// Constructs a piece from a given character according to UCI specification.
     /// Returns an error (`&' static str`) if the provided `char` does not match any piece.
     fn try_from(value: char) -> Result<Self, Self::Error> {
-        Ok(Self::from(Self::UCI_CHAR.chars().position(|x| x == value).ok_or("Invalid CPiece!")?))
+        Ok(Self::from_raw(Self::UCI_CHAR.chars().position(|x| x == value).ok_or("Invalid CPiece!")? as u8))
     }
-}
-
-impl_lists! {Piece, 6}
-impl_lists! {CPiece, 12}
-
-impl_from_type! {
-    Piece, u8, 6,
-    [u8]
-}
-
-impl_from_type! {
-    CPiece, u8, 12,
-    [u8, usize]
 }

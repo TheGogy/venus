@@ -1,7 +1,7 @@
 use std::ops::Not;
 
 use crate::{
-    impl_all_math_ops, impl_math_assign_ops, impl_math_ops,
+    impl_all_math_ops,
     tables::sliding_piece::between,
     types::{
         bitboard::Bitboard,
@@ -20,6 +20,8 @@ use crate::{
 /// [wk][bk][wq][bq]
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub struct CastlingRights(pub u8);
+
+impl_all_math_ops!(CastlingRights: u8);
 
 impl CastlingRights {
     /// Total number of possible castling rights.
@@ -63,11 +65,6 @@ impl CastlingRights {
     pub const fn get_mask(c: Color, is_qs: bool) -> Self {
         Self::MASKS[is_qs as usize][c.idx()]
     }
-}
-
-impl_all_math_ops! {
-    CastlingRights: u8,
-    [u8, usize]
 }
 
 impl Not for CastlingRights {

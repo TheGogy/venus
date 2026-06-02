@@ -8,9 +8,9 @@ use crate::{threading::thread::Thread, tunables::params::tunables::*};
 // we're likely to exceed beta, we can return beta immediately.
 #[rustfmt::skip]
 pub fn can_apply_rfp(depth: Depth, improving: bool, opp_worsening: bool, eval: Eval, beta: Eval) -> bool {
-    let rfp_margin = rfp_mult() * Eval(i32::from(depth))
-                   - rfp_improving_margin() * Eval(i32::from(improving))
-                   - rfp_worsening_margin() * Eval(i32::from(opp_worsening));
+    let rfp_margin = Eval(i32::from(depth))         * rfp_mult()
+                   - Eval(i32::from(improving))     * rfp_improving_margin()
+                   - Eval(i32::from(opp_worsening)) * rfp_worsening_margin();
     !eval.is_win() && !beta.is_loss() && depth <= rfp_d_max() && eval - rfp_margin >= beta
 }
 

@@ -102,6 +102,10 @@ pub enum MoveFlag {
     CPromoQ     = 0b1111,
 }
 
+impl_from_type! {
+    MoveFlag, u8, 16
+}
+
 impl MoveFlag {
     /// Whether this [`MoveFlag`] denotes a capture.
     pub const fn is_cap(self) -> bool {
@@ -140,9 +144,4 @@ impl MoveFlag {
     pub const fn get_promo(self) -> Piece {
         unsafe { std::mem::transmute(((self as u8) & 0b0011) + 1) }
     }
-}
-
-impl_from_type! {
-    MoveFlag, u8, 16,
-    [u8]
 }

@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::{defs::MAX_PLY, impl_all_math_ops, impl_math_assign_ops, impl_math_ops};
+use crate::{defs::MAX_PLY, impl_all_math_ops};
 
 /// Represents the evaluation within a game.
 ///
@@ -15,6 +15,8 @@ use crate::{defs::MAX_PLY, impl_all_math_ops, impl_math_assign_ops, impl_math_op
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct Eval(pub i32);
+
+impl_all_math_ops! (Eval: i32);
 
 impl Eval {
     pub const DRAW: Self = Self(0);
@@ -164,9 +166,4 @@ impl std::ops::Neg for Eval {
     fn neg(self) -> Self {
         Self(-self.0)
     }
-}
-
-impl_all_math_ops! {
-    Eval: i32,
-    [i32, i16]
 }

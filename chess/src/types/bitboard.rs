@@ -1,7 +1,7 @@
 use core::fmt;
 
 use crate::{
-    impl_all_math_ops, impl_math_assign_ops, impl_math_ops,
+    impl_all_math_ops,
     types::{
         rank_file::{File, Rank},
         square::Square,
@@ -13,6 +13,8 @@ use crate::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(transparent)]
 pub struct Bitboard(pub u64);
+
+impl_all_math_ops!(Bitboard: u64);
 
 impl Bitboard {
     pub const EMPTY: Self = Self(0);
@@ -94,11 +96,6 @@ impl Bitboard {
            | (file_edges & !square.file().bb().0),
         )
     }
-}
-
-impl_all_math_ops! {
-    Bitboard: u64,
-    [u64]
 }
 
 impl std::ops::Not for Bitboard {

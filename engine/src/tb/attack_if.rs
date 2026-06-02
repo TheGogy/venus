@@ -38,5 +38,5 @@ pub extern "C" fn ven_tb_queen_attacks(sq: u32, occ: u64) -> u64 {
 #[unsafe(no_mangle)]
 pub extern "C" fn ven_tb_pawn_attacks(sq: u32, c: bool) -> u64 {
     // NOTE: We represent WHITE = 0, BLACK = 1, Fathom does the opposite.
-    pawn_atk(Color::from(!c), Square::from_raw(sq as u8)).0
+    pawn_atk(Color::from_raw(!c as u8), Square::from_raw(sq as u8)).0
 }
