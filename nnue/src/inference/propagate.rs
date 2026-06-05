@@ -1,9 +1,9 @@
-#[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
+#[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
 pub use fallback::*;
-#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+#[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
 pub use simdvec::*;
 
-#[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
+#[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
 mod fallback {
     use utils::memory::Align64;
 
@@ -81,7 +81,7 @@ mod fallback {
     }
 }
 
-#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+#[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
 mod simdvec {
     use utils::memory::Align64;
 
@@ -103,14 +103,19 @@ mod simdvec {
         clippy::cast_ptr_alignment
     )]
     pub fn propagate_all_layers(nn: &NNUEData, stm: &HalfAcc, opp: &HalfAcc, obkt: usize) -> f32 {
+        /// On ARM NEON, the mulhi instruction actually computes 2*x*y.
+        /// This is effectively a left shift by itself, so when we shift left
+        /// we do 1 less to compensate.
+        const L1_DEQ_SHIFT: simd::ShiftT = L1Q_BITS - cfg!(target_feature = "neon") as simd::ShiftT;
+
         let mut ft_out = Align64([0u8; L1_LEN]);
         let mut l1_out = Align64([0.0; EFF_L2_LEN]);
         let mut l2_out = Align64([0.0; L3_LEN]);
 
         let mut sparse = SparseMat::default();
 
-        let zero_i = simd::zeroed_i();
-        let zero_f = simd::zeroed_f();
+        let zero_i = simd::from_val_i16(0);
+        let zero_f = simd::from_val_f32(0.0);
         let one_f = simd::from_val_f32(1.0);
         let ft_quant = simd::from_val_i16(FT_QUANT as i16);
         let dequant = simd::from_val_f32(L1_DEQUANT);
@@ -133,28 +138,40 @@ mod simdvec {
                     let y2 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 2 + PAIRWISE_LEN));
                     let y3 = simd::from_ptr_i16(acc.add(i + simd::CHUNK_SIZE_I16 * 3 + PAIRWISE_LEN));
 
-                    let x0_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x0, zero_i, ft_quant));
-                    let x1_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x1, zero_i, ft_quant));
-                    let x2_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x2, zero_i, ft_quant));
-                    let x3_clip = simd::shl_i16::<L1Q_BITS>(simd::clamp_i16(x3, zero_i, ft_quant));
-
+                    // Clip y inputs from above.
+                    // We don't care about clipping these from below:
+                    // mulhi (positive << shift) * negative
+                    // will be negative, so it will saturate to 0 with packus.
                     let y0_clip = simd::min_i16(y0, ft_quant);
                     let y1_clip = simd::min_i16(y1, ft_quant);
                     let y2_clip = simd::min_i16(y2, ft_quant);
                     let y3_clip = simd::min_i16(y3, ft_quant);
+
+                    // Clip x inputs to [0..FT_QUANT] and then left shift so that
+                    // mulhi gives CReLU(x) * CReLU(y)
+                    let x0_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x0, zero_i, ft_quant));
+                    let x1_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x1, zero_i, ft_quant));
+                    let x2_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x2, zero_i, ft_quant));
+                    let x3_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x3, zero_i, ft_quant));
 
                     let xy0 = simd::mulhi_i16(x0_clip, y0_clip);
                     let xy1 = simd::mulhi_i16(x1_clip, y1_clip);
                     let xy2 = simd::mulhi_i16(x2_clip, y2_clip);
                     let xy3 = simd::mulhi_i16(x3_clip, y3_clip);
 
+                    // Pack i16 -> u8, saturate negatives to 0 (to clip y from below).
                     let prod_u8_01 = simd::packus_i16_u8(xy0, xy1);
                     let prod_u8_23 = simd::packus_i16_u8(xy2, xy3);
 
-                    simd::to_ptr_u8(ft_out_ptr.add(offset + i).cast(), prod_u8_01);
-                    simd::to_ptr_u8(ft_out_ptr.add(offset + i + simd::CHUNK_SIZE_U8).cast(), prod_u8_23);
+                    // Store in ft_out.
+                    simd::to_ptr_u8(ft_out_ptr.add(offset + i + 0 * simd::CHUNK_SIZE_U8).cast(), prod_u8_01);
+                    simd::to_ptr_u8(ft_out_ptr.add(offset + i + 1 * simd::CHUNK_SIZE_U8).cast(), prod_u8_23);
 
-                    sparse.update(prod_u8_01, prod_u8_23);
+                    // Update sparse activation tracker.
+                    let pack_i32_01 = simd::reinterpret_u8_i32(prod_u8_01);
+                    let pack_i32_23 = simd::reinterpret_u8_i32(prod_u8_23);
+
+                    sparse.update(pack_i32_01, pack_i32_23);
                 }
             };
 
@@ -186,18 +203,18 @@ mod simdvec {
                 let idx_2 = sparse.index_for(c + 2);
                 let idx_3 = sparse.index_for(c + 3);
 
-                let ft0 = simd::from_val_i32(*ft_out_32.get_unchecked(idx_0));
-                let ft1 = simd::from_val_i32(*ft_out_32.get_unchecked(idx_1));
-                let ft2 = simd::from_val_i32(*ft_out_32.get_unchecked(idx_2));
-                let ft3 = simd::from_val_i32(*ft_out_32.get_unchecked(idx_3));
+                let ft0 = simd::reinterpret_i32_u8(simd::from_val_i32(*ft_out_32.get_unchecked(idx_0)));
+                let ft1 = simd::reinterpret_i32_u8(simd::from_val_i32(*ft_out_32.get_unchecked(idx_1)));
+                let ft2 = simd::reinterpret_i32_u8(simd::from_val_i32(*ft_out_32.get_unchecked(idx_2)));
+                let ft3 = simd::reinterpret_i32_u8(simd::from_val_i32(*ft_out_32.get_unchecked(idx_3)));
 
                 for i in 0..L2_LEN / simd::CHUNK_SIZE_F32 {
                     let x = simd::from_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32));
 
-                    let x = simd::dpbusd_i32(x, ft0, simd::from_ptr_i8(weight_ptr.add(idx_0 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
-                    let x = simd::dpbusd_i32(x, ft1, simd::from_ptr_i8(weight_ptr.add(idx_1 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
-                    let x = simd::dpbusd_i32(x, ft2, simd::from_ptr_i8(weight_ptr.add(idx_2 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
-                    let x = simd::dpbusd_i32(x, ft3, simd::from_ptr_i8(weight_ptr.add(idx_3 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
+                    let x = simd::dotprod_i32(x, ft0, simd::from_ptr_i8(weight_ptr.add(idx_0 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
+                    let x = simd::dotprod_i32(x, ft1, simd::from_ptr_i8(weight_ptr.add(idx_1 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
+                    let x = simd::dotprod_i32(x, ft2, simd::from_ptr_i8(weight_ptr.add(idx_2 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
+                    let x = simd::dotprod_i32(x, ft3, simd::from_ptr_i8(weight_ptr.add(idx_3 * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8)));
 
                     simd::to_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32), x);
                 }
@@ -206,12 +223,12 @@ mod simdvec {
             // Affine Transform (tail).
             for c in full_chunks..sparse.count {
                 let idx = sparse.index_for(c);
-                let ft = simd::from_val_i32(*ft_out_32.get_unchecked(idx));
+                let ft = simd::reinterpret_i32_u8(simd::from_val_i32(*ft_out_32.get_unchecked(idx)));
                 for i in 0..L2_LEN / simd::CHUNK_SIZE_F32 {
                     let x = simd::from_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32));
                     let wgt = simd::from_ptr_i8(weight_ptr.add(idx * L2_LEN * 4 + i * simd::CHUNK_SIZE_U8));
 
-                    let x = simd::dpbusd_i32(x, ft, wgt);
+                    let x = simd::dotprod_i32(x, ft, wgt);
                     simd::to_ptr_i32(acts_ptr.add(i * simd::CHUNK_SIZE_F32), x);
                 }
             }
@@ -264,7 +281,7 @@ mod simdvec {
         // --------------------- L3 ---------------------
 
         unsafe {
-            let mut sum = simd::zeroed_f();
+            let mut sum = simd::from_val_f32(0.0);
 
             let l1_out_ptr = l1_out.as_ptr();
             let l2_out_ptr = l2_out.as_ptr();

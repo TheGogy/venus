@@ -1,9 +1,9 @@
-#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+#[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
 use utils::memory::Align64;
 use utils::memory::boxed_zeroed;
 
 use crate::arch::{EFF_L2_LEN, FEATURES, L1_LEN, L2_LEN, L3_LEN, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, NNUEData, QuantNNUEData};
-#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+#[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
 use crate::simd::simd;
 
 impl QuantNNUEData {
@@ -13,7 +13,7 @@ impl QuantNNUEData {
     /// Packus interleaves each block of 128 from a and b, but we want them
     /// to be consecutive - so we un-interleave them now so that they'll be properly concatenated.
     #[allow(clippy::needless_range_loop)]
-    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+    #[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
     fn permute_packus(&self, out: &mut Box<NNUEData>) {
         const PACKUS_CHUNK: usize = 8;
 
@@ -43,10 +43,10 @@ impl QuantNNUEData {
     pub fn permute(&self) -> Box<NNUEData> {
         let mut out: Box<NNUEData> = boxed_zeroed();
 
-        #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+        #[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
         self.permute_packus(&mut out);
 
-        #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
+        #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
         unsafe {
             std::ptr::copy_nonoverlapping(
                 self.ftw.as_ptr() as *const i16,
@@ -58,7 +58,7 @@ impl QuantNNUEData {
 
         for b in 0..NB_OUTPUT_BUCKETS {
             // Transpose L1 weights.
-            #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+            #[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
             for i in (0..L1_LEN).step_by(4) {
                 for j in 0..L2_LEN {
                     for k in 0..4 {
@@ -68,7 +68,7 @@ impl QuantNNUEData {
             }
 
             // Transpose L1 weights.
-            #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
+            #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
             for i in 0..L1_LEN {
                 for j in 0..L2_LEN {
                     out.l1w[b][i * L2_LEN + j] = self.l1w[i][b][j];
