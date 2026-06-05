@@ -10,8 +10,14 @@ pub mod avx512f;
 #[cfg(target_feature = "avx512f")]
 pub use avx512f::*;
 
+#[cfg(target_feature = "neon")]
+pub mod neon;
+
+#[cfg(target_feature = "neon")]
+pub use neon::*;
+
 // Preserve interface if we're using a different type.
-#[cfg(not(any(target_feature = "avx2", target_feature = "avx512f")))]
+#[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
 #[allow(clippy::module_inception)]
 pub mod simd {
     pub const ARCH_NAME: &str = "fallback";
