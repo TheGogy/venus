@@ -14,7 +14,7 @@ impl Board {
 
         let flag = m.flag();
         let (src, dst) = (m.src(), m.dst());
-        let mut pc = self.get_piece(src);
+        let mut pc = self.pc_at(src);
 
         let mut state = BoardState::default();
 
@@ -52,8 +52,8 @@ impl Board {
             // Castle: move rook to castling square.
             MoveFlag::Castling => {
                 let (rf, rt) = self.castlingmask.rook_src_dst(dst);
-                let r = CPiece::create(self.stm, Piece::Rook);
-                let k = CPiece::create(self.stm, Piece::King);
+                let r = CPiece::make(self.stm, Piece::Rook);
+                let k = CPiece::make(self.stm, Piece::King);
                 self.pop_piece(rf);
                 self.set_piece(r, rt);
                 state.hash.toggle_piece(r, rf);
@@ -72,7 +72,7 @@ impl Board {
 
             // Capture: Remove piece at target square.
             MoveFlag::Capture => {
-                let cap = self.get_piece(dst);
+                let cap = self.pc_at(dst);
                 state.cap = cap;
                 self.pop_piece(dst);
                 state.hash.toggle_piece(cap, dst);
@@ -83,7 +83,7 @@ impl Board {
             // En passant: Remove ep captured piece.
             MoveFlag::EnPassant => {
                 let epsq = dst.forward(!self.stm);
-                let cap = self.get_piece(epsq);
+                let cap = self.pc_at(epsq);
                 state.cap = cap;
                 self.pop_piece(epsq);
                 state.hash.toggle_piece(cap, epsq);
@@ -93,20 +93,20 @@ impl Board {
 
             // Regular promotion: set piece to promoted piece.
             MoveFlag::PromoN | MoveFlag::PromoB | MoveFlag::PromoR | MoveFlag::PromoQ => {
-                let stm_pawn = CPiece::create(self.stm, Piece::Pawn);
-                pc = CPiece::create(self.stm, flag.get_promo());
+                let stm_pawn = CPiece::make(self.stm, Piece::Pawn);
+                pc = CPiece::make(self.stm, flag.get_promo());
                 state.halfmoves = 0;
                 dp = DirtyPieces::Add1Sub1((pc, dst), (stm_pawn, src));
             }
 
             // Capture promotion: remove piece from to square and set piece to promoted piece.
             MoveFlag::CPromoN | MoveFlag::CPromoB | MoveFlag::CPromoR | MoveFlag::CPromoQ => {
-                let stm_pawn = CPiece::create(self.stm, Piece::Pawn);
-                let cap = self.get_piece(dst);
+                let stm_pawn = CPiece::make(self.stm, Piece::Pawn);
+                let cap = self.pc_at(dst);
                 state.cap = cap;
                 self.pop_piece(dst);
                 state.hash.toggle_piece(cap, dst);
-                pc = CPiece::create(self.stm, flag.get_promo());
+                pc = CPiece::make(self.stm, flag.get_promo());
                 state.halfmoves = 0;
                 dp = DirtyPieces::Add1Sub2((pc, dst), (cap, dst), (stm_pawn, src));
             }
@@ -143,7 +143,7 @@ impl Board {
 
         let flag = m.flag();
         let (src, dst) = (m.src(), m.dst());
-        let mut piece = self.get_piece(dst);
+        let mut piece = self.pc_at(dst);
         let cap = self.state.cap;
 
         // SAFETY: Caller guarantees this will only be called when there is a valid move in the history.
@@ -164,7 +164,7 @@ impl Board {
             MoveFlag::Castling => {
                 let (rf, rt) = self.castlingmask.rook_src_dst(dst);
                 self.pop_piece(rt);
-                self.set_piece(CPiece::create(self.stm, Piece::Rook), rf);
+                self.set_piece(CPiece::make(self.stm, Piece::Rook), rf);
             }
 
             // Capture: replace the captured piece.
@@ -180,13 +180,13 @@ impl Board {
 
             // Regular promotion: set piece to promoted piece.
             MoveFlag::PromoN | MoveFlag::PromoB | MoveFlag::PromoR | MoveFlag::PromoQ => {
-                piece = CPiece::create(self.stm, Piece::Pawn);
+                piece = CPiece::make(self.stm, Piece::Pawn);
             }
 
             // Capture promotion: add piece back to destination square and set piece to promoted piece.
             MoveFlag::CPromoN | MoveFlag::CPromoB | MoveFlag::CPromoR | MoveFlag::CPromoQ => {
                 self.set_piece(cap, dst);
-                piece = CPiece::create(self.stm, Piece::Pawn);
+                piece = CPiece::make(self.stm, Piece::Pawn);
             }
         }
 
@@ -248,8 +248,8 @@ mod tests {
 
         b.make_move(m);
 
-        assert_eq!(b.get_piece(Square::E2), CPiece::None);
-        assert_eq!(b.get_piece(Square::E4), CPiece::WPawn);
+        assert_eq!(b.pc_at(Square::E2), CPiece::None);
+        assert_eq!(b.pc_at(Square::E4), CPiece::WPawn);
         assert_eq!(b.history.len(), 1);
 
         let x: Board = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1".parse().unwrap();
@@ -258,8 +258,8 @@ mod tests {
 
         b.undo_move();
 
-        assert_eq!(b.get_piece(Square::E4), CPiece::None);
-        assert_eq!(b.get_piece(Square::E2), CPiece::WPawn);
+        assert_eq!(b.pc_at(Square::E4), CPiece::None);
+        assert_eq!(b.pc_at(Square::E2), CPiece::WPawn);
         assert_eq!(b.history.len(), 0);
 
         let x = Board::default();
@@ -284,13 +284,13 @@ mod tests {
 
         b.make_move(m);
 
-        assert_eq!(b.get_piece(Square::E1), CPiece::None);
-        assert_eq!(b.get_piece(Square::G1), CPiece::WKing);
+        assert_eq!(b.pc_at(Square::E1), CPiece::None);
+        assert_eq!(b.pc_at(Square::G1), CPiece::WKing);
 
         b.undo_move();
 
-        assert_eq!(b.get_piece(Square::F1), CPiece::None);
-        assert_eq!(b.get_piece(Square::H1), CPiece::WRook);
+        assert_eq!(b.pc_at(Square::F1), CPiece::None);
+        assert_eq!(b.pc_at(Square::H1), CPiece::WRook);
     }
 
     #[test]
@@ -300,13 +300,13 @@ mod tests {
 
         b.make_move(m);
 
-        assert_eq!(b.get_piece(Square::D5), CPiece::WPawn);
-        assert_eq!(b.get_piece(Square::C4), CPiece::None);
+        assert_eq!(b.pc_at(Square::D5), CPiece::WPawn);
+        assert_eq!(b.pc_at(Square::C4), CPiece::None);
 
         b.undo_move();
 
-        assert_eq!(b.get_piece(Square::C4), CPiece::WPawn);
-        assert_eq!(b.get_piece(Square::D5), CPiece::BPawn);
+        assert_eq!(b.pc_at(Square::C4), CPiece::WPawn);
+        assert_eq!(b.pc_at(Square::D5), CPiece::BPawn);
     }
 
     #[test]
@@ -316,14 +316,14 @@ mod tests {
 
         b.make_move(m);
 
-        assert_eq!(b.get_piece(Square::F5), CPiece::None);
-        assert_eq!(b.get_piece(Square::F6), CPiece::WPawn);
+        assert_eq!(b.pc_at(Square::F5), CPiece::None);
+        assert_eq!(b.pc_at(Square::F6), CPiece::WPawn);
         assert_eq!(b.state.epsq, Square::Invalid);
 
         b.undo_move();
 
-        assert_eq!(b.get_piece(Square::F5), CPiece::BPawn);
-        assert_eq!(b.get_piece(Square::F6), CPiece::None);
+        assert_eq!(b.pc_at(Square::F5), CPiece::BPawn);
+        assert_eq!(b.pc_at(Square::F6), CPiece::None);
     }
 
     #[test]
@@ -333,13 +333,13 @@ mod tests {
 
         b.make_move(m);
 
-        assert_eq!(b.get_piece(Square::G8), CPiece::WQueen);
-        assert_eq!(b.get_piece(Square::G7), CPiece::None);
+        assert_eq!(b.pc_at(Square::G8), CPiece::WQueen);
+        assert_eq!(b.pc_at(Square::G7), CPiece::None);
 
         b.undo_move();
 
-        assert_eq!(b.get_piece(Square::G7), CPiece::WPawn);
-        assert_eq!(b.get_piece(Square::G8), CPiece::None);
+        assert_eq!(b.pc_at(Square::G7), CPiece::WPawn);
+        assert_eq!(b.pc_at(Square::G8), CPiece::None);
     }
 
     #[test]
@@ -349,13 +349,13 @@ mod tests {
 
         b.make_move(m);
 
-        assert_eq!(b.get_piece(Square::F8), CPiece::WQueen);
-        assert_eq!(b.get_piece(Square::G7), CPiece::None);
+        assert_eq!(b.pc_at(Square::F8), CPiece::WQueen);
+        assert_eq!(b.pc_at(Square::G7), CPiece::None);
 
         b.undo_move();
 
-        assert_eq!(b.get_piece(Square::G7), CPiece::WPawn);
-        assert_eq!(b.get_piece(Square::F8), CPiece::BBishop);
+        assert_eq!(b.pc_at(Square::G7), CPiece::WPawn);
+        assert_eq!(b.pc_at(Square::F8), CPiece::BBishop);
     }
 
     #[test]

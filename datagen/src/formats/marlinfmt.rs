@@ -94,7 +94,7 @@ impl MarlinFmt {
                 Piece::from_raw(marlin_pc & 0b111)
             };
 
-            let pc = CPiece::create(c, p);
+            let pc = CPiece::make(c, p);
 
             state.hash.toggle_piece(pc, s);
             b.set_piece(pc, s);

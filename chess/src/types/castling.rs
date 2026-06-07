@@ -160,7 +160,7 @@ impl CastlingRights {
         for token in s.chars() {
             let t = token.to_ascii_uppercase();
             let c = if token.is_ascii_uppercase() { Color::White } else { Color::Black };
-            let rook = CPiece::create(c, Piece::Rook);
+            let rook = CPiece::make(c, Piece::Rook);
             let ksq = b.ksq(c);
 
             let (rsq, mask) = match t {

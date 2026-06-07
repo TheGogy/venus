@@ -65,7 +65,7 @@ impl CPiece {
     }
 
     /// Create a [`CPiece`] from a [`Color`] and a [`Piece`].
-    pub const fn create(c: Color, p: Piece) -> Self {
+    pub const fn make(c: Color, p: Piece) -> Self {
         Self::from_raw(((p as u8) << 1) + c as u8)
     }
 

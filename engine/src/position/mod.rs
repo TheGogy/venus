@@ -30,7 +30,7 @@ impl std::str::FromStr for Position {
         let mut board: Board = match tokens.next() {
             Some("startpos") => Board::default(),
 
-            // Testing positions
+            // Testing positions.
             Some("kiwipete") => "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1".parse().unwrap(),
             Some("killer") => "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1".parse().unwrap(),
             Some("nolot3") => "r2qk2r/ppp1b1pp/2n1p3/3pP1n1/3P2b1/2PB1NN1/PP4PP/R1BQK2R w KQkq - 0 1".parse().unwrap(),
@@ -38,16 +38,21 @@ impl std::str::FromStr for Position {
             Some("tricky") => "3qk1b1/1p4r1/1n4r1/2P1b2B/p3N2p/P2Q3P/8/1R3R1K w - - 2 39".parse().unwrap(),
             Some("endgame") => "r7/6k1/1p6/2pp1p2/7Q/8/p1P2K1P/8 w - - 0 32".parse().unwrap(),
 
-            // FEN parsing
+            // FEN parsing.
             Some("fen") => {
                 let fen = &tokens.clone().take(6).collect::<Vec<&str>>().join(" ")[..];
 
                 for _ in 0..6 {
-                    tokens.next();
+                    tokens.next().ok_or("Invalid FEN!")?;
                 }
 
                 fen.parse()?
             }
+
+            // FRC parsing.
+            Some("frc") => Board::from_frc_idx(tokens.next().ok_or("Must provide index!")?.parse().map_err(|_| "Invalid index!")?, false)?,
+            Some("dfrc") => Board::from_frc_idx(tokens.next().ok_or("Must provide index!")?.parse().map_err(|_| "Invalid index!")?, true)?,
+
             _ => return Err("Invalid position!"),
         };
 
@@ -75,6 +80,11 @@ impl Position {
     /// Reset the board back to the starting position.
     pub fn reset(&mut self) {
         self.board = Board::default();
+        self.reinit_nnue();
+    }
+
+    /// Fully refreshes the NNUE to the current board state.
+    pub fn reinit_nnue(&mut self) {
         self.nnue.reset();
         self.nnue.update_all(&self.board);
     }
@@ -113,10 +123,5 @@ impl Position {
     /// Get the current side to move.
     pub fn stm(&self) -> Color {
         self.board.stm
-    }
-
-    /// Fully refreshes the NNUE to the current board state.
-    pub fn reinit_nnue(&mut self) {
-        self.nnue.update_all(&self.board);
     }
 }

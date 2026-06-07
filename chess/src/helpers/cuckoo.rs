@@ -95,7 +95,7 @@ static CUCKOO: CuckooTable = {
     while c < 2 {
         let mut p = 1; // Knight ..= King
         while p < 6 {
-            let pc = CPiece::create(Color::from_raw(c), Piece::from_raw(p));
+            let pc = CPiece::make(Color::from_raw(c), Piece::from_raw(p));
 
             let mut x = 0;
             while x < 64 {

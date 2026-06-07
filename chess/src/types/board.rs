@@ -12,6 +12,7 @@ use crate::{
         color::Color,
         moves::{Move, MoveFlag},
         piece::{CPiece, Piece},
+        rank_file::{File, Rank},
         square::Square,
         zobrist::Hash,
     },
@@ -188,6 +189,107 @@ impl FromStr for Board {
     }
 }
 
+/// Set board according to FRC index
+impl Board {
+    /// Set one side of the board according to the FRC index.
+    pub fn from_frc_idx(idx: usize, dfrc: bool) -> Result<Self, &'static str> {
+        if idx > if dfrc { 960 * 960 } else { 960 } {
+            return Err("Index out of range! Expected [0..960].");
+        }
+
+        let mut b = Self::empty();
+        let mut s = BoardState::default();
+
+        let add_piece = |brd: &mut Self, sta: &mut BoardState, pc: CPiece, sq: Square| {
+            brd.set_piece(pc, sq);
+            sta.hash.toggle_piece(pc, sq);
+        };
+
+        // Set pawns
+        for i in 0..8 {
+            let w_sq = Square::make(Rank::R2, File::from_raw(i));
+            let b_sq = Square::make(Rank::R7, File::from_raw(i));
+            add_piece(&mut b, &mut s, CPiece::WPawn, w_sq);
+            add_piece(&mut b, &mut s, CPiece::BPawn, b_sq);
+        }
+
+        // Scharnagl back ranks
+        let w_scharnagl = Self::decode_scharnagl(idx % 960);
+        let b_scharnagl = Self::decode_scharnagl(if dfrc { idx / 960 } else { idx % 960 });
+
+        // Set back rank
+        for i in 0..8 {
+            let w_sq = Square::make(Rank::R1, File::from_raw(i as u8));
+            let b_sq = Square::make(Rank::R8, File::from_raw(i as u8));
+            let w_pc = CPiece::make(Color::White, w_scharnagl[i]);
+            let b_pc = CPiece::make(Color::Black, b_scharnagl[i]);
+            add_piece(&mut b, &mut s, w_pc, w_sq);
+            add_piece(&mut b, &mut s, b_pc, b_sq);
+        }
+
+        b.update_masks(&mut s);
+
+        // Set all castling rights at the start
+        let mut castling_str = String::new();
+        for i in w_scharnagl.iter().enumerate().filter_map(|(i, p)| (p == &Piece::Rook).then_some(i)) {
+            castling_str.push((b'A' + i as u8) as char);
+        }
+        for i in b_scharnagl.iter().enumerate().filter_map(|(i, p)| (p == &Piece::Rook).then_some(i)) {
+            castling_str.push((b'a' + i as u8) as char);
+        }
+
+        let (c_rights, c_mask) = match CastlingRights::parse(&b, &castling_str.to_string()) {
+            Ok((r, m)) => (r, m),
+            Err(e) => return Err(e),
+        };
+
+        b.castlingmask = c_mask;
+        s.castling = c_rights;
+
+        s.epsq = Square::Invalid;
+        s.halfmoves = 0;
+        s.fullmoves = 1;
+
+        b.state = s;
+
+        Ok(b)
+    }
+
+    /// Decode the Scharnagl index to get the back rank piece positions.
+    /// https://en.wikipedia.org/wiki/Fischer_random_chess_numbering_scheme#Direct_derivation
+    fn decode_scharnagl(n: usize) -> [Piece; 8] {
+        const K5N: [[usize; 2]; 10] = [[0, 0], [0, 1], [0, 2], [0, 3], [1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]];
+
+        let mut pcs = [None; 8];
+
+        let (n2, b1) = (n / 4, n % 4);
+        let (n3, b2) = (n2 / 4, n2 % 4);
+        let (n4, q) = (n3 / 4, n3 % 4);
+
+        // Add piece after the first `idx` free slots.
+        let insert_into_nth_free = |pcs: &mut [Option<Piece>; 8], idx: usize, pc: Piece| {
+            if let Some(slot) = pcs.iter_mut().filter(|p| p.is_none()).nth(idx) {
+                *slot = Some(pc);
+            }
+        };
+
+        // One light square + one dark square bishop.
+        pcs[b1 * 2 + 1] = Some(Piece::Bishop);
+        pcs[b2 * 2] = Some(Piece::Bishop);
+
+        insert_into_nth_free(&mut pcs, q, Piece::Queen);
+        insert_into_nth_free(&mut pcs, K5N[n4][0], Piece::Knight);
+        insert_into_nth_free(&mut pcs, K5N[n4][1], Piece::Knight);
+
+        // King goes between both rooks.
+        insert_into_nth_free(&mut pcs, 0, Piece::Rook);
+        insert_into_nth_free(&mut pcs, 0, Piece::King);
+        insert_into_nth_free(&mut pcs, 0, Piece::Rook);
+
+        pcs.map(Option::unwrap)
+    }
+}
+
 /// Translate board from internal representation to FEN.
 impl Board {
     /// Get the piece placement in UCI format.
@@ -298,7 +400,7 @@ impl Board {
         self.p_bb(Piece::Bishop) | self.p_bb(Piece::Queen)
     }
 
-    /// Get all the orthoonal sliders on the board (queens + bishops).
+    /// Get all the orthoonal sliders on the board (queens + rooks).
     pub fn all_orth(&self) -> Bitboard {
         self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)
     }
@@ -338,11 +440,6 @@ impl Board {
         self.pc_map[s.idx()] = CPiece::None;
     }
 
-    /// Gets the piece at the given square.
-    pub const fn get_piece(&self, s: Square) -> CPiece {
-        self.pc_map[s.idx()]
-    }
-
     /// Find a move given a UCI move string.
     pub fn find_move(&self, s: &str) -> Option<Move> {
         let mut mv = None;
@@ -362,7 +459,7 @@ impl Board {
     /// Get the piece that is captured by a move.
     pub fn captured(&self, m: Move) -> CPiece {
         if m.flag() == MoveFlag::EnPassant {
-            CPiece::create(!self.stm, Piece::Pawn)
+            CPiece::make(!self.stm, Piece::Pawn)
         } else {
             self.pc_at(m.dst())
         }

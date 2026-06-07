@@ -36,7 +36,7 @@ impl Board {
         }
 
         // Get our piece that will be captured.
-        let victim = if flag.is_promo() { CPiece::create(self.stm, flag.get_promo()) } else { self.get_piece(src) };
+        let victim = if flag.is_promo() { CPiece::make(self.stm, flag.get_promo()) } else { self.pc_at(src) };
 
         // Get the value of the piece that we will use to capture.
         let mut move_val = if flag.is_cap() {
@@ -160,7 +160,7 @@ impl Board {
             let s = atk & self.pc_bb(c, p) & my_occ;
 
             if s.non_empty() {
-                return (CPiece::create(c, p), s.lsb());
+                return (CPiece::make(c, p), s.lsb());
             }
         }
 
