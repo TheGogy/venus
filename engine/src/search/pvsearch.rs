@@ -2,11 +2,11 @@ use std::sync::atomic::Ordering;
 
 use chess::{
     defs::MAX_PLY,
+    movegen::MoveList,
     types::{Depth, eval::Eval, moves::Move},
 };
 
 use crate::{
-    history::movebuffer::MoveBuffer,
     movepick::{MPStage, MovePicker, SearchType},
     position::Position,
     search::{
@@ -305,8 +305,8 @@ impl Position {
         let mut best_move = Move::NONE;
         let mut best_value = -Eval::INFINITY;
 
-        let mut caps_tried = MoveBuffer::default();
-        let mut quiets_tried = MoveBuffer::default();
+        let mut caps_tried = MoveList::new();
+        let mut quiets_tried = MoveList::new();
 
         let mut moves_tried = 0;
 
@@ -508,9 +508,11 @@ impl Position {
 
             // Add move to history.
             if is_quiet {
-                quiets_tried.push(m);
+                // SAFETY: at most MAX_MOVES legal moves can be tried in this node.
+                unsafe { quiets_tried.push_unchecked(m) };
             } else if m.flag().is_cap() {
-                caps_tried.push(m);
+                // SAFETY: at most MAX_MOVES legal moves can be tried in this node.
+                unsafe { caps_tried.push_unchecked(m) };
             }
         }
 

@@ -1,7 +1,13 @@
+use arrayvec::ArrayVec;
+
+use crate::{defs::MAX_MOVES, types::moves::Move};
+
 pub mod enumerate;
 pub mod make_move;
 pub mod perft;
 pub mod update;
+
+pub type MoveList = ArrayVec<Move, MAX_MOVES>;
 
 // Movegen trait.
 // Noisy: Only generate noisy moves (captures + queen promos).

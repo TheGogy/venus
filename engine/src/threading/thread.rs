@@ -8,6 +8,7 @@ use std::{
 
 use chess::{
     defs::MAX_PLY,
+    movegen::MoveList,
     types::{Depth, board::Board, color::Color, eval::Eval, moves::Move},
 };
 
@@ -16,7 +17,6 @@ use crate::{
         conthist::{CONT_NUM, ContHist, PieceTo},
         corrhist::{CorrHist, correction_bonus},
         hist_delta,
-        movebuffer::MoveBuffer,
         noisyhist::NoisyHist,
         quiethist::QuietHist,
     },
@@ -186,7 +186,7 @@ impl Thread {
     }
 
     /// Update the history tables given some quiet and noisy moves.
-    pub fn update_history(&mut self, best: Move, depth: Depth, board: &Board, quiets: &MoveBuffer, captures: &MoveBuffer) {
+    pub fn update_history(&mut self, best: Move, depth: Depth, board: &Board, quiets: &MoveList, captures: &MoveList) {
         let (bonus, malus) = hist_delta(depth);
         self.hist_noisy.update(board, best, captures, bonus, malus);
 

@@ -1,11 +1,8 @@
 use core::fmt;
 use std::str::FromStr;
 
-use arrayvec::ArrayVec;
-
 use crate::{
-    defs::MAX_MOVES,
-    movegen::Allmv,
+    movegen::{Allmv, MoveList},
     types::{
         bitboard::Bitboard,
         castling::{CastlingMask, CastlingRights},
@@ -472,8 +469,8 @@ impl Board {
     }
 
     /// Generate all legal moves in the position.
-    pub fn gen_moves(&self) -> ArrayVec<Move, MAX_MOVES> {
-        let mut mvs = ArrayVec::new();
+    pub fn gen_moves(&self) -> MoveList {
+        let mut mvs = MoveList::new();
         self.enumerate_moves::<_, Allmv>(|m| unsafe { mvs.push_unchecked(m) });
         mvs
     }

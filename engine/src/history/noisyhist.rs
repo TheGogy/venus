@@ -1,3 +1,4 @@
+use chess::movegen::MoveList;
 use chess::types::{
     board::Board,
     moves::Move,
@@ -6,7 +7,7 @@ use chess::types::{
 };
 use utils::memory::boxed_zeroed;
 
-use crate::history::{HistEntry, movebuffer::MoveBuffer};
+use crate::history::HistEntry;
 
 pub const CAP_HIST_MAX: i32 = 16384;
 
@@ -45,7 +46,7 @@ impl NoisyHist {
     }
 
     /// Update the history with the given moves.
-    pub fn update(&mut self, b: &Board, best: Move, captures: &MoveBuffer, bonus: i16, malus: i16) {
+    pub fn update(&mut self, b: &Board, best: Move, captures: &MoveList, bonus: i16, malus: i16) {
         for m in captures {
             self.add_bonus(b, *m, -malus);
         }

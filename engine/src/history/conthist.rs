@@ -1,7 +1,10 @@
-use chess::types::{board::Board, moves::Move, piece::CPiece, square::Square};
+use chess::{
+    movegen::MoveList,
+    types::{board::Board, moves::Move, piece::CPiece, square::Square},
+};
 use utils::memory::boxed_zeroed;
 
-use crate::history::{HistEntry, movebuffer::MoveBuffer};
+use crate::history::HistEntry;
 
 const CONT_HIST_MAX: i32 = 16384;
 pub const CONT_NUM: usize = 2;
@@ -39,7 +42,7 @@ impl ContHist {
     }
 
     /// Update the history with the given moves.
-    pub fn update(&mut self, best: Move, pt: PieceTo, other_moves: &MoveBuffer, bonus: i16, malus: i16) {
+    pub fn update(&mut self, best: Move, pt: PieceTo, other_moves: &MoveList, bonus: i16, malus: i16) {
         self.add_bonus(best, pt, bonus);
 
         for m in other_moves {

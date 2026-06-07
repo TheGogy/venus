@@ -1,7 +1,10 @@
-use chess::types::{color::Color, moves::Move, square::Square};
+use chess::{
+    movegen::MoveList,
+    types::{color::Color, moves::Move, square::Square},
+};
 use utils::memory::boxed_zeroed;
 
-use crate::history::{HistEntry, movebuffer::MoveBuffer};
+use crate::history::HistEntry;
 
 /// Quiet history.
 ///
@@ -39,7 +42,7 @@ impl QuietHist {
     }
 
     /// Update the history with the given moves.
-    pub fn update(&mut self, c: Color, best: Move, quiets: &MoveBuffer, bonus: i16, malus: i16) {
+    pub fn update(&mut self, c: Color, best: Move, quiets: &MoveList, bonus: i16, malus: i16) {
         for m in quiets {
             self.add_bonus(c, *m, -malus);
         }
