@@ -40,8 +40,7 @@ impl Default for NNUE {
 impl NNUE {
     /// Reset the NNUE.
     pub fn reset(&mut self) {
-        self.cache.reset();
-        self.stack = boxed_zeroed();
+        self.cache.reset(self.nn);
         self.dp_stack = [DirtyPieces::None; MAX_ACCS];
         self.idx = 0;
     }

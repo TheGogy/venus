@@ -1,5 +1,5 @@
+use super::MgType;
 use crate::{
-    movegen::MgType,
     tables::{
         leaping_piece::{king_atk, knight_atk, pawn_atk},
         sliding_piece::{bishop_atk, rook_atk},
@@ -63,15 +63,15 @@ impl Board {
         }
 
         if MG::NOISY {
-            (dest & self.c_bb(!self.stm)).bitloop(|to| {
+            for to in dest & self.c_bb(!self.stm) {
                 receiver(Move::new(from, to, MoveFlag::Capture));
-            });
+            }
         }
 
         if MG::QUIET {
-            (dest & !self.occ()).bitloop(|to| {
+            for to in dest & !self.occ() {
                 receiver(Move::new(from, to, MoveFlag::Normal));
-            });
+            }
         }
     }
 
@@ -134,13 +134,13 @@ impl Board {
                     cr &= self.state.checkmask;
                 }
 
-                cl.bitloop(|s| {
+                for s in cl {
                     self.add_cpromos(s.sub_dir(ul), s, receiver);
-                });
+                }
 
-                cr.bitloop(|s| {
+                for s in cr {
                     self.add_cpromos(s.sub_dir(ur), s, receiver);
-                });
+                }
             }
 
             // Promotions without capture.
@@ -151,9 +151,9 @@ impl Board {
                 bb &= self.state.checkmask;
             }
 
-            bb.bitloop(|s| {
+            for s in bb {
                 self.add_promos::<F, MG>(s.sub_dir(up), s, receiver);
-            });
+            }
         }
 
         // En passants.
@@ -168,17 +168,17 @@ impl Board {
                 epbb &= self.state.checkmask;
             }
 
-            epbb.bitloop(|src| {
+            for src in epbb {
                 // Our pawn is pinned but taking enemy pawn makes us leave pinmask.
                 if (src.bb() & diag).non_empty() && (self.state.epsq.bb() & diag).is_empty() {
-                    return;
+                    continue;
                 }
 
                 // Prune orthgonal pins.
                 if (eprank & rook_atk(self.ksq(self.stm), occ ^ src.bb() ^ epcap) & self.orth_bb(!self.stm)).is_empty() {
                     receiver(Move::new(src, self.state.epsq, MoveFlag::EnPassant));
                 }
-            });
+            }
         }
 
         // Pushes.
@@ -192,13 +192,13 @@ impl Board {
                 doubles &= self.state.checkmask;
             }
 
-            doubles.bitloop(|s| {
+            for s in doubles {
                 receiver(Move::new(s.sub_dir(up).sub_dir(up), s, MoveFlag::DoublePush));
-            });
+            }
 
-            singles.bitloop(|s| {
+            for s in singles {
                 receiver(Move::new(s.sub_dir(up), s, MoveFlag::Normal));
-            });
+            }
         }
 
         // Captures.
@@ -212,13 +212,13 @@ impl Board {
                 cr &= self.state.checkmask;
             }
 
-            cl.bitloop(|s| {
+            for s in cl {
                 receiver(Move::new(s.sub_dir(ul), s, MoveFlag::Capture));
-            });
+            }
 
-            cr.bitloop(|s| {
+            for s in cr {
                 receiver(Move::new(s.sub_dir(ur), s, MoveFlag::Capture));
-            });
+            }
         }
     }
 
@@ -266,9 +266,9 @@ impl Board {
         // Pinned knights can never move: they move diagonally and orthogonally at once.
         let knights = self.pc_bb(self.stm, Piece::Knight) & !(diag | orth);
 
-        knights.bitloop(|s| {
+        for s in knights {
             self.add_moves::<F, MG, CHECK>(s, knight_atk(s) & !self.c_bb(self.stm), receiver);
-        });
+        }
     }
 
     /// Add all diagonal slider moves.
@@ -284,14 +284,14 @@ impl Board {
         let ok = !self.c_bb(self.stm);
 
         // Non pinned bishop + queen.
-        (candidates & !diag).bitloop(|s| {
+        for s in candidates & !diag {
             self.add_moves::<F, MG, CHECK>(s, bishop_atk(s, occ) & ok, receiver);
-        });
+        }
 
         // Pinned bishop + queen.
-        (candidates & diag).bitloop(|s| {
+        for s in candidates & diag {
             self.add_moves::<F, MG, CHECK>(s, bishop_atk(s, occ) & ok & diag, receiver);
-        });
+        }
     }
 
     // Add all orthogonal slider moves.
@@ -306,14 +306,14 @@ impl Board {
         let ok = !self.c_bb(self.stm);
 
         // Non pinned rook + queen.
-        (candidates & !orth).bitloop(|s| {
+        for s in candidates & !orth {
             self.add_moves::<F, MG, CHECK>(s, rook_atk(s, occ) & ok, receiver);
-        });
+        }
 
         // Pinned rook + queen.
-        (candidates & orth).bitloop(|s| {
+        for s in candidates & orth {
             self.add_moves::<F, MG, CHECK>(s, rook_atk(s, occ) & ok & orth, receiver);
-        });
+        }
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{
 
 /// Finny entry.
 /// Stores what the board looked like last refresh, so we only need to apply the difference.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct FinnyEntry {
     pub acc: FullAcc,
     pub colors: [[Bitboard; Color::NUM]; Color::NUM],
@@ -33,9 +33,9 @@ impl FinnyEntry {
 pub struct FinnyTable(pub Box<[FinnyEntry; INPUT_KING_POSNS]>);
 
 impl FinnyTable {
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, nn: &NNUEData) {
         for e in self.0.iter_mut() {
-            *e = FinnyEntry::default();
+            *e = FinnyEntry::from_nn(nn);
         }
     }
 
@@ -72,16 +72,16 @@ impl FinnyTable {
                 }
 
                 // Toggle new weights on.
-                adds.bitloop(|s| {
+                for s in adds {
                     let add = nn.feats_for(ksq, perspective, p, c, s);
                     add1_inplace(feats, add);
-                });
+                }
 
                 // Toggle old weights off.
-                subs.bitloop(|s| {
+                for s in subs {
                     let sub = nn.feats_for(ksq, perspective, p, c, s);
                     sub1_inplace(feats, sub);
-                });
+                }
             }
         }
 

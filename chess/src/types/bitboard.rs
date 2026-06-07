@@ -130,6 +130,29 @@ impl fmt::Display for Bitboard {
     }
 }
 
+impl IntoIterator for Bitboard {
+    type Item = Square;
+    type IntoIter = BitboardIterator;
+    fn into_iter(self) -> Self::IntoIter {
+        BitboardIterator(self)
+    }
+}
+
+pub struct BitboardIterator(Bitboard);
+
+impl Iterator for BitboardIterator {
+    type Item = Square;
+    fn next(&mut self) -> Option<Square> {
+        if self.0.is_empty() {
+            None
+        } else {
+            let sq = self.0.lsb();
+            self.0.pop_lsb();
+            Some(sq)
+        }
+    }
+}
+
 // Macro to help with debugging bitboards.
 #[macro_export]
 macro_rules! assert_bitboard_eq {

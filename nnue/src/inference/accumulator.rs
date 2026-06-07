@@ -1,22 +1,12 @@
 use chess::types::{color::Color, square::Square};
 
-use crate::{
-    arch::{HalfAcc, L1_LEN, NNUEData},
-    embed::get_permuted_nnue,
-};
+use crate::arch::{HalfAcc, L1_LEN, NNUEData};
 
 #[derive(Clone, Debug)]
 pub struct FullAcc {
     pub feats: [HalfAcc; Color::NUM],
     pub correct: [bool; Color::NUM],
     pub ksqs: [Square; Color::NUM],
-}
-
-impl Default for FullAcc {
-    fn default() -> Self {
-        let bias = get_permuted_nnue().ftb;
-        Self { feats: [bias; Color::NUM], correct: [false; Color::NUM], ksqs: [Square::Invalid; Color::NUM] }
-    }
 }
 
 impl FullAcc {

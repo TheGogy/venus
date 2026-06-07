@@ -89,7 +89,7 @@ pub fn run_datagen(opts: DataGenOpts) -> anyhow::Result<()> {
 
     let mut tb = SyzygyTB::default();
     let tb_str = opts.syzygy_path.map_or_else(
-        || "NO TB! Datagen will produce bad data!!!!!".to_string(),
+        || "!!! NO TB! Datagen will produce bad data !!!".to_string(),
         |path| {
             tb.init(path.to_str().unwrap_or(""));
             format!("{}-man tb at {}", tb.max_pcs, path.display())
@@ -332,7 +332,8 @@ fn report_stats(completed: usize, total: usize, positions: usize, start: Instant
     let progress = (completed as f64 / total as f64) * 100.0;
 
     println!(
-        "GAMES={:<8} ({:>6.2}%) | PPS {:<3.2} | ETA={:>40} | WW={:<7} ({:>5.2}%) | BW={:<7} ({:>5.2}%) | DR={:<7} ({:>5.2}%) | ADJ={:<7}",
+        "[{}] - GAMES={:<8} ({:>6.2}%) | PPS {:<3.2} | ETA={:>40} | WW={:<7} ({:>5.2}%) | BW={:<7} ({:>5.2}%) | DR={:<7} ({:>5.2}%) | ADJ={:<7}",
+        chrono::Local::now().format("%d-%H%M"),
         completed,
         progress,
         pos_per_sec,

@@ -30,19 +30,19 @@ impl Board {
         state.attacked = all_pawn_atk(self.pc_bb(opp, Piece::Pawn), opp);
 
         // Knights.
-        self.pc_bb(opp, Piece::Knight).bitloop(|s| {
+        for s in self.pc_bb(opp, Piece::Knight) {
             state.attacked |= knight_atk(s);
-        });
+        }
 
         // Bishops + Queens.
-        self.diag_bb(opp).bitloop(|s| {
+        for s in self.diag_bb(opp) {
             state.attacked |= bishop_atk(s, occ);
-        });
+        }
 
         // Rooks + Queens.
-        self.orth_bb(opp).bitloop(|s| {
+        for s in self.orth_bb(opp) {
             state.attacked |= rook_atk(s, occ);
-        });
+        }
 
         // King.
         state.attacked |= king_atk(self.ksq(opp));
@@ -58,8 +58,8 @@ impl Board {
         state.checkers =
             self.pc_bb(opp, Piece::Pawn)   & pawn_atk(self.stm, ksq)
           | self.pc_bb(opp, Piece::Knight) & knight_atk(ksq)
-          | self.diag_bb(opp)               & bishop_atk(ksq, occ)
-          | self.orth_bb(opp)               & rook_atk(ksq, occ)
+          | self.diag_bb(opp)              & bishop_atk(ksq, occ)
+          | self.orth_bb(opp)              & rook_atk(ksq, occ)
     }
 
     /// Update the king lines.
@@ -96,34 +96,34 @@ impl Board {
         }
 
         // Bishops and queens
-        (self.diag_bb(opp) & bishop_atk(ksqs[self.stm.idx()], opp_occ)).bitloop(|s| {
+        for s in self.diag_bb(opp) & bishop_atk(ksqs[self.stm.idx()], opp_occ) {
             let between = between(ksqs[self.stm.idx()], s);
             match (between & stm_occ).nbits() {
                 0 => state.checkmask                |= between | s.bb(), // No pieces: add to checkmask
                 1 => state.pin_diag[self.stm.idx()] |= between | s.bb(), // One piece: add to pinmask
                 _ => {}                                                  // > 1 piece: do nothing
             }
-        });
+        }
 
         // Rooks and queens
-        (self.orth_bb(opp) & rook_atk(ksqs[self.stm.idx()], opp_occ)).bitloop(|s| {
+        for s in self.orth_bb(opp) & rook_atk(ksqs[self.stm.idx()], opp_occ) {
             let between = between(ksqs[self.stm.idx()], s);
             match (between & stm_occ).nbits() {
                 0 => state.checkmask                |= between | s.bb(), // No pieces: add to checkmask
                 1 => state.pin_orth[self.stm.idx()] |= between | s.bb(), // One piece: add to pinmask
                 _ => {}                                                  // > 1 piece: do nothing
             }
-        });
+        }
 
         // Update pinmasks for opponent.
-        (self.diag_bb(opp) & bishop_atk(ksqs[opp.idx()], stm_occ)).bitloop(|s| {
+        for s in self.diag_bb(opp) & bishop_atk(ksqs[opp.idx()], stm_occ) {
             let between = between(ksqs[opp.idx()], s);
             if (between & opp_occ).nbits() == 1 { state.pin_diag[opp.idx()] |= between | s.bb() }
-        });
+        }
 
-        (self.orth_bb(opp) & rook_atk(ksqs[opp.idx()], stm_occ)).bitloop(|s| {
+        for s in self.orth_bb(opp) & rook_atk(ksqs[opp.idx()], stm_occ) {
             let between = between(ksqs[opp.idx()], s);
             if (between & opp_occ).nbits() == 1 { state.pin_orth[opp.idx()] |= between | s.bb() }
-        });
+        }
     }
 }
