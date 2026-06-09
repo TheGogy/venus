@@ -1,5 +1,8 @@
+#[allow(dead_code)]
+
 pub mod simd {
     use std::arch::x86_64::*;
+
     pub type I8Vec = __m256i;
     pub type U8Vec = __m256i;
     pub type I16Vec = __m256i;

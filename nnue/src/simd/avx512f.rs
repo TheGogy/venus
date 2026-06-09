@@ -1,9 +1,12 @@
+#[allow(dead_code)]
+
 pub mod simd {
     use std::arch::x86_64::*;
 
     pub type I8Vec = __m512i;
     pub type U8Vec = __m512i;
     pub type I16Vec = __m512i;
+    pub type U16Vec = __m512i;
     pub type I32Vec = __m512i;
     pub type F32Vec = __m512;
     pub type Mask16 = __mmask16;
@@ -49,6 +52,12 @@ pub mod simd {
     }
 
     /// Loads a vector in directly from the values at the given pointer.
+    pub fn from_ptr_u16(ptr: *const u16) -> I16Vec {
+        debug_assert!((ptr as usize).is_multiple_of(std::mem::align_of::<I16Vec>()));
+        unsafe { _mm512_loadu_si512(ptr.cast()) }
+    }
+
+    /// Loads a vector in directly from the values at the given pointer.
     pub fn from_ptr_i32(ptr: *const i32) -> I32Vec {
         debug_assert!((ptr as usize).is_multiple_of(std::mem::align_of::<I32Vec>()));
         unsafe { _mm512_load_si512(ptr.cast()) }
@@ -64,6 +73,12 @@ pub mod simd {
     pub fn to_ptr_u8(dst: *mut u8, data: U8Vec) {
         debug_assert!((dst as usize).is_multiple_of(std::mem::align_of::<U8Vec>()));
         unsafe { _mm512_store_si512(dst.cast(), data) }
+    }
+
+    /// Stores a vector at the given pointer.
+    pub fn to_ptr_u16(dst: *mut u8, data: U16Vec) {
+        debug_assert!((dst as usize).is_multiple_of(std::mem::align_of::<U16Vec>()));
+        unsafe { _mm512_storeu_si512(dst.cast(), data) }
     }
 
     /// Stores a vector at the given pointer.
@@ -96,6 +111,11 @@ pub mod simd {
     /// Multiplies x and y and adds to z.
     pub fn fmadd_f32(x: F32Vec, y: F32Vec, z: F32Vec) -> F32Vec {
         unsafe { _mm512_fmadd_ps(x, y, z) }
+    }
+
+    /// Sums two vectors together.
+    pub fn add_i16(x: I16Vec, y: I16Vec) -> I16Vec {
+        unsafe { _mm512_add_epi16(x, y) }
     }
 
     /// Returns min of two vectors.
@@ -162,6 +182,18 @@ pub mod simd {
             let prod = _mm512_madd_epi16(_mm512_maddubs_epi16(x, y), _mm512_set1_epi16(1));
             _mm512_add_epi32(sum, prod)
         }
+    }
+
+    /// Unpacks and interleaves two mask registers.
+    /// Equivalent to x << 16 | y
+    pub fn interleave_masks(x: Mask16, y: Mask16) -> Mask32 {
+        unsafe { _mm512_kunpackw(x as Mask32, y as Mask32) }
+    }
+
+    /// Compress a vector to store all the values that line up with the mask contiguously,
+    /// and set all other values to 0.
+    pub fn compress_mask_i16(mask: Mask32, base: I16Vec) -> I16Vec {
+        unsafe { _mm512_maskz_compress_epi16(mask, base) }
     }
 
     /// Convert packed u8s -> i32s.

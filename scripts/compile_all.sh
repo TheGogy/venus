@@ -6,6 +6,8 @@ build() {
     local flags="-C target-feature=$2"
     local dir=target/$name
 
+    echo "Compiling for $1"
+
     env -u RUSTFLAGS \
         CARGO_TARGET_DIR="$dir" \
         RUSTFLAGS="$flags" \

@@ -1,3 +1,5 @@
+#[allow(dead_code)]
+
 pub mod simd {
     use std::arch::aarch64::*;
 
