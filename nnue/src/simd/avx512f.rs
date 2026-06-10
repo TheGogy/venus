@@ -76,8 +76,9 @@ pub mod simd {
     }
 
     /// Stores a vector at the given pointer.
-    pub fn to_ptr_u16(dst: *mut u8, data: U16Vec) {
-        debug_assert!((dst as usize).is_multiple_of(std::mem::align_of::<U16Vec>()));
+    /// NOTE: This does NOT check alignment!!!
+    pub fn to_ptr_u16_unchecked(dst: *mut u8, data: U16Vec) {
+        // debug_assert!((dst as usize).is_multiple_of(std::mem::align_of::<U16Vec>()));
         unsafe { _mm512_storeu_si512(dst.cast(), data) }
     }
 

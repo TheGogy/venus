@@ -8,8 +8,8 @@ use crate::arch::USE_FTPERM;
 use crate::{arch::L1_LEN, simd::simd};
 
 #[cfg(target_feature = "avx512vbmi2")]
-const BASE: [u16; 32] =
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
+const BASE: Align64<[u16; 32]> =
+    Align64([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]);
 
 pub struct SparseMat {
     pub indices: Align64<[u16; L1_LEN / 4]>,
@@ -53,7 +53,7 @@ impl SparseMat {
         let nnz = simd::compress_mask_i16(mask, self.base);
         let idx = unsafe { self.indices.as_mut_ptr().add(self.count).cast() };
 
-        simd::to_ptr_u16(idx, nnz);
+        simd::to_ptr_u16_unchecked(idx, nnz);
 
         self.count += mask.count_ones() as usize;
         self.base = simd::add_i16(self.base, simd::from_val_i16(32));
