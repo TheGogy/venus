@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use cli::uci::UCIReader;
 use engine::bench::run_bench;
@@ -24,13 +25,13 @@ enum Command {
     Spsa,
 }
 
-fn main() {
+fn main() -> Result<()> {
     #[cfg(not(feature = "embed"))]
     println!("WARNING: engine does not have eval network. If you want to build the engine, make sure to build with the 'embed' feature.");
 
     let args = Args::parse();
 
-    let result = match args.command {
+    match args.command {
         Some(Command::Bench { epd }) => run_bench(epd),
 
         #[cfg(feature = "tune")]
@@ -40,13 +41,8 @@ fn main() {
         }
 
         None => {
-            UCIReader::default().run();
+            UCIReader::default().run()?;
             Ok(())
         }
-    };
-
-    if let Err(e) = result {
-        eprintln!("error: {e}");
-        std::process::exit(1);
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     tables::{
-        leaping_piece::{all_pawn_atk, king_atk, knight_atk, pawn_atk},
+        leaping_piece::{knight_atk, pawn_atk},
         sliding_piece::{between, bishop_atk, rook_atk},
     },
     types::{
@@ -26,13 +26,8 @@ impl Board {
         let opp = !self.stm;
         let occ = self.occ() ^ self.pc_bb(self.stm, Piece::King);
 
-        // Pawns.
-        state.attacked = all_pawn_atk(self.pc_bb(opp, Piece::Pawn), opp);
-
-        // Knights.
-        for s in self.pc_bb(opp, Piece::Knight) {
-            state.attacked |= knight_atk(s);
-        }
+        // Pawns, knights, king.
+        state.attacked = self.all_pawn_atk(opp) | self.all_knight_atk(opp) | self.all_king_atk(opp);
 
         // Bishops + Queens.
         for s in self.diag_bb(opp) {
@@ -43,9 +38,6 @@ impl Board {
         for s in self.orth_bb(opp) {
             state.attacked |= rook_atk(s, occ);
         }
-
-        // King.
-        state.attacked |= king_atk(self.ksq(opp));
     }
 
     /// Update the king lines and checkers.
@@ -90,7 +82,7 @@ impl Board {
 
         // We have already determined if we are in check with update_checkers; don't do these
         // lookups unless absolutely necessary.
-        if state.checkers.non_empty() {
+        if !state.checkers.is_empty() {
             state.checkmask = self.pc_bb(opp, Piece::Pawn) & pawn_atk(self.stm, ksqs[self.stm.idx()])
                             | self.pc_bb(opp, Piece::Knight) & knight_atk(ksqs[self.stm.idx()])
         }

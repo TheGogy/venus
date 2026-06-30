@@ -42,6 +42,16 @@ impl Eval {
         Self(self.0.min(other.0))
     }
 
+    /// Gets the midpoint between two evaluations.
+    pub const fn midpoint(a: Self, b: Self) -> Self {
+        Self(i32::midpoint(a.0, b.0))
+    }
+
+    /// Linearly interpolate between two evaluations.
+    pub const fn lerp(a: Self, b: Self, t: f32) -> Self {
+        Self(t.mul_add((b.0 - a.0) as f32, a.0 as f32) as i32)
+    }
+
     /// The value of a draw with a bit of randomness to de-incentivise repetitions.
     pub const fn dithered_draw(rand: i32) -> Self {
         let dither_mask = 0b11;
@@ -88,14 +98,9 @@ impl Eval {
         self.0 <= -Self::LONGEST_TB_MATE.0
     }
 
-    /// Whether this score implies someone has found mate.
-    pub const fn terminal(self) -> bool {
-        self.0.abs() >= Self::LONGEST_TB_MATE.0
-    }
-
-    /// Whether this score implies that the game has not been confirmed as mate.
-    pub const fn nonterminal(self) -> bool {
-        self.0.abs() < Self::LONGEST_TB_MATE.0
+    /// Whether this score implies either side has a proven mate.
+    pub const fn is_terminal(self) -> bool {
+        self.is_win() || self.is_loss()
     }
 
     /// Whether or not this is a valid score.
@@ -104,7 +109,7 @@ impl Eval {
     }
 
     /// Gets the eval from the corrected value stored in the TT.
-    pub const fn from_corrected(self, ply: usize) -> Self {
+    pub const fn from_tb_score(self, ply: usize) -> Self {
         if self.is_win() {
             Self(self.0 - ply as i32)
         } else if self.is_loss() {
@@ -115,7 +120,7 @@ impl Eval {
     }
 
     /// Converts the eval to the corrected value stored in the TT.
-    pub const fn to_corrected(self, ply: usize) -> Self {
+    pub const fn to_tb_score(self, ply: usize) -> Self {
         if self.is_win() {
             Self(self.0 + ply as i32)
         } else if self.is_loss() {
@@ -127,31 +132,24 @@ impl Eval {
 
     /// Normalizes the evaluation.
     /// TODO: Feed it more games
-    ///       It needs more games
-    ///       It always needs more games
     /// <https://github.com/official-stockfish/WDL_model>
-    pub const fn normalized(self) -> i32 {
+    pub const fn to_centipawns(self) -> i32 {
         const NORMALIZE_PAWN_VALUE: i32 = 168;
 
-        if self.nonterminal() { (self.0 * 100) / NORMALIZE_PAWN_VALUE } else { self.0 }
+        if !self.is_terminal() { (self.0 * 100) / NORMALIZE_PAWN_VALUE } else { self.0 }
     }
 
     /// Clamps eval to the valid (non-terminal) range.
-    pub fn clamped(self) -> Self {
+    pub fn clamp_to_nonterminal(self) -> Self {
         Self(self.0.clamp(-Self::LONGEST_TB_MATE.0 + 1, Self::LONGEST_TB_MATE.0 - 1))
-    }
-
-    /// Gets the midpoint between two evaluations.
-    pub const fn midpoint(a: Self, b: Self) -> Self {
-        Self(i32::midpoint(a.0, b.0))
     }
 }
 
 /// Display the eval according to UCI format.
 impl fmt::Display for Eval {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.nonterminal() {
-            write!(f, "cp {}", self.normalized())
+        if !self.is_terminal() {
+            write!(f, "cp {}", self.to_centipawns())
         } else {
             let moves_to_mate = (Self::MATE.0 - self.abs().0 + 1) / 2;
             let sign = if *self > Self::DRAW { "" } else { "-" };

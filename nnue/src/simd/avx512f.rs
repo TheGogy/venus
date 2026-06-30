@@ -6,7 +6,6 @@ pub mod simd {
     pub type I16Vec = __m512i;
     pub type I32Vec = __m512i;
     pub type F32Vec = __m512;
-    pub type Mask16 = __mmask16;
     pub type Mask32 = __mmask32;
 
     pub const ARCH_NAME: &str = "avx512f";
@@ -146,8 +145,8 @@ pub mod simd {
     }
 
     /// Gets a mask of all the nonzero elements in the vector.
-    pub fn nonzero_mask_i32(v: I32Vec) -> Mask16 {
-        unsafe { _mm512_cmpgt_epi32_mask(v, _mm512_setzero_si512()) }
+    pub fn nonzero_mask_i32(v: I32Vec) -> Mask32 {
+        unsafe { Mask32::from(_mm512_cmpgt_epi32_mask(v, _mm512_setzero_si512())) }
     }
 
     /// Multiply groups of u8s -> i16s -> i32s and sum these with `sum`.

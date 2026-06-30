@@ -84,7 +84,7 @@ impl Position {
 
                 // Depth reduction on fail-high.
                 // When we fail high, we often don't need full depth to prove the position is good.
-                if v.nonterminal() {
+                if !v.is_terminal() {
                     search_depth -= 1;
                 }
             }

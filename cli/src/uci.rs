@@ -3,10 +3,12 @@ use std::{
     str::SplitWhitespace,
 };
 
+use anyhow::{Result, anyhow};
 #[cfg(feature = "tune")]
 use engine::tunables::params::tunables;
 use engine::{
     VERSION,
+    bench::run_bench,
     interface::{EngineCommand, EngineInterface},
     position::Position,
     time_management::timecontrol::TimeControl,
@@ -40,26 +42,30 @@ pub struct UCIReader {
 
 impl UCIReader {
     /// Start UCI reader.
-    pub fn run(&self) {
+    pub fn run(&self) -> Result<()> {
         println!("{NAME} v{VERSION}-{} by {}", nnue::ARCH, authors());
 
         let stdin = io::stdin().lock();
-        for line in stdin.lines().map(Result::unwrap) {
+        for line in stdin.lines() {
+            let line = line?;
             match self.parse_command(&line) {
                 Ok(()) => {}
                 Err(e) => eprintln!("{e}"),
             }
         }
+
+        Ok(())
     }
 
     /// Parse a UCI command.
     #[rustfmt::skip]
-    fn parse_command(&self, s: &str) -> Result<(), &'static str> {
+    fn parse_command(&self, s: &str) -> Result<()> {
         let mut tokens = s.split_whitespace();
 
         match tokens.next() {
             Some(cmd) => match cmd {
                 "isready"        => println!("readyok"),
+                "bench"          => run_bench(None)?,
                 "uci"            => self.cmd_uci(),
                 "ucinewgame"     => self.interface.handle_command(EngineCommand::NewGame),
                 "stop"           => self.interface.handle_command(EngineCommand::Stop),
@@ -72,9 +78,9 @@ impl UCIReader {
                 "setoption"      => return self.cmd_setoption(&mut tokens),
                 "move" | "m"     => return self.cmd_move(&mut tokens),
                 "undo" | "u"     => self.interface.handle_command(EngineCommand::Undo),
-                _ => return Err("Unknown command!")
+                _ => return Err(anyhow!("Unknown command!"))
             },
-            None => return Err("Empty command!"),
+            None => return Err(anyhow!("Empty command!")),
         }
 
         Ok(())
@@ -82,11 +88,11 @@ impl UCIReader {
 }
 
 /// Parse a depth value from tokens.
-fn parse_depth(tokens: &mut SplitWhitespace) -> Result<usize, &'static str> {
-    let depth: usize = tokens.next().ok_or("No depth value!")?.parse().map_err(|_| "Invalid depth value!")?;
+fn parse_depth(tokens: &mut SplitWhitespace) -> Result<usize> {
+    let depth: usize = tokens.next().ok_or_else(|| anyhow!("No depth value!"))?.parse().map_err(|_| anyhow!("Invalid depth value!"))?;
 
     if depth == 0 {
-        return Err("Invalid depth value!");
+        return Err(anyhow!("Invalid depth value!"));
     }
 
     Ok(depth)
@@ -107,51 +113,51 @@ impl UCIReader {
     }
 
     /// perft command.
-    pub fn cmd_perft(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+    pub fn cmd_perft(&self, tokens: &mut SplitWhitespace) -> Result<()> {
         let depth = parse_depth(tokens)?;
         self.interface.handle_command(EngineCommand::Perft(depth));
         Ok(())
     }
 
     /// perftmp command.
-    pub fn cmd_perftmp(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+    pub fn cmd_perftmp(&self, tokens: &mut SplitWhitespace) -> Result<()> {
         let depth = parse_depth(tokens)?;
         self.interface.handle_command(EngineCommand::PerftMp(depth));
         Ok(())
     }
 
     /// go command.
-    pub fn cmd_go(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
-        let tc: TimeControl = tokens.collect::<Vec<&str>>().join(" ").parse()?;
+    pub fn cmd_go(&self, tokens: &mut SplitWhitespace) -> Result<()> {
+        let tc: TimeControl = tokens.collect::<Vec<&str>>().join(" ").parse().map_err(anyhow::Error::msg)?;
         self.interface.handle_command(EngineCommand::Go(tc));
         Ok(())
     }
 
     /// position command.
-    pub fn cmd_position(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
-        let pos: Position = tokens.collect::<Vec<&str>>().join(" ").parse()?;
+    pub fn cmd_position(&self, tokens: &mut SplitWhitespace) -> Result<()> {
+        let pos: Position = tokens.collect::<Vec<&str>>().join(" ").parse().map_err(anyhow::Error::msg)?;
         self.interface.handle_command(EngineCommand::Position(Box::new(pos)));
         Ok(())
     }
 
     /// setoption command.
-    pub fn cmd_setoption(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+    pub fn cmd_setoption(&self, tokens: &mut SplitWhitespace) -> Result<()> {
         if tokens.next() != Some("name") {
-            return Err("Invalid option command!");
+            return Err(anyhow!("Invalid option command!"));
         }
-        let name = tokens.next().ok_or("No option name!")?.to_owned();
+        let name = tokens.next().ok_or_else(|| anyhow!("No option name!"))?.to_owned();
 
         if tokens.next() != Some("value") {
-            return Err("Invalid option command!");
+            return Err(anyhow!("Invalid option command!"));
         }
-        let value = tokens.next().ok_or("No option value!")?.to_owned();
+        let value = tokens.next().ok_or_else(|| anyhow!("No option value!"))?.to_owned();
 
         self.interface.handle_command(EngineCommand::SetOpt(name, value));
         Ok(())
     }
 
     /// move command.
-    pub fn cmd_move(&self, tokens: &mut SplitWhitespace) -> Result<(), &'static str> {
+    pub fn cmd_move(&self, tokens: &mut SplitWhitespace) -> Result<()> {
         let m = tokens.collect::<Vec<&str>>().join(" ");
         self.interface.handle_command(EngineCommand::Move(m));
         Ok(())

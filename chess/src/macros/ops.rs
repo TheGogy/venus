@@ -1,8 +1,5 @@
 /// Implements math and math-assign operations for a newtype wrapper and its inner primitive.
 ///
-/// Each pair is `Op::op / OpAssign::op_assign`.  You can supply any subset of pairs, or use
-/// [`impl_all_math_ops!`] to get the full standard set.
-///
 /// # Example
 /// ```
 /// impl_math_ops! {

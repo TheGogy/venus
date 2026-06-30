@@ -1,10 +1,10 @@
+use chess::types::{eval::Eval, piece::Piece};
+
+use super::Position;
 use crate::{
     threading::thread::Thread,
     tunables::params::tunables::{ms_base, ms_bishop, ms_knight, ms_queen, ms_rook},
 };
-
-use super::Position;
-use chess::types::{eval::Eval, piece::Piece};
 
 /// Evaluation.
 impl Position {
@@ -18,7 +18,7 @@ impl Position {
         v = (v * self.material_scale()) / 1024;
 
         // Clamp eval to non-terminal range.
-        v.clamped()
+        v.clamp_to_nonterminal()
     }
 
     /// Adjust the evaluation according to correction history and 50 move rule scaling.
@@ -32,7 +32,7 @@ impl Position {
         v += t.correction_score(&self.board);
 
         // Clamp eval to non-terminal range.
-        v.clamped()
+        v.clamp_to_nonterminal()
     }
 
     /// Get the material scale for the position.

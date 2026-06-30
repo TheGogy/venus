@@ -128,12 +128,15 @@ impl Position {
         let mut tt_pv = NT::PV;
 
         if let Some(tte) = tt.probe(self.hash()) {
-            tt_move = tte.mov();
             tt_eval = tte.eval();
             tt_value = tte.value(t.ply);
             tt_bound = tte.bound();
             tt_depth = tte.depth();
-            tt_pv |= tte.pv;
+            tt_pv |= tte.pv();
+
+            if self.board.is_legal(tte.mov()) {
+                tt_move = tte.mov();
+            }
         }
 
         // TT cutoff.
@@ -223,6 +226,8 @@ impl Position {
         let opp_worsening = t.opp_worsening();
         let child_pv = &mut PVLine::default();
 
+        t.prepare_next();
+
         // -----------------------------------
         //              Pruning
         // -----------------------------------
@@ -266,7 +271,7 @@ impl Position {
         // -----------------------------------
         let pc_beta = beta + pc_beta_base() + (i32::from(!improving) * pc_beta_non_improving());
 
-        if !NT::PV && beta.nonterminal() && depth >= 5 && !(tt_depth >= depth - 3 && tt_value < pc_beta) {
+        if !NT::PV && !beta.is_terminal() && depth >= 5 && !(tt_depth >= depth - 3 && tt_value < pc_beta) {
             let mut mp = MovePicker::new(SearchType::Pc, in_check, tt_move, pc_beta - t.ss().eval);
             let pc_depth = depth - 4;
 
@@ -292,7 +297,7 @@ impl Position {
                 if v >= pc_beta {
                     tt.insert(self.hash(), Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
-                    if v.nonterminal() {
+                    if !v.is_terminal() {
                         return v;
                     }
                 }
@@ -340,7 +345,7 @@ impl Position {
             // -----------------------------------
             //          Move loop pruning
             // -----------------------------------
-            if !NT::PV && !in_check && !mp.skip_quiets && best_value.nonterminal() {
+            if !NT::PV && !in_check && !mp.skip_quiets && !best_value.is_terminal() {
                 // History pruning.
                 if can_apply_hp(depth, is_quiet, hist_score) {
                     mp.skip_quiets = true;
@@ -360,7 +365,7 @@ impl Position {
             // SEE pruning.
             // If all captures happen on this move and we lose, prune this move.
             if depth <= sp_d_max()
-                && best_value.nonterminal()
+                && !best_value.is_terminal()
                 && mp.stage > MPStage::PvNoisyWin
                 && !self.board.see(m, Eval(-see_margins[usize::from(is_quiet)]))
             {
@@ -377,7 +382,7 @@ impl Position {
                 && depth >= ext_d_min()
                 && !singular
                 && m == tt_move
-                && tt_value.nonterminal()
+                && !tt_value.is_terminal()
                 && tt_bound.has(Bound::Lower)
                 && tt_depth >= depth - 3
             {
@@ -399,7 +404,7 @@ impl Position {
                 // Multicut.
                 // We had a beta cutoff, so another move was too good - meaning the TT move wasn't
                 // singular. If the same score would cause a cutoff here, prune it.
-                else if v >= beta && v.nonterminal() {
+                else if v >= beta && !v.is_terminal() {
                     return beta;
                 }
                 // Negative extensions.

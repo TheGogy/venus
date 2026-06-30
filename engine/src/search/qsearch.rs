@@ -62,17 +62,20 @@ impl Position {
         let mut tt_pv = false;
 
         if let Some(tte) = tt.probe(self.hash()) {
-            tt_move = tte.mov();
-            tt_value = tte.value(t.ply);
             tt_eval = tte.eval();
+            tt_value = tte.value(t.ply);
             tt_bound = tte.bound();
             tt_depth = tte.depth();
             tt_pv = tte.pv();
+
+            if self.board.is_legal(tte.mov()) {
+                tt_move = tte.mov();
+            }
         }
 
         // TT cutoff.
         // If the bound from the tt is tighter than the current search value, just return it.
-        if !NT::PV && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
+        if !NT::PV && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
 
@@ -193,7 +196,7 @@ impl Position {
 
         // Adjust beta cutoff values to be more conservative.
         // This prevents qsearch from returning overly optimistic evaluations.
-        if best_value >= beta && best_value.nonterminal() {
+        if best_value >= beta && !best_value.is_terminal() {
             best_value = Eval::midpoint(best_value, beta);
         }
 

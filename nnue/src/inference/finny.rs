@@ -40,8 +40,15 @@ impl FinnyTable {
     }
 
     /// Get a [`FinnyTable`] from some given NNUE weights.
+    /// # Panics
+    ///     Panics if we cannot allocate the NNUE weights.
     pub fn from_nn(nn: &NNUEData) -> Self {
-        let arr = (0..INPUT_KING_POSNS).map(|_| FinnyEntry::from_nn(nn)).collect::<Vec<_>>().into_boxed_slice().try_into().unwrap();
+        let arr = (0..INPUT_KING_POSNS)
+            .map(|_| FinnyEntry::from_nn(nn))
+            .collect::<Vec<_>>()
+            .into_boxed_slice()
+            .try_into()
+            .expect("Could not allocate NNUE weights!");
         Self(arr)
     }
 
@@ -61,7 +68,7 @@ impl FinnyTable {
                 let mut adds = new & !old;
 
                 // Handle both in one go if we can.
-                while adds.non_empty() && subs.non_empty() {
+                while !adds.is_empty() && !subs.is_empty() {
                     let add = nn.feats_for(ksq, perspective, p, c, adds.lsb());
                     let sub = nn.feats_for(ksq, perspective, p, c, subs.lsb());
 

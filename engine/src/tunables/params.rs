@@ -55,7 +55,7 @@ init_tunables! {
     hist_corr_other: i32 = 100, 80, 120, 2;
 
     // transposition table.
-    tt_replace_d_min: i16 = 5, 2, 6, 1;
+    tt_replace_d_min: i16 = 4, 2, 6, 1;
 
     // Probcut.
     pc_beta_base:          i32 = 143, 120, 200, 5;
@@ -70,9 +70,9 @@ init_tunables! {
     // Late move reductions.
     lmr_m_min: usize = 2, 1, 4, 1;
 
-    // Late move reduction table parameters (scaled up x1024).
-    lmr_base: i32 = 887, 500, 2000, 100;
-    lmr_mult: i32 = 2003, 1500, 4000, 100;
+    // Late move reduction table parameters.
+    lmr_base: f32 = 887.0 / 1024.0, 500.0 / 1024.0, 2000.0 / 1024.0, 100.0 / 1024.0;
+    lmr_mult: f32 = 2003.0 / 1024.0, 1500.0 / 1024.0, 4000.0 / 1024.0, 100.0 / 1024.0;
 
     // Late move reduction scales.
     lmr_ttpv:      i32 = 983, -1024, 1024, 200;
@@ -137,4 +137,7 @@ init_tunables! {
 
     // Bonus for checks in movepicking.
     mp_gc_bonus: i32 = 10000, 6000, 14000, 300;
+
+    // Bonus for escaping threats in movepicking.
+    mp_escapes_threat_bonus: i32 = 25, 10, 50, 2;
 }

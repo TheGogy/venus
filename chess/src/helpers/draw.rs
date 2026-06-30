@@ -21,12 +21,12 @@ impl Board {
             2 => true,
 
             // King vs King + (...) => Draw if other piece is a Knight or Bishop.
-            3 => (self.p_bb(Piece::Knight) | self.p_bb(Piece::Bishop)).non_empty(),
+            3 => !(self.p_bb(Piece::Knight) | self.p_bb(Piece::Bishop)).is_empty(),
 
             // Anything else.
             _ => {
                 // If we have a piece that can checkmate, it is not a draw.
-                if (self.p_bb(Piece::Pawn) | self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)).non_empty() {
+                if !(self.p_bb(Piece::Pawn) | self.p_bb(Piece::Rook) | self.p_bb(Piece::Queen)).is_empty() {
                     return false;
                 }
 
@@ -48,13 +48,13 @@ impl Board {
 
                     // 2 Knights can technically deliver checkmate, though this cannot be forced.
                     // <https://lichess.org/editor/8/8/8/8/8/1N2N3/8/3k1K2_b_-_-_0_3?color=white>
-                    if knights.non_empty() && !bishops.non_empty() {
+                    if !knights.is_empty() && bishops.is_empty() {
                         return knights.nbits() <= 2;
                     }
 
                     // 2 Bishops can deliver checkmate (except in the rare case that we have
                     // underpromoted to a bishop and now have 2 bishops of the same color)
-                    if bishops.non_empty() && !knights.non_empty() {
+                    if !bishops.is_empty() && knights.is_empty() {
                         return bishops & Bitboard::WHITE_SQ == bishops || bishops & Bitboard::BLACK_SQ == bishops;
                     }
                 }
