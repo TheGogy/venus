@@ -23,44 +23,42 @@ macro_rules! init_tunables {
         pub mod tunables {
             #[cfg(feature = "tune")]
             mod storage {
-                $crate::init_tunables!(@storage_items $($name: $t = $val, $min, $max, $step;)*);
+                $crate::init_tunables!(@storage $($name: $t = $val, $min, $max, $step;)*);
             }
 
             $crate::init_tunables!(@accessors $($name: $t = $val, $min, $max, $step;)*);
 
             #[cfg(feature = "tune")]
             pub fn set_tunable(tunable_name: &str, val: &str) -> Result<(), &'static str> {
-                $crate::init_tunables!(@set_tunable_if tunable_name, val; $($name: $t = $val, $min, $max, $step;)*)
+                $crate::init_tunables!(@set_tunable tunable_name, val; $($name: $t = $val, $min, $max, $step;)*)
             }
 
             #[cfg(feature = "tune")]
             pub fn spsa_output_opts() -> String {
                 let mut options = String::new();
-                $crate::init_tunables!(@spsa_output_opts_items options; $($name: $t = $val, $min, $max, $step;)*);
+                $crate::init_tunables!(@spsa_opts options; $($name: $t = $val, $min, $max, $step;)*);
                 options
             }
 
             #[cfg(feature = "tune")]
             pub fn spsa_output_txt() -> String {
                 let mut txt = String::new();
-                $crate::init_tunables!(@spsa_output_txt_items txt; $($name: $t = $val, $min, $max, $step;)*);
+                $crate::init_tunables!(@spsa_txt txt; $($name: $t = $val, $min, $max, $step;)*);
                 txt
             }
         }
     };
 
-    (@storage_items) => {};
-    (@storage_items $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    (@storage) => {};
+    (@storage $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         #[allow(non_upper_case_globals)]
-        pub static $name: std::sync::atomic::AtomicU32 =
-            std::sync::atomic::AtomicU32::new(($val as f32).to_bits());
-        $crate::init_tunables!(@storage_items $($rest)*);
+        pub static $name: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(($val as f32).to_bits());
+        $crate::init_tunables!(@storage $($rest)*);
     };
-    (@storage_items $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    (@storage $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         #[allow(non_upper_case_globals)]
-        pub static $name: std::sync::atomic::AtomicI32 =
-            std::sync::atomic::AtomicI32::new($val as i32);
-        $crate::init_tunables!(@storage_items $($rest)*);
+        pub static $name: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new($val as i32);
+        $crate::init_tunables!(@storage $($rest)*);
     };
 
     (@accessors) => {};
@@ -93,38 +91,42 @@ macro_rules! init_tunables {
         $crate::init_tunables!(@accessors $($rest)*);
     };
 
-    (@set_tunable_if $name_expr:expr, $val_expr:expr;) => {
+    // Set value at runtime.
+    (@set_tunable $name_expr:expr, $val_expr:expr;) => {
         Err("Unknown option!")
     };
-    (@set_tunable_if $name_expr:expr, $val_expr:expr; $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    (@set_tunable $name_expr:expr, $val_expr:expr; $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         if $name_expr == stringify!($name) {
             let parsed: f32 = $val_expr.parse().map_err(|_| "Invalid value")?;
             storage::$name.store(parsed.to_bits(), std::sync::atomic::Ordering::Relaxed);
             Ok(())
         } else {
-            $crate::init_tunables!(@set_tunable_if $name_expr, $val_expr; $($rest)*)
+            $crate::init_tunables!(@set_tunable $name_expr, $val_expr; $($rest)*)
         }
     };
-    (@set_tunable_if $name_expr:expr, $val_expr:expr; $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    (@set_tunable $name_expr:expr, $val_expr:expr; $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         if $name_expr == stringify!($name) {
             let parsed: i32 = $val_expr.parse().map_err(|_| "Invalid value")?;
             storage::$name.store(parsed, std::sync::atomic::Ordering::Relaxed);
             Ok(())
         } else {
-            $crate::init_tunables!(@set_tunable_if $name_expr, $val_expr; $($rest)*)
+            $crate::init_tunables!(@set_tunable $name_expr, $val_expr; $($rest)*)
         }
     };
 
-    (@spsa_output_opts_items $options:ident;) => {};
-    (@spsa_output_opts_items $options:ident; $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    // <https://github.com/AndyGrant/OpenBench/wiki/SPSA-Tuning-Workloads#final-notes>
+    //
+    // UCI protocol does not allow for SPIN values with floats: use string instead.
+    (@spsa_opts $options:ident;) => {};
+    (@spsa_opts $options:ident; $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         $options.push_str(&format!(
             "option name {} type string default {}\n",
             stringify!($name),
             $val,
         ));
-        $crate::init_tunables!(@spsa_output_opts_items $options; $($rest)*);
+        $crate::init_tunables!(@spsa_opts $options; $($rest)*);
     };
-    (@spsa_output_opts_items $options:ident; $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    (@spsa_opts $options:ident; $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         $options.push_str(&format!(
             "option name {} type spin default {} min {} max {}\n",
             stringify!($name),
@@ -132,11 +134,12 @@ macro_rules! init_tunables {
             $min,
             $max,
         ));
-        $crate::init_tunables!(@spsa_output_opts_items $options; $($rest)*);
+        $crate::init_tunables!(@spsa_opts $options; $($rest)*);
     };
 
-    (@spsa_output_txt_items $txt:ident;) => {};
-    (@spsa_output_txt_items $txt:ident; $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    // Output values for OB internal representation.
+    (@spsa_txt $txt:ident;) => {};
+    (@spsa_txt $txt:ident; $name:ident: f32 = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         $txt.push_str(&format!(
             "{}, float, {}, {}, {}, {}, 0.002\n",
             stringify!($name),
@@ -145,9 +148,9 @@ macro_rules! init_tunables {
             $max,
             $step,
         ));
-        $crate::init_tunables!(@spsa_output_txt_items $txt; $($rest)*);
+        $crate::init_tunables!(@spsa_txt $txt; $($rest)*);
     };
-    (@spsa_output_txt_items $txt:ident; $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
+    (@spsa_txt $txt:ident; $name:ident: $t:ty = $val:expr, $min:expr, $max:expr, $step:expr; $($rest:tt)*) => {
         $txt.push_str(&format!(
             "{}, int, {}.0, {}.0, {}.0, {}.0, 0.002\n",
             stringify!($name),
@@ -156,6 +159,6 @@ macro_rules! init_tunables {
             $max,
             $step,
         ));
-        $crate::init_tunables!(@spsa_output_txt_items $txt; $($rest)*);
+        $crate::init_tunables!(@spsa_txt $txt; $($rest)*);
     };
 }

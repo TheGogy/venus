@@ -51,7 +51,7 @@ init_tunables! {
     hist_noisy_div: i32 = 6329, 5000, 8000, 150;
 
     // Correction history weights. (scaled up x1024).
-    hist_corr_pawn: i32 = 80, 60, 100, 2;
+    hist_corr_pawn:  i32 = 80, 60, 100, 2;
     hist_corr_other: i32 = 100, 80, 120, 2;
 
     // transposition table.
@@ -62,8 +62,8 @@ init_tunables! {
     pc_beta_non_improving: i32 = 55, 30, 80, 4;
 
     // extensions.
-    ext_d_min: i16 = 8, 5, 10, 1;
-    ext_mult:  i16 = 2, 1, 4, 1;
+    ext_d_min:  i16 = 8, 5, 10, 1;
+    ext_mult:   i16 = 2, 1, 4, 1;
     ext_double: i32 = 12, 7, 14, 1;
     ext_triple: i32 = 80, 50, 150, 20;
 
@@ -71,8 +71,8 @@ init_tunables! {
     lmr_m_min: usize = 2, 1, 4, 1;
 
     // Late move reduction table parameters.
-    lmr_base: f32 = 887.0 / 1024.0, 500.0 / 1024.0, 2000.0 / 1024.0, 100.0 / 1024.0;
-    lmr_mult: f32 = 2003.0 / 1024.0, 1500.0 / 1024.0, 4000.0 / 1024.0, 100.0 / 1024.0;
+    lmr_base: f32 = 0.8662109, 0.5, 2.0, 0.1;
+    lmr_mult: f32 = 1.9560547, 1.5, 4.0, 0.1;
 
     // Late move reduction scales.
     lmr_ttpv:      i32 = 983, -1024, 1024, 200;
