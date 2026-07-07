@@ -8,7 +8,9 @@ use crate::{
     tb::probe::{SyzygyTB, TB_HITS},
     threading::{pv::PVLine, thread::Thread},
     tt::table::TT,
-    tunables::params::tunables::{asp_window_base, asp_window_d_min, asp_window_div},
+    tunables::params::tunables::{
+        asp_window_base, asp_window_d_min, asp_window_div, asp_window_expansion_fail_high, asp_window_expansion_fail_low,
+    },
 };
 
 impl Position {
@@ -71,14 +73,18 @@ impl Position {
             // Move beta towards alpha to narrow the window from above, and
             // expand alpha downward to catch the actual value.
             if v <= alpha {
-                beta = (alpha + beta) / 2;
+                beta = Eval::midpoint(alpha, beta);
                 alpha = (v - delta).max(-Eval::INFINITY);
                 search_depth = full_depth;
+
+                // Gradually expand the aspiration window for the next attempt.
+                delta += (delta as f32 * asp_window_expansion_fail_low()) as i32;
             }
             // Search failed high (exceeded beta).
             // This means the position is better than we thought.
             // Expand beta upward to catch the actual value, and save the PV.
             else if v >= beta {
+                alpha = (beta - delta).max(alpha);
                 beta = (v + delta).min(Eval::INFINITY);
                 t.pv = pv.clone();
 
@@ -87,17 +93,15 @@ impl Position {
                 if !v.is_terminal() {
                     search_depth -= 1;
                 }
+
+                // Gradually expand the aspiration window for the next attempt.
+                delta += (delta as f32 * asp_window_expansion_fail_high()) as i32;
             }
             // Found result within the window: return.
             else {
                 t.pv = pv;
                 return v;
             }
-
-            // Gradually expand the aspiration window for the next attempt.
-            // If we keep failing outside the window, it means the position's value
-            // has changed significantly, so we need a wider search window.
-            delta += delta / 3;
         }
     }
 }

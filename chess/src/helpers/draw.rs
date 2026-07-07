@@ -39,7 +39,7 @@ impl Board {
                 // opposite types.
                 if n_minor_pcs == 2 {
                     // If we have one minor piece each, then we cannot force checkmate.
-                    if self.c_bb(Color::White).nbits() == self.c_bb(Color::Black).nbits() {
+                    if self.c_bb(Color::White).nbits() == 2 {
                         return true;
                     }
 

@@ -24,8 +24,9 @@ use crate::{
     },
     tunables::params::tunables::{
         ext_d_min, ext_double, ext_mult, ext_triple, hist_noisy_div, hist_quiet_div, lmp_base, lmr_cutnode, lmr_evaldiff, lmr_givecheck,
-        lmr_histscale, lmr_incheck, lmr_nonimprov, lmr_nonpv, lmr_offset, lmr_ttdeeper, lmr_ttnoisy, lmr_ttpv, lmr_ver_e_min, nmp_base,
-        nmp_factor, pc_beta_base, pc_beta_non_improving, sp_d_max, sp_noisy_margin, sp_quiet_margin,
+        lmr_histscale, lmr_incheck, lmr_nonimprov, lmr_nonpv, lmr_offset, lmr_ttdeeper, lmr_ttnoisy, lmr_ttpv, lmr_ver_e_min,
+        multicut_lerp, nmp_base, nmp_factor, pc_beta_base, pc_beta_non_improving, pc_lerp, rfp_lerp, sp_d_max, sp_noisy_margin,
+        sp_quiet_margin,
     },
 };
 
@@ -234,7 +235,7 @@ impl Position {
         if !NT::PV && !in_check && !singular {
             // Reverse futility pruning (static null move pruning).
             if can_apply_rfp(depth, improving, opp_worsening, eval, beta) {
-                return beta + (eval - beta) / 3;
+                return Eval::lerp(beta, eval, rfp_lerp());
             }
 
             // Razoring.
@@ -247,7 +248,7 @@ impl Position {
             }
 
             // Null move pruning.
-            if can_apply_nmp(&self.board, t, depth, improving, eval, beta) {
+            if can_apply_nmp(&self.board, t, depth, improving, eval, beta, cutnode) {
                 let r = (nmp_base() + depth / nmp_factor()).min(depth) + Depth::from(tt_move.flag().is_noisy());
 
                 self.make_null(t);
@@ -271,7 +272,7 @@ impl Position {
         // -----------------------------------
         let pc_beta = beta + pc_beta_base() + (i32::from(!improving) * pc_beta_non_improving());
 
-        if !NT::PV && !beta.is_terminal() && depth >= 5 && !(tt_depth >= depth - 3 && tt_value < pc_beta) {
+        if !NT::PV && !in_check && !beta.is_terminal() && depth >= 5 && !(tt_depth >= depth - 3 && tt_value < pc_beta) {
             let mut mp = MovePicker::new(SearchType::Pc, in_check, tt_move, pc_beta - t.ss().eval);
             let pc_depth = depth - 4;
 
@@ -297,9 +298,11 @@ impl Position {
                 if v >= pc_beta {
                     tt.insert(self.hash(), Bound::Lower, m, raw_value, v, pc_depth + 1, t.ply, tt_pv);
 
-                    if !v.is_terminal() {
+                    if v.is_win() {
                         return v;
                     }
+
+                    return Eval::lerp(v, beta, pc_lerp());
                 }
             }
         }
@@ -405,7 +408,7 @@ impl Position {
                 // We had a beta cutoff, so another move was too good - meaning the TT move wasn't
                 // singular. If the same score would cause a cutoff here, prune it.
                 else if v >= beta && !v.is_terminal() {
-                    return beta;
+                    return Eval::lerp(v, beta, multicut_lerp());
                 }
                 // Negative extensions.
                 else if tt_value >= beta {

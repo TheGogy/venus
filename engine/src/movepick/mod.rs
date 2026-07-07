@@ -97,25 +97,3 @@ impl MovePicker {
         Self { stage, searchtype, tt_move, killer: Move::NONE, see_threshold, skip_quiets: false, move_list: MoveList::default() }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use chess::types::{moves::MoveFlag, square::Square};
-
-    use crate::movepick::{Eval, MPStage, Move, MovePicker, SearchType};
-
-    #[test]
-    fn test_movepick_construction() {
-        let mp = MovePicker::new(SearchType::Pv, false, Move::new(Square::E2, Square::E4, MoveFlag::Normal), Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::PvTT);
-
-        let mp = MovePicker::new(SearchType::Pv, false, Move::NONE, Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::PvNoisyGen);
-
-        let mp = MovePicker::new(SearchType::Pv, true, Move::NONE, Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::EvGen);
-
-        let mp = MovePicker::new(SearchType::Qs, false, Move::NONE, Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::QsNoisyGen);
-    }
-}

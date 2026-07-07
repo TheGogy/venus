@@ -58,9 +58,6 @@ impl MovePicker {
                 {
                     return Some(m);
                 }
-
-                // Get ready to go over losing noisy moves.
-                self.move_list.prepare_bad_moves();
             }
 
             // Return all remaining moves.

@@ -32,9 +32,12 @@ init_tunables! {
     ms_queen:  i32 = 1313, 1200, 1400, 10;
 
     // Aspiration window.
-    asp_window_d_min:   i16 = 4, 2, 7, 1;
-    asp_window_div:     i32 = 11400, 8000, 14000, 500;
-    asp_window_base:    i32 = 5, 4, 10, 1;
+    asp_window_d_min:     i16 = 4, 2, 7, 1;
+    asp_window_div:       i32 = 11400, 8000, 14000, 500;
+    asp_window_base:      i32 = 5, 4, 10, 1;
+
+    asp_window_expansion_fail_high: f32 = 0.333, 0.1, 0.5, 0.05;
+    asp_window_expansion_fail_low: f32 = 0.333, 0.1, 0.5, 0.05;
 
     // History bonuses.
     hist_bonus_max:  i16 = 1567, 800, 3200, 100;
@@ -61,11 +64,16 @@ init_tunables! {
     pc_beta_base:          i32 = 143, 120, 200, 5;
     pc_beta_non_improving: i32 = 55, 30, 80, 4;
 
+    pc_lerp: f32 = 0.2, 0.1, 0.5, 0.05;
+
     // extensions.
     ext_d_min:  i16 = 8, 5, 10, 1;
     ext_mult:   i16 = 2, 1, 4, 1;
     ext_double: i32 = 12, 7, 14, 1;
     ext_triple: i32 = 80, 50, 150, 20;
+
+    // Multi-cut.
+    multicut_lerp: f32 = 1.0, 0.0, 1.0, 0.05;
 
     // Late move reductions.
     lmr_m_min: usize = 2, 1, 4, 1;
@@ -99,6 +107,8 @@ init_tunables! {
     rfp_mult:             i32 = 82, 40, 120, 5;
     rfp_improving_margin: i32 = 59, 25, 85, 5;
     rfp_worsening_margin: i32 = 6, 5, 20, 1;
+
+    rfp_lerp: f32 = 0.2, 0.1, 0.7, 0.05;
 
     // Null move pruning.
     nmp_d_min:            i16 = 3, 1, 4, 1;
@@ -135,9 +145,16 @@ init_tunables! {
     sp_d_max:        i16 = 10, 6, 14, 1;
     sp_qs_margin:    i32 = 33, 10, 50, 2;
 
+    // SEE score for giving checks in movepicking.
+    mp_givecheck_see: i32 = -75, -150, 0, 5;
+
     // Bonus for checks in movepicking.
     mp_gc_bonus: i32 = 10000, 6000, 14000, 300;
 
     // Bonus for escaping threats in movepicking.
     mp_escapes_threat_bonus: i32 = 25, 10, 50, 2;
+
+    // Qsearch beta cutoff lerps.
+    qs_stand_pat_beta_lerp: f32 = 0.5, 0.2, 0.7, 0.05;
+    qs_conservative_beta_lerp: f32 = 0.5, 0.2, 0.7, 0.05;
 }

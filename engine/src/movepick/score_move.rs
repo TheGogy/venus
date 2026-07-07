@@ -10,7 +10,11 @@ use chess::{
 };
 
 use super::{MovePicker, SearchType};
-use crate::{history::noisyhist::CAP_HIST_MAX, threading::thread::Thread, tunables::params::tunables::mp_gc_bonus};
+use crate::{
+    history::noisyhist::CAP_HIST_MAX,
+    threading::thread::Thread,
+    tunables::params::tunables::{mp_gc_bonus, mp_givecheck_see},
+};
 
 /// The value of the victim we are capturing with this move.
 const MVV: [i32; Piece::NUM] = [0, 2400, 2400, 4800, 9600, 0];
@@ -57,7 +61,7 @@ impl MovePicker {
                 }
             }
 
-            score += i32::from(b.gives_check_fast(m) && b.see(m, Eval(-75))) * mp_gc_bonus();
+            score += i32::from(b.gives_check_fast(m) && b.see(m, Eval(mp_givecheck_see()))) * mp_gc_bonus();
 
             let threat = threat_masks[b.pc_at(m.src()).pt().idx()];
             let v = i32::from(threat.has(m.src())) - i32::from(threat.has(m.dst()));

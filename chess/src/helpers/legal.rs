@@ -9,6 +9,7 @@ use crate::{
 
 impl Board {
     /// Whether the given move is legal in this position.
+    /// TODO: Benchmark + optimize
     pub fn is_legal(&self, m: Move) -> bool {
         let flag = m.flag();
         let src_piece = self.pc_at(m.src());

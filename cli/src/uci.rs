@@ -49,7 +49,8 @@ impl UCIReader {
         for line in stdin.lines() {
             let line = line?;
             match self.parse_command(&line) {
-                Ok(()) => {}
+                Ok(true) => return Ok(()),
+                Ok(false) => {}
                 Err(e) => eprintln!("{e}"),
             }
         }
@@ -57,13 +58,14 @@ impl UCIReader {
         Ok(())
     }
 
-    /// Parse a UCI command.
+    /// Parse a UCI command. Returns true if the engine should quit.
     #[rustfmt::skip]
-    fn parse_command(&self, s: &str) -> Result<()> {
+    fn parse_command(&self, s: &str) -> Result<bool> {
         let mut tokens = s.split_whitespace();
 
         match tokens.next() {
             Some(cmd) => match cmd {
+                "quit"           => { self.interface.handle_command(EngineCommand::Stop); return Ok(true); }
                 "isready"        => println!("readyok"),
                 "bench"          => run_bench(None)?,
                 "uci"            => self.cmd_uci(),
@@ -71,19 +73,19 @@ impl UCIReader {
                 "stop"           => self.interface.handle_command(EngineCommand::Stop),
                 "eval"           => self.interface.handle_command(EngineCommand::Eval),
                 "print" | "p"    => self.interface.handle_command(EngineCommand::Print),
-                "perft"          => return self.cmd_perft(&mut tokens),
-                "perftmp"        => return self.cmd_perftmp(&mut tokens),
-                "go"             => return self.cmd_go(&mut tokens),
-                "position" | "b" => return self.cmd_position(&mut tokens),
-                "setoption"      => return self.cmd_setoption(&mut tokens),
-                "move" | "m"     => return self.cmd_move(&mut tokens),
+                "perft"          => self.cmd_perft(&mut tokens)?,
+                "perftmp"        => self.cmd_perftmp(&mut tokens)?,
+                "go"             => self.cmd_go(&mut tokens)?,
+                "position" | "b" => self.cmd_position(&mut tokens)?,
+                "setoption"      => self.cmd_setoption(&mut tokens)?,
+                "move" | "m"     => self.cmd_move(&mut tokens)?,
                 "undo" | "u"     => self.interface.handle_command(EngineCommand::Undo),
                 _ => return Err(anyhow!("Unknown command!"))
             },
             None => return Err(anyhow!("Empty command!")),
         }
 
-        Ok(())
+        Ok(false)
     }
 }
 

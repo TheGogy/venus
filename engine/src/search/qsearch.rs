@@ -12,7 +12,7 @@ use crate::{
         entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_QS, TT_DEPTH_UNSEARCHED},
         table::TT,
     },
-    tunables::params::tunables::{fp_qs_base, sp_qs_margin},
+    tunables::params::tunables::{fp_qs_base, qs_conservative_beta_lerp, qs_stand_pat_beta_lerp, sp_qs_margin},
 };
 
 impl Position {
@@ -117,7 +117,9 @@ impl Position {
             if best_value >= beta {
                 // Adjust beta cutoff values to be more conservative.
                 // This prevents qsearch from returning overly optimistic evaluations.
-                best_value = Eval::midpoint(best_value, beta);
+                if !best_value.is_terminal() && !beta.is_terminal() {
+                    best_value = Eval::lerp(best_value, beta, qs_stand_pat_beta_lerp());
+                }
 
                 // Throw the static eval into the tt if we won't overwrite anything.
                 if tt_depth == -TT_DEPTH_OFFSET {
@@ -189,7 +191,6 @@ impl Position {
         }
 
         // Checkmate detection.
-        // If we're in check and have no legal moves, it's checkmate.
         if in_check && !moves_exist {
             return Eval::search_mated_in(t.ply);
         }
@@ -197,7 +198,7 @@ impl Position {
         // Adjust beta cutoff values to be more conservative.
         // This prevents qsearch from returning overly optimistic evaluations.
         if best_value >= beta && !best_value.is_terminal() {
-            best_value = Eval::midpoint(best_value, beta);
+            best_value = Eval::lerp(best_value, beta, qs_conservative_beta_lerp());
         }
 
         // Save to TT.
