@@ -40,14 +40,14 @@ init_tunables! {
     asp_window_expansion_fail_low: f32  = 0.32567887, 0.1, 0.5, 0.05;
 
     // History bonuses.
-    hist_bonus_max:  i16 = 1567, 800, 3200, 100;
-    hist_bonus_base: i16 = 356, 100, 600, 25;
-    hist_bonus_mult: i16 = 366, 100, 600, 25;
+    hist_bonus_max:  i32 = 1567, 800, 3200, 100;
+    hist_bonus_base: i32 = 356, 100, 600, 25;
+    hist_bonus_mult: i32 = 366, 100, 600, 25;
 
     // History maluses.
-    hist_malus_max:  i16 = 1680, 800, 3200, 100;
-    hist_malus_base: i16 = 356, 100, 600, 25;
-    hist_malus_mult: i16 = 366, 100, 600, 25;
+    hist_malus_max:  i32 = 1680, 800, 3200, 100;
+    hist_malus_base: i32 = 356, 100, 600, 25;
+    hist_malus_mult: i32 = 366, 100, 600, 25;
 
     // History divisors.
     hist_quiet_div: i32 = 8867, 7000, 10000, 150;
