@@ -31,7 +31,9 @@ pub const fn input_bucket(ksq: Square, c: Color) -> usize {
 /// Get the current output bucket to use.
 pub const fn output_bucket(nb_pieces: usize) -> usize {
     const DIV: usize = usize::div_ceil(32, NB_OUTPUT_BUCKETS);
-    (nb_pieces - 2) / DIV
+    let obkt = (nb_pieces - 2) / DIV;
+    assert!(obkt < NB_OUTPUT_BUCKETS);
+    obkt
 }
 
 /// Whether the king has changed position.

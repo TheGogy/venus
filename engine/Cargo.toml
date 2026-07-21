@@ -1,6 +1,6 @@
 [package]
 name = "engine"
-version = "0.5.4"
+version = "0.5.2"
 edition = "2024"
 authors = ["TheGogy"]
 
@@ -8,13 +8,13 @@ authors = ["TheGogy"]
 doctest = false
 
 [dependencies]
-anyhow = "1.0.103"
+anyhow = "1.0.102"
 chess = { path = "../chess" }
 utils = { path = "../utils" }
 nnue = { path = "../nnue" }
 
 [build-dependencies]
-cc = { version = "1.2.66", optional = true }
+cc = { version = "1.2.63", optional = true }
 bindgen = { version = "0.72.1", optional = true }
 
 [features]

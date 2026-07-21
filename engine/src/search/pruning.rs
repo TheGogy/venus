@@ -24,9 +24,8 @@ pub fn can_apply_razoring(depth: Depth, eval: Eval, alpha: Eval) -> bool {
 /// Null move pruning.
 /// If the opponent gets a free move and we're still above beta, then our
 /// position is probably so good we can just return beta.
-pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval: Eval, beta: Eval, cutnode: bool) -> bool {
-    cutnode
-        && depth >= nmp_d_min()
+pub fn can_apply_nmp(b: &Board, t: &Thread, depth: Depth, improving: bool, eval: Eval, beta: Eval) -> bool {
+    depth >= nmp_d_min()
         && t.ply_from_null > 0
         && eval + nmp_improving_margin() * i32::from(improving) >= beta
         && !b.only_king_pawns_left()
@@ -88,8 +87,8 @@ pub fn lmr_base_reduction(depth: Depth, moves_tried: usize) -> i32 {
             return 0;
         }
 
-        let lmr_base = lmr_base();
-        let lmr_mult = lmr_mult();
+        let lmr_base = lmr_base() as f32 / 1024.0;
+        let lmr_mult = lmr_mult() as f32 / 1024.0;
 
         (lmr_base + f32::from(depth).ln() * (moves_tried as f32).ln() / lmr_mult) as i32 * LMR_SCALE
     }

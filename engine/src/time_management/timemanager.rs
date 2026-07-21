@@ -16,8 +16,8 @@ pub struct TimeManager {
     // Constructed at start.
     start: Instant,
     tc: TimeControl,
-    soft_bound: Duration,
-    hard_bound: Duration,
+    opt: Duration,
+    max: Duration,
 
     // Shared between all threads.
     global_stop: Arc<AtomicBool>,
@@ -40,22 +40,21 @@ impl fmt::Display for TimeManager {
 }
 
 impl TimeManager {
-    /// Check time after this many nodes.
     const FREQUENCY: u64 = 2048;
 
     /// Initialize a new time manager.
     #[allow(clippy::large_stack_arrays)]
     pub fn new(global_stop: Arc<AtomicBool>, global_nodes: Arc<AtomicU64>, tc: TimeControl, stm: Color) -> Self {
-        let (soft_bound, hard_bound) = tc.get_time_bounds(stm);
+        let (opt, max) = tc.opt_max_time(stm);
         let start = Instant::now();
 
-        Self { start, tc, soft_bound, hard_bound, global_stop, global_nodes, last_check: 0, move_nodes: [[0; Square::NUM]; Square::NUM] }
+        Self { start, tc, opt, max, global_stop, global_nodes, last_check: 0, move_nodes: [[0; Square::NUM]; Square::NUM] }
     }
 
     /// Change the time controls.
     #[allow(clippy::large_stack_arrays)]
     pub fn set_tc(&mut self, tc: TimeControl, stm: Color) {
-        (self.soft_bound, self.hard_bound) = tc.get_time_bounds(stm);
+        (self.opt, self.max) = tc.opt_max_time(stm);
         self.start = Instant::now();
         self.tc = tc;
         self.global_stop.store(false, Ordering::SeqCst);
@@ -89,7 +88,7 @@ impl TimeManager {
                     1.0
                 };
 
-                self.elapsed() < self.soft_bound.mul_f64(scale)
+                self.elapsed() < self.opt.mul_f64(scale)
             }
         };
 
@@ -114,7 +113,7 @@ impl TimeManager {
         }
 
         let should_continue = match self.tc {
-            TimeControl::Variable { .. } | TimeControl::FixedTime(_) => delta < Self::FREQUENCY || self.elapsed() < self.hard_bound,
+            TimeControl::Variable { .. } | TimeControl::FixedTime(_) => delta < Self::FREQUENCY || self.elapsed() < self.max,
             _ => true,
         };
 

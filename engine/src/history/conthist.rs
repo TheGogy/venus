@@ -66,6 +66,7 @@ impl PieceTo {
     }
 
     /// Construct a [`PieceTo`] from a piece and a move.
+    /// NOTE: (this should be used *after* the move has been made on the board.)
     pub const fn from(b: &Board, m: Move) -> Self {
         let s = m.src();
         let p = b.pc_at(s);

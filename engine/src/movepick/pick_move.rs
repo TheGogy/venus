@@ -1,7 +1,11 @@
 use chess::types::{board::Board, moves::Move};
 
-use super::{MPStage, MovePicker};
 use crate::threading::thread::Thread;
+
+use super::{
+    MPStage, MovePicker,
+    move_list::{LEFT, RIGHT},
+};
 
 impl MovePicker {
     pub fn next(&mut self, b: &Board, t: &Thread) -> Option<Move> {
@@ -27,20 +31,8 @@ impl MovePicker {
 
             // Return all winning noisies.
             MPStage::PvNoisyWin | MPStage::QsNoisyAll | MPStage::EvAll => {
-                if let Some(m) = self.move_list.next_good() {
-                    return Some(m);
-                }
-            }
-
-            // Return killer move.
-            MPStage::PvKiller => {
-                if let Some(km) = t.ss().killer
-                    && km != self.tt_move
-                    && b.is_legal(km)
-                {
-                    self.stage = self.stage.next();
-                    self.killer = km;
-                    return Some(km);
+                if self.move_list.has_moves::<LEFT>() {
+                    return Some(self.move_list.select_upto::<LEFT>());
                 }
             }
 
@@ -53,17 +45,18 @@ impl MovePicker {
 
             // Return all quiets.
             MPStage::PvQuietAll => {
-                if !self.skip_quiets
-                    && let Some(m) = self.move_list.next_good()
-                {
-                    return Some(m);
+                if !self.skip_quiets && self.move_list.has_moves::<LEFT>() {
+                    return Some(self.move_list.select_upto::<LEFT>());
                 }
+
+                // Get ready to go over losing noisy moves.
+                self.move_list.prepare_bad_moves();
             }
 
             // Return all remaining moves.
             MPStage::PvNoisyLoss => {
-                if let Some(m) = self.move_list.next_bad() {
-                    return Some(m);
+                if self.move_list.has_moves::<RIGHT>() {
+                    return Some(self.move_list.select_upto::<RIGHT>());
                 }
             }
 
@@ -74,10 +67,11 @@ impl MovePicker {
 
             // Return all moves over the given SEE threshold.
             MPStage::PcNoisyAll => {
-                if let Some(m) = self.move_list.next_good()
-                    && b.see(m, self.see_threshold)
-                {
-                    return Some(m);
+                if self.move_list.has_moves::<LEFT>() {
+                    let m = self.move_list.select_upto::<LEFT>();
+                    if b.see(m, self.see_threshold) {
+                        return Some(m);
+                    }
                 }
             }
 

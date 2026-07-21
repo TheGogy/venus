@@ -112,7 +112,6 @@ struct SquareEntry {
 
 impl SquareEntry {
     /// Get the attacks for this square entry.
-    #[allow(clippy::missing_const_for_fn)]
     pub fn attack_offset(&self, occ: Bitboard) -> usize {
         #[cfg(target_arch = "x86_64")]
         {

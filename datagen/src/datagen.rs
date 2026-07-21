@@ -272,7 +272,7 @@ fn thread_gen_data(
             compressed_pos.push(&pos.board, best_move, score);
 
             // If either side proves mate, terminate immediately.
-            if score.is_terminal() {
+            if score.terminal() {
                 break wdl_result(pos.stm(), &WIN_W, &WIN_B);
             }
 

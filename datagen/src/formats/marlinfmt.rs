@@ -49,7 +49,8 @@ impl From<&Board> for MarlinFmt {
             pad: 0,
         };
 
-        for (i, s) in occ.into_iter().enumerate() {
+        let mut i = 0;
+        for s in occ {
             let pc = b.pc_at(s);
 
             // Marlin uses unmoved rooks to handle castling, regular pieces for everything else.
@@ -63,6 +64,7 @@ impl From<&Board> for MarlinFmt {
             marlin_pc |= (pc.color() as u8) << 3;
 
             packed.pcs[i / 2] |= marlin_pc << ((i % 2) * 4);
+            i += 1;
         }
 
         packed
@@ -80,7 +82,8 @@ impl MarlinFmt {
 
         let mut castling_squares = ArrayVec::<Square, 4>::new();
 
-        for (i, s) in occ.into_iter().enumerate() {
+        let mut i = 0;
+        for s in occ {
             let marlin_pc = self.pcs[i / 2] >> ((i % 2) * 4) & 0xF;
 
             let c = Color::from_raw(marlin_pc >> 3);
@@ -95,6 +98,8 @@ impl MarlinFmt {
 
             state.hash.toggle_piece(pc, s);
             b.set_piece(pc, s);
+
+            i += 1;
         }
 
         let mut c_rights = CastlingRights::NONE;

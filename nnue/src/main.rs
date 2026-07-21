@@ -1,6 +1,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, error::Result};
 use nnue::{
@@ -44,7 +44,7 @@ fn main() {
     }
 }
 
-fn quantize(infile: &Path, outfile: &Path) -> Result<()> {
+fn quantize(infile: &PathBuf, outfile: &PathBuf) -> Result<()> {
     let raw_data = RawNNUEData::load_from_file(infile)?;
     println!("[INFO] Quantizing {} -> {}", infile.display(), outfile.display());
     let quant_data = raw_data.quantize();
@@ -54,7 +54,7 @@ fn quantize(infile: &Path, outfile: &Path) -> Result<()> {
     Ok(())
 }
 
-fn permute(infile: &Path, outfile: &Path) -> Result<()> {
+fn permute(infile: &PathBuf, outfile: &PathBuf) -> Result<()> {
     let quant_data = QuantNNUEData::load_from_file(infile)?;
     println!("[INFO] Permuting {} -> {}", infile.display(), outfile.display());
     let perm_data = quant_data.permute();
@@ -109,7 +109,7 @@ where
     }
 }
 
-fn stats(file: &Path) -> Result<()> {
+fn stats(file: &PathBuf) -> Result<()> {
     let quant_data = QuantNNUEData::load_from_file(file)?;
     let nn = quant_data.prepare_nnue();
     println!("--- ft biases ---");

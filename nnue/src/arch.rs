@@ -9,11 +9,10 @@ pub const FT_QUANT: i32 = 255;
 pub const L1_QUANT: i32 = 64;
 
 /// HACK: This should just be a u32 everywhere, but avx2 decided to be special
-#[allow(clippy::cast_sign_loss)]
 pub const L1Q_BITS: simd::ShiftT = L1_QUANT.trailing_zeros() as simd::ShiftT;
 pub const L1Q_SHIFT: simd::ShiftT = 16 - L1Q_BITS;
 
-/// Invert quantization steps (clamp by `FT_QUANT`, downscale by `FT_SHIFT`, quantize by `FT_QUANT * L1_QUANT`).
+/// Invert quantization steps (clamp by FT_QUANT, downscale by FT_SHIFT, quantize by FT_QUANT * L1_QUANT).
 #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 pub const L1_DEQUANT: f32 = (1 << L1Q_SHIFT) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
 

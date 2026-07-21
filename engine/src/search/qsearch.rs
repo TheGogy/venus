@@ -12,7 +12,7 @@ use crate::{
         entry::{Bound, TT_DEPTH_OFFSET, TT_DEPTH_QS, TT_DEPTH_UNSEARCHED},
         table::TT,
     },
-    tunables::params::tunables::{fp_qs_base, qs_conservative_beta_lerp, qs_stand_pat_beta_lerp, sp_qs_margin},
+    tunables::params::tunables::{fp_qs_base, sp_qs_margin},
 };
 
 impl Position {
@@ -62,20 +62,17 @@ impl Position {
         let mut tt_pv = false;
 
         if let Some(tte) = tt.probe(self.hash()) {
-            tt_eval = tte.eval();
+            tt_move = tte.mov();
             tt_value = tte.value(t.ply);
+            tt_eval = tte.eval();
             tt_bound = tte.bound();
             tt_depth = tte.depth();
             tt_pv = tte.pv();
-
-            if self.board.is_legal(tte.mov()) {
-                tt_move = tte.mov();
-            }
         }
 
         // TT cutoff.
         // If the bound from the tt is tighter than the current search value, just return it.
-        if !NT::PV && tt_bound.is_usable(tt_value, beta) {
+        if !NT::PV && tt_depth >= TT_DEPTH_QS && tt_bound.is_usable(tt_value, beta) {
             return tt_value;
         }
 
@@ -117,9 +114,7 @@ impl Position {
             if best_value >= beta {
                 // Adjust beta cutoff values to be more conservative.
                 // This prevents qsearch from returning overly optimistic evaluations.
-                if !best_value.is_terminal() && !beta.is_terminal() {
-                    best_value = Eval::lerp(best_value, beta, qs_stand_pat_beta_lerp());
-                }
+                best_value = Eval::midpoint(best_value, beta);
 
                 // Throw the static eval into the tt if we won't overwrite anything.
                 if tt_depth == -TT_DEPTH_OFFSET {
@@ -191,14 +186,15 @@ impl Position {
         }
 
         // Checkmate detection.
+        // If we're in check and have no legal moves, it's checkmate.
         if in_check && !moves_exist {
             return Eval::search_mated_in(t.ply);
         }
 
         // Adjust beta cutoff values to be more conservative.
         // This prevents qsearch from returning overly optimistic evaluations.
-        if best_value >= beta && !best_value.is_terminal() {
-            best_value = Eval::lerp(best_value, beta, qs_conservative_beta_lerp());
+        if best_value >= beta && best_value.nonterminal() {
+            best_value = Eval::midpoint(best_value, beta);
         }
 
         // Save to TT.

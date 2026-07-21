@@ -33,6 +33,11 @@ impl Bitboard {
         self.0 == 0
     }
 
+    /// Whether the bitboard contains any value.
+    pub const fn non_empty(self) -> bool {
+        self.0 != 0
+    }
+
     /// Whether the bitboard contains more than one value.
     pub const fn multiple(self) -> bool {
         self.0 & (self.0 - 1) != 0
@@ -67,6 +72,18 @@ impl Bitboard {
     /// Get the number of bits set.
     pub const fn nbits(self) -> u32 {
         self.0.count_ones()
+    }
+
+    /// Performs the given function for each square set in the bitboard.
+    pub fn bitloop<F>(&self, mut f: F)
+    where
+        F: FnMut(Square),
+    {
+        let mut bb = *self;
+        while bb.non_empty() {
+            f(bb.lsb());
+            bb.pop_lsb();
+        }
     }
 
     /// Get the edge mask for a given square.

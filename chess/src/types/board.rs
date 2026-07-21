@@ -3,10 +3,6 @@ use std::str::FromStr;
 
 use crate::{
     movegen::{Allmv, MoveList},
-    tables::{
-        leaping_piece::{all_pawn_atk, king_atk, knight_atk},
-        sliding_piece::{bishop_atk, rook_atk},
-    },
     types::{
         bitboard::Bitboard,
         castling::{CastlingMask, CastlingRights},
@@ -261,22 +257,22 @@ impl Board {
     fn decode_scharnagl(n: usize) -> [Piece; 8] {
         const K5N: [[usize; 2]; 10] = [[0, 0], [0, 1], [0, 2], [0, 3], [1, 1], [1, 2], [1, 3], [2, 2], [2, 3], [3, 3]];
 
-        let mut pcs = [Piece::None; 8];
+        let mut pcs = [None; 8];
 
         let (n2, b1) = (n / 4, n % 4);
         let (n3, b2) = (n2 / 4, n2 % 4);
         let (n4, q) = (n3 / 4, n3 % 4);
 
         // Add piece after the first `idx` free slots.
-        let insert_into_nth_free = |pcs: &mut [Piece; 8], idx: usize, pc: Piece| {
-            if let Some(slot) = pcs.iter_mut().filter(|p| **p == Piece::None).nth(idx) {
-                *slot = pc;
+        let insert_into_nth_free = |pcs: &mut [Option<Piece>; 8], idx: usize, pc: Piece| {
+            if let Some(slot) = pcs.iter_mut().filter(|p| p.is_none()).nth(idx) {
+                *slot = Some(pc);
             }
         };
 
         // One light square + one dark square bishop.
-        pcs[b1 * 2 + 1] = Piece::Bishop;
-        pcs[b2 * 2] = Piece::Bishop;
+        pcs[b1 * 2 + 1] = Some(Piece::Bishop);
+        pcs[b2 * 2] = Some(Piece::Bishop);
 
         insert_into_nth_free(&mut pcs, q, Piece::Queen);
         insert_into_nth_free(&mut pcs, K5N[n4][0], Piece::Knight);
@@ -287,7 +283,7 @@ impl Board {
         insert_into_nth_free(&mut pcs, 0, Piece::King);
         insert_into_nth_free(&mut pcs, 0, Piece::Rook);
 
-        pcs
+        pcs.map(Option::unwrap)
     }
 }
 
@@ -482,52 +478,6 @@ impl Board {
     /// Whether the position has any legal moves remaining.
     pub fn has_moves(&self) -> bool {
         !self.gen_moves().is_empty()
-    }
-
-    /// Get all pawn attacks for the given side.
-    pub fn all_pawn_atk(&self, c: Color) -> Bitboard {
-        all_pawn_atk(self.pc_bb(c, Piece::Pawn), c)
-    }
-
-    /// Get all knight attacks for the given side.
-    pub fn all_knight_atk(&self, c: Color) -> Bitboard {
-        let mut atk = Bitboard::EMPTY;
-        for s in self.pc_bb(c, Piece::Knight) {
-            atk |= knight_atk(s);
-        }
-        atk
-    }
-
-    /// Get all bishop attacks for the given side.
-    pub fn all_bishop_atk(&self, c: Color) -> Bitboard {
-        let mut atk = Bitboard::EMPTY;
-        for s in self.pc_bb(c, Piece::Bishop) {
-            atk |= bishop_atk(s, self.occ());
-        }
-        atk
-    }
-
-    /// Get all rook attacks for the given side.
-    pub fn all_rook_atk(&self, c: Color) -> Bitboard {
-        let mut atk = Bitboard::EMPTY;
-        for s in self.pc_bb(c, Piece::Rook) {
-            atk |= rook_atk(s, self.occ());
-        }
-        atk
-    }
-
-    /// Get all queen attacks for the given side.
-    pub fn all_queen_atk(&self, c: Color) -> Bitboard {
-        let mut atk = Bitboard::EMPTY;
-        for s in self.pc_bb(c, Piece::Queen) {
-            atk |= bishop_atk(s, self.occ()) | rook_atk(s, self.occ());
-        }
-        atk
-    }
-
-    /// Get all king attacks for the given side.
-    pub fn all_king_atk(&self, c: Color) -> Bitboard {
-        king_atk(self.ksq(c))
     }
 }
 

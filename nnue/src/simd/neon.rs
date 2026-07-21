@@ -1,5 +1,4 @@
 pub mod simd {
-    #[allow(clippy::wildcard_imports)]
     use std::arch::aarch64::*;
 
     pub type I8Vec = int8x16_t;
@@ -8,6 +7,7 @@ pub mod simd {
     pub type I32Vec = int32x4_t;
     pub type U32Vec = uint32x4_t;
     pub type F32Vec = float32x4_t;
+    pub type Mask16 = u16;
     pub type Mask32 = u32;
 
     pub const ARCH_NAME: &str = "neon";
@@ -147,17 +147,32 @@ pub mod simd {
     }
 
     /// Gets a mask of all the nonzero elements in the vector.
-    pub fn nonzero_mask_i32(v: I32Vec) -> Mask32 {
+    pub fn nonzero_mask_i32(v: I32Vec) -> Mask16 {
         unsafe {
             const MASK: [u32; 4] = [1, 2, 4, 8];
             let vu32: U32Vec = std::mem::transmute(v);
-            vaddvq_u32(vandq_u32(vtstq_u32(vu32, vu32), vld1q_u32(MASK.as_ptr())))
+            vaddvq_u32(vandq_u32(vtstq_u32(vu32, vu32), vld1q_u32(MASK.as_ptr()))) as Mask16
         }
     }
 
     /// Multiply groups of u8s -> i16s -> i32s and sum these with `sum`.
     pub fn dotprod_i32(sum: I32Vec, x: U8Vec, y: I8Vec) -> I32Vec {
-        unsafe { vdotq_s32(sum, std::mem::transmute::<U8Vec, I8Vec>(x), y) }
+        let out: int32x4_t;
+        unsafe {
+            std::arch::asm!(
+                "sdot {sum:v}.4s, {x:v}.16b, {y:v}.16b",
+                sum = inout(vreg) sum => out,
+                x = in(vreg) x,
+                y = in(vreg) y,
+                options(pure, nomem, nostack, preserves_flags)
+            );
+        }
+        out
+
+        // TODO: Update once vdotq is stable
+        // https://github.com/rust-lang/rust/issue/117224
+        // As of time of writing, this was just merged!
+        // unsafe { vdotq_s32(sum, std::mem::transmute(x), std::mem::transmute(y)) }
     }
 
     /// Reinterpret packed i32s -> u8s.
