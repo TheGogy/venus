@@ -2,7 +2,33 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Hash};
 
-use crate::tt::bits;
+/// TT depth offsets.
+/// Depth of qsearch entries. Must be <= -1, as we add 1 for qsearch entries in check.
+pub const TT_DEPTH_QS: Depth = -1;
+
+/// Depth of unsearched entries. Must be < QS entries.
+pub const TT_DEPTH_UNSEARCHED: Depth = -2;
+
+/// Offset to make all stored depths positive and > 0.
+pub const TT_DEPTH_OFFSET: Depth = 3;
+
+/// Number of entries to store in each bucket.
+pub const TT_BUCKET_ENTRIES: usize = 3;
+
+/// Size of each TT bucket.
+pub const TT_BUCKET_SIZE: usize = std::mem::size_of::<TTBucket>();
+const TT_BUCKET_WORDS: usize = TT_BUCKET_SIZE / std::mem::size_of::<u64>();
+
+pub const TT_AGE_CYCLE: u8 = 1 << 5;
+pub const TT_AGE_MASK: u8 = TT_AGE_CYCLE - 1;
+
+/// Penalty applied to older entries when choosing a replacement victim.
+pub const TT_AGE_MUL: i32 = 8;
+
+/// Get the partial key stored in each entry.
+pub const fn get_low_16(hash: Hash) -> u16 {
+    (hash.key & 0xFFFF) as u16
+}
 
 /// TT Bound.
 /// Upper: search at this position fails high.
@@ -31,128 +57,138 @@ impl Bound {
     }
 }
 
-/// Entry in the transposition table
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash, Default)]
+/// Packed entry metadata.
+///
+/// Bits:
+/// - 0..=1: bound
+/// - 2: PV flag
+/// - 3..=7: generation age
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TTMetadata(u8);
+
+impl TTMetadata {
+    pub const fn new(age: u8, pv: bool, bound: Bound) -> Self {
+        Self((bound as u8) | ((pv as u8) << 2) | (age << 3))
+    }
+
+    pub const fn age(self) -> u8 {
+        self.0 >> 3
+    }
+
+    pub const fn pv(self) -> bool {
+        (self.0 & 0b100) != 0
+    }
+
+    pub const fn bound(self) -> Bound {
+        unsafe { std::mem::transmute(self.0 & 0b11) }
+    }
+}
+
+/// Transposition table entry.
+#[derive(Clone, Copy, Debug, Default)]
+#[repr(C)]
 pub struct TTEntry {
-    pub key: u64,     // 64 bits - Position hash.
-    pub pv: bool,     //  1 bit  - Whether this node was pv.
-    pub age: u8,      //  6 bits - Search generation.
-    pub depth: u8,    //  7 bits - Search depth.
-    pub bound: Bound, //  2 bits - Type of bound.
-    pub mov: Move,    // 16 bits - Best move found.
-    pub eval: i16,    // 16 bits - Static evaluation.
-    pub value: i16,   // 16 bits - Search score.
+    pub key: u16,             // 2 bytes
+    pub mov: Move,            // 2 bytes
+    pub eval: i16,            // 2 bytes
+    pub value: i16,           // 2 bytes
+    pub depth: u8,            // 1 byte
+    pub metadata: TTMetadata, // 1 byte
 }
 
-/// A compressed transposition table entry stored in the table.
-#[derive(Debug, Default)]
-pub struct CompressedEntry {
-    key: AtomicU64,
-    data: AtomicU64,
-}
-
-/// TT depth offsets.
-/// Depth of qsearch entries. Must be <= -1, as we add 1 for qsearch entries in check.
-pub const TT_DEPTH_QS: Depth = -1;
-
-/// Depth of unsearched entries. Must be < QS entries.
-pub const TT_DEPTH_UNSEARCHED: Depth = -2;
-
-/// Offset to make all stored depths positive and > 0.
-pub const TT_DEPTH_OFFSET: Depth = 3;
+const _: () = assert!(std::mem::size_of::<TTEntry>() == 10);
 
 impl TTEntry {
-    /// Make a new TT entry.
-    #[allow(clippy::too_many_arguments, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub const fn new(key: u64, pv: bool, age: u8, d: Depth, bound: Bound, mov: Move, eval: Eval, value: Eval) -> Self {
-        let depth = (d + TT_DEPTH_OFFSET) as u8;
-        Self { key, pv, age, depth, bound, mov, eval: eval.0 as i16, value: value.0 as i16 }
-    }
-
-    /// Compress this TT entry.
-    pub const fn compress(self) -> (u64, u64) {
-        let data = bits::pack_pv(self.pv)
-            | bits::pack_age(self.age)
-            | bits::pack_depth(self.depth)
-            | bits::pack_bound(self.bound)
-            | bits::pack_move(self.mov)
-            | bits::pack_eval(self.eval)
-            | bits::pack_value(self.value);
-
-        (self.key ^ data, data)
-    }
-
-    /// Get a TT entry from compressed format.
-    pub const fn from_compressed(key: u64, data: u64) -> Self {
-        Self {
-            key: key ^ data, // Recover original key
-            pv: bits::unpack_pv(data),
-            age: bits::unpack_age(data),
-            depth: bits::unpack_depth(data),
-            bound: bits::unpack_bound(data),
-            mov: bits::unpack_move(data),
-            eval: bits::unpack_eval(data),
-            value: bits::unpack_value(data),
-        }
-    }
-
-    /// Get whether this was a pv node.
-    pub const fn pv(self) -> bool {
-        self.pv
-    }
-
-    /// Get the depth.
-    pub const fn depth(self) -> Depth {
-        (self.depth as Depth) - TT_DEPTH_OFFSET
-    }
-
-    /// Get the bound.
-    pub const fn bound(self) -> Bound {
-        self.bound
-    }
-
-    /// Get the move.
-    pub const fn mov(self) -> Move {
+    pub const fn mov(&self) -> Move {
         self.mov
     }
 
-    /// Get static evaluation.
-    pub const fn eval(self) -> Eval {
+    pub const fn eval(&self) -> Eval {
         Eval(self.eval as i32)
     }
 
-    /// Get the search score.
-    pub const fn value(self, ply: usize) -> Eval {
-        Eval(self.value as i32).from_corrected(ply)
+    pub const fn value(&self, ply: usize) -> Eval {
+        Eval(self.value as i32).from_tb_score(ply)
+    }
+
+    pub const fn depth(&self) -> Depth {
+        (self.depth as Depth) - TT_DEPTH_OFFSET
+    }
+
+    pub const fn bound(&self) -> Bound {
+        self.metadata.bound()
+    }
+
+    pub const fn pv(&self) -> bool {
+        self.metadata.pv()
+    }
+
+    pub const fn is_occupied(&self) -> bool {
+        self.depth > 0
+    }
+
+    pub const fn key_matches(&self, hash: Hash) -> bool {
+        self.key == get_low_16(hash)
+    }
+
+    /// Check whether this entry is occupied and matches the stored partial key.
+    pub const fn matches(&self, hash: Hash) -> bool {
+        self.is_occupied() && self.key_matches(hash)
+    }
+
+    /// Age distance from the current table generation, modulo the age cycle.
+    pub const fn relative_age(&self, tt_age: u8) -> i32 {
+        ((TT_AGE_CYCLE + tt_age - self.metadata.age()) & TT_AGE_MASK) as i32
+    }
+
+    /// Replacement priority. Lower values are replaced first.
+    pub const fn relative_quality(&self, tt_age: u8) -> i32 {
+        self.depth as i32 - TT_AGE_MUL * self.relative_age(tt_age)
     }
 }
 
-impl CompressedEntry {
-    /// Read the entry, with hash verification.
-    pub fn read(&self, hash: Hash) -> Option<TTEntry> {
-        let key = self.key.load(Ordering::Relaxed);
-        let data = self.data.load(Ordering::Relaxed);
+/// One cache-line-sized bucket of TT entries.
+#[derive(Clone, Copy, Debug, Default)]
+#[repr(C, align(32))]
+pub struct TTBucket {
+    pub entries: [TTEntry; TT_BUCKET_ENTRIES], // 30 bytes
+    hash: u16,                                 // 2 bytes
+}
 
-        // Verify the entry matches the expected hash
-        if key ^ hash.key == data { Some(TTEntry::from_compressed(key, data)) } else { None }
+impl TTBucket {
+    const fn checksum(&self) -> u16 {
+        self.entries[0].key ^ self.entries[1].key ^ self.entries[2].key
     }
 
-    /// Read without verification - only use when known valid.
-    pub fn read_unchecked(&self) -> TTEntry {
-        let key = self.key.load(Ordering::Relaxed);
-        let data = self.data.load(Ordering::Relaxed);
-        TTEntry::from_compressed(key, data)
+    pub const fn update_checksum(&mut self) {
+        self.hash = self.checksum();
     }
 
-    /// Write an entry to the table.
-    pub fn write(&self, entry: TTEntry) {
-        let (key, data) = entry.compress();
-        self.key.store(key, Ordering::Relaxed);
-        self.data.store(data, Ordering::Relaxed);
+    pub const fn checksum_matches(&self) -> bool {
+        self.hash == self.checksum()
+    }
+}
+
+/// Atomic bucket storage.
+#[derive(Debug, Default)]
+#[repr(C, align(32))]
+pub struct AtomicTTBucket {
+    data: [AtomicU64; TT_BUCKET_WORDS], // 32 bytes
+}
+
+const _: () = assert!(std::mem::size_of::<TTBucket>() == 32);
+const _: () = assert!(std::mem::size_of::<AtomicTTBucket>() == 32);
+
+impl AtomicTTBucket {
+    pub fn load(&self) -> TTBucket {
+        let raw: [u64; TT_BUCKET_WORDS] = std::array::from_fn(|i| self.data[i].load(Ordering::Relaxed));
+        unsafe { std::mem::transmute(raw) }
     }
 
-    /// Check if this entry is occupied.
-    pub fn is_occupied(&self) -> bool {
-        self.key.load(Ordering::Relaxed) != 0
+    pub fn store(&self, bucket: TTBucket) {
+        let raw: [u64; TT_BUCKET_WORDS] = unsafe { std::mem::transmute(bucket) };
+        for (slot, word) in self.data.iter().zip(raw) {
+            slot.store(word, Ordering::Relaxed);
+        }
     }
 }

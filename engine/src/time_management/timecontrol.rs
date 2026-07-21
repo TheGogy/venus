@@ -75,11 +75,12 @@ fn parse<T: FromStr>(tokens: &mut SplitWhitespace) -> Result<T, &'static str> {
 
 /// Get the optimal time values.
 impl TimeControl {
-    const OVERHEAD: u64 = 32;
+    /// Overhead added per move (ms).
+    const OVERHEAD: u64 = 15;
 
     /// Get the optimal and maximum time from the time control.
     #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    pub fn opt_max_time(self, stm: Color) -> (Duration, Duration) {
+    pub fn get_time_bounds(self, stm: Color) -> (Duration, Duration) {
         match self {
             // These controls do not have maximum time.
             Self::Infinite | Self::FixedNodes(_) | Self::FixedDepth(_) => (Duration::ZERO, Duration::ZERO),
@@ -102,24 +103,24 @@ impl TimeControl {
                     inc = 0;
                 }
 
-                let (opt, max) = if let Some(mtg) = movestogo {
+                let (soft, hard) = if let Some(mtg) = movestogo {
                     let scale = 0.7 / (mtg.min(50) as f64);
                     let eight = 0.8 * time as f64;
 
-                    let opt = (scale * time as f64).min(eight);
-                    let max = (5.0 * opt).min(eight);
+                    let soft = (scale * time as f64).min(eight);
+                    let hard = (5.0 * soft).min(eight);
 
-                    (opt, max)
+                    (soft, hard)
                 } else {
                     let total = ((time / 20) + (inc * 3 / 4)) as f64;
 
-                    let opt = total * 0.6;
-                    let max = (2.0 * total).min(time as f64);
+                    let soft = total * 0.6;
+                    let hard = (2.0 * total).min(time as f64);
 
-                    (opt, max)
+                    (soft, hard)
                 };
 
-                (Duration::from_millis(opt as u64), Duration::from_millis(max as u64))
+                (Duration::from_millis(soft as u64), Duration::from_millis(hard as u64))
             }
         }
     }

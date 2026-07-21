@@ -1,9 +1,9 @@
+use std::fmt::Write;
+
 use chess::{
     defs::MAX_PLY,
     types::{castling::CastlingMask, moves::Move},
 };
-
-use std::fmt::Write;
 
 /// This allows us to keep track of the current PV.
 #[derive(Clone, Debug)]

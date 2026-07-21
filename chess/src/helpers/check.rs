@@ -32,14 +32,14 @@ impl Board {
         let pt = self.pc_at(src).pt();
 
         // Direct check.
-        if (self.king_line(pt) & dbb).non_empty() {
+        if !(self.king_line(pt) & dbb).is_empty() {
             return true;
         }
 
         // Discovered check.
         // If we are in line with the enemy king, check if there is a sliding piece giving check,
         // and that we have moved out of the way.
-        if ((bishop_atk(opp_ksq, occ) & self.diag_bb(stm)).non_empty() || (rook_atk(opp_ksq, occ) & self.orth_bb(stm)).non_empty())
+        if (!(bishop_atk(opp_ksq, occ) & self.diag_bb(stm)).is_empty() || !(rook_atk(opp_ksq, occ) & self.orth_bb(stm)).is_empty())
             && (between(opp_ksq, src) & between(opp_ksq, dst)).is_empty()
         {
             return true;
@@ -52,7 +52,7 @@ impl Board {
             MoveFlag::EnPassant => {
                 let epsq = dst.forward(opp).bb();
                 let ep_occ = occ ^ epsq;
-                (bishop_atk(opp_ksq, ep_occ) & self.diag_bb(stm)).non_empty() || (rook_atk(opp_ksq, ep_occ) & self.orth_bb(stm)).non_empty()
+                !(bishop_atk(opp_ksq, ep_occ) & self.diag_bb(stm)).is_empty() || !(rook_atk(opp_ksq, ep_occ) & self.orth_bb(stm)).is_empty()
             }
 
             // Castling.
@@ -61,13 +61,13 @@ impl Board {
             MoveFlag::Castling => {
                 let (_, rt) = self.castlingmask.rook_src_dst(dst);
                 let line = between(opp_ksq, rt);
-                line.non_empty() && (line & occ).is_empty()
+                !line.is_empty() && (line & occ).is_empty()
             }
 
             // Promotions.
             // We have already checked the normal promotion stuff,
             // we just need to see if the piece we are promoting to puts the king in check.
-            f if f.is_promo() => (atk_by_type(f.get_promo(), dst, occ) & opp_kbb).non_empty(),
+            f if f.is_promo() => !(atk_by_type(f.get_promo(), dst, occ) & opp_kbb).is_empty(),
 
             // We have done all the checks for other move types already: they do not give check.
             _ => false,

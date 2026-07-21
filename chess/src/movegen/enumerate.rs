@@ -104,7 +104,7 @@ impl Board {
     }
 
     /// Add all pawn moves.
-    fn enumerate_pawn<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_pawn<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -122,7 +122,7 @@ impl Board {
 
         // Promotions.
         let promo = pawns & Bitboard::PR[self.stm.idx()] & !orth;
-        if promo.non_empty() {
+        if !promo.is_empty() {
             if MG::NOISY {
                 // Promotions with capture.
                 // We can move within pinmask as long as we stay within pinmask.
@@ -170,7 +170,7 @@ impl Board {
 
             for src in epbb {
                 // Our pawn is pinned but taking enemy pawn makes us leave pinmask.
-                if (src.bb() & diag).non_empty() && (self.state.epsq.bb() & diag).is_empty() {
+                if !(src.bb() & diag).is_empty() && (self.state.epsq.bb() & diag).is_empty() {
                     continue;
                 }
 
@@ -225,7 +225,7 @@ impl Board {
     /// Add all castling moves.
     /// This should only be called when we are enumerating quiet moves
     /// and are not in check.
-    fn enumerate_castling<F>(&self, receiver: &mut F)
+    pub fn enumerate_castling<F>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -248,7 +248,7 @@ impl Board {
     }
 
     /// Add all king moves.
-    fn enumerate_king<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_king<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -257,7 +257,7 @@ impl Board {
     }
 
     /// Add all knight moves.
-    fn enumerate_knight<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_knight<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -272,7 +272,7 @@ impl Board {
     }
 
     /// Add all diagonal slider moves.
-    fn enumerate_diag<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_diag<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {
@@ -295,7 +295,7 @@ impl Board {
     }
 
     // Add all orthogonal slider moves.
-    fn enumerate_orth<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
+    pub fn enumerate_orth<F, MG: MgType, const CHECK: bool>(&self, receiver: &mut F)
     where
         F: FnMut(Move),
     {

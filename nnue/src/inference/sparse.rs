@@ -55,8 +55,7 @@ impl Default for SparseMat {
 impl SparseMat {
     pub fn update(&mut self, x: simd::I32Vec, y: simd::I32Vec) {
         unsafe {
-            let mask =
-                simd::Mask32::from(simd::nonzero_mask_i32(x)) | simd::Mask32::from(simd::nonzero_mask_i32(y)) << simd::CHUNK_SIZE_I32;
+            let mask = simd::nonzero_mask_i32(x) | simd::nonzero_mask_i32(y) << simd::CHUNK_SIZE_I32;
 
             let iptr = self.indices.as_mut_ptr();
 

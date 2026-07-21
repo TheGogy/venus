@@ -10,8 +10,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn write_lmr_table() -> Result<(), Box<dyn Error>> {
-    const LMR_BASE: f32 = 887.0 / 1024.0;
-    const LMR_MULT: f32 = 2003.0 / 1024.0;
+    const LMR_BASE: f32 = 0.8662109;
+    const LMR_MULT: f32 = 1.9560547;
 
     let mut lmr_table = [[0; 64]; 64];
 

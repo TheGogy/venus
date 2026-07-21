@@ -98,11 +98,11 @@ impl Board {
             let mut own_atk = atk & self.c_bb(stm);
 
             // Prune pinned pieces.
-            if (occ & self.c_bb(!stm) & self.state.pin_diag[stm.idx()]).non_empty() {
+            if !(occ & self.c_bb(!stm) & self.state.pin_diag[stm.idx()]).is_empty() {
                 own_atk &= !diag_pinned[stm.idx()];
             }
 
-            if (occ & self.c_bb(!stm) & self.state.pin_orth[stm.idx()]).non_empty() {
+            if !(occ & self.c_bb(!stm) & self.state.pin_orth[stm.idx()]).is_empty() {
                 own_atk &= !orth_pinned[stm.idx()];
             }
 
@@ -130,7 +130,7 @@ impl Board {
             if balance >= 0 {
                 // If our final recapturing piece is a king, and the opponent has another attacker,
                 // then a positive balance should mean a loss.
-                if pt == Piece::King && atk & self.c_bb(stm) != Bitboard::EMPTY {
+                if pt == Piece::King && !(atk & self.c_bb(stm)).is_empty() {
                     return self.stm == stm;
                 }
 
@@ -157,10 +157,10 @@ impl Board {
         let my_occ = self.c_bb(c);
 
         for p in Piece::iter() {
-            let s = atk & self.pc_bb(c, p) & my_occ;
+            let attackers_bb = atk & self.pc_bb(c, p) & my_occ;
 
-            if s.non_empty() {
-                return (CPiece::make(c, p), s.lsb());
+            if !attackers_bb.is_empty() {
+                return (CPiece::make(c, p), attackers_bb.lsb());
             }
         }
 

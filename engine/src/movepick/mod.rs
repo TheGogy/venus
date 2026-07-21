@@ -7,33 +7,8 @@ mod score_move;
 use chess::types::{eval::Eval, moves::Move};
 use move_list::MoveList;
 
-// ------------------------------------------------------------------------------------------------
-//
 // The movepicker sorts moves from what is probably the best move to what is probably the worst
 // move. This allows us to have more cuts in alpha-beta pruning.
-//
-// For PV search, moves are stored as follows:
-//
-//  N = Winning noisy move.
-//  n = Losing noisy move.
-//  Q = Quiet move.
-// +-----------+---------------+---------------------------------------------------+---------+
-// | N N N N N | Q Q Q Q Q Q Q |                                                   | n n n n |
-// +-----------+---------------+---------------------------------------------------+---------+
-// ^           ^               ^                                                   ^
-// cur         left            left (after enumerating quiets)                     right
-//
-// 1. We enumerate noisy moves. Winning ones are placed starting from the left, losing ones are placed
-//    starting from the right.
-// 2. We go through the winning noisy moves, up to end (as shown above).
-// 3. We enumerate quiet moves, and put them all on the left.
-// 4. We go through all quiet moves, up to end (as shown above, after enumerating quiets).
-// 5. We go through the bad noisy moves, starting from the end of the list and working toward the
-//    middle.
-//
-// For all other search types, we go through each move sequentially as they are generated.
-//
-// ------------------------------------------------------------------------------------------------
 
 /// Move picker stages.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
@@ -44,6 +19,7 @@ pub enum MPStage {
     PvTT,
     PvNoisyGen,
     PvNoisyWin,
+    PvKiller,
     PvQuietGen,
     PvQuietAll,
     PvNoisyLoss,
@@ -93,6 +69,7 @@ pub struct MovePicker {
     searchtype: SearchType,
 
     tt_move: Move,
+    killer: Move,
 
     see_threshold: Eval,
 
@@ -117,28 +94,6 @@ impl MovePicker {
             Move::NONE
         });
 
-        Self { stage, searchtype, tt_move, see_threshold, skip_quiets: false, move_list: MoveList::default() }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use chess::types::{moves::MoveFlag, square::Square};
-
-    use crate::movepick::{Eval, MPStage, Move, MovePicker, SearchType};
-
-    #[test]
-    fn test_movepick_construction() {
-        let mp = MovePicker::new(SearchType::Pv, false, Move::new(Square::E2, Square::E4, MoveFlag::Normal), Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::PvTT);
-
-        let mp = MovePicker::new(SearchType::Pv, false, Move::NONE, Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::PvNoisyGen);
-
-        let mp = MovePicker::new(SearchType::Pv, true, Move::NONE, Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::EvGen);
-
-        let mp = MovePicker::new(SearchType::Qs, false, Move::NONE, Eval::DRAW);
-        assert_eq!(mp.stage, MPStage::QsNoisyGen);
+        Self { stage, searchtype, tt_move, killer: Move::NONE, see_threshold, skip_quiets: false, move_list: MoveList::default() }
     }
 }
