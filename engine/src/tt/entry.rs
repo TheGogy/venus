@@ -16,8 +16,8 @@ pub const TT_DEPTH_OFFSET: Depth = 3;
 pub const TT_BUCKET_ENTRIES: usize = 3;
 
 /// Size of each TT bucket.
-pub const TT_BUCKET_SIZE: usize = std::mem::size_of::<TTBucket>();
-const TT_BUCKET_WORDS: usize = TT_BUCKET_SIZE / std::mem::size_of::<u64>();
+pub const TT_BUCKET_SIZE: usize = size_of::<TTBucket>();
+const TT_BUCKET_WORDS: usize = TT_BUCKET_SIZE / size_of::<u64>();
 
 pub const TT_AGE_CYCLE: u8 = 1 << 5;
 pub const TT_AGE_MASK: u8 = TT_AGE_CYCLE - 1;
@@ -61,7 +61,7 @@ impl Bound {
 ///
 /// Bits:
 /// - 0..=1: bound
-/// - 2: PV flag
+/// - 2:     PV flag
 /// - 3..=7: generation age
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TTMetadata(u8);
@@ -96,7 +96,7 @@ pub struct TTEntry {
     pub metadata: TTMetadata, // 1 byte
 }
 
-const _: () = assert!(std::mem::size_of::<TTEntry>() == 10);
+const _: () = assert!(size_of::<TTEntry>() == 10);
 
 impl TTEntry {
     pub const fn mov(&self) -> Move {
@@ -176,8 +176,8 @@ pub struct AtomicTTBucket {
     data: [AtomicU64; TT_BUCKET_WORDS], // 32 bytes
 }
 
-const _: () = assert!(std::mem::size_of::<TTBucket>() == 32);
-const _: () = assert!(std::mem::size_of::<AtomicTTBucket>() == 32);
+const _: () = assert!(size_of::<TTBucket>() == 32);
+const _: () = assert!(size_of::<AtomicTTBucket>() == 32);
 
 impl AtomicTTBucket {
     pub fn load(&self) -> TTBucket {

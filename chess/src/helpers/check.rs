@@ -66,7 +66,7 @@ impl Board {
 
             // Promotions.
             // We have already checked the normal promotion stuff,
-            // we just need to see if the piece we are promoting to puts the king in check.
+            // we just need to see if the piece we are promoting puts the king in check.
             f if f.is_promo() => !(atk_by_type(f.get_promo(), dst, occ) & opp_kbb).is_empty(),
 
             // We have done all the checks for other move types already: they do not give check.

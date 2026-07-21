@@ -26,7 +26,7 @@ impl Not for Color {
     type Output = Self;
 
     fn not(self) -> Self {
-        Self::from_raw(1 ^ self as u8)
+        Self::from_raw(1 ^ self.to_raw())
     }
 }
 

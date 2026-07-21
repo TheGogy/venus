@@ -10,8 +10,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn write_lmr_table() -> Result<(), Box<dyn Error>> {
-    const LMR_BASE: f32 = 0.8662109;
-    const LMR_MULT: f32 = 1.9560547;
+    const LMR_BASE: f32 = 0.95;
+    const LMR_MULT: f32 = 2.00;
 
     let mut lmr_table = [[0; 64]; 64];
 
@@ -21,7 +21,7 @@ fn write_lmr_table() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let lmr = unsafe { std::slice::from_raw_parts::<u8>(lmr_table.as_ptr().cast::<u8>(), 64 * 64 * std::mem::size_of::<i32>()) };
+    let lmr = unsafe { std::slice::from_raw_parts::<u8>(lmr_table.as_ptr().cast::<u8>(), 64 * 64 * size_of::<i32>()) };
 
     // Write to file in the output directory.
     let out_dir = env::var("OUT_DIR")?;
@@ -38,10 +38,9 @@ fn setup_fathom() -> Result<(), Box<dyn Error>> {
         .header("./external/Fathom/src/tbprobe.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .layout_tests(false)
-        .generate()
-        .unwrap();
+        .generate()?;
 
-    binds.write_to_file("./src/tb/binds.rs").unwrap();
+    binds.write_to_file("./src/tb/binds.rs")?;
 
     // Compile Fathom.
     let cc = &mut cc::Build::new();

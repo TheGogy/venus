@@ -1,5 +1,5 @@
 #[cfg(feature = "nnz_logging")]
-use std::cell::RefCell;
+use std::{cell::RefCell, fs::File, io::Write};
 
 use utils::memory::Align64;
 
@@ -130,12 +130,19 @@ pub struct NNZPermTracker {
 
     pub count: usize,
     pub total: usize,
+
+    pub dump_file: File,
 }
 
 #[cfg(feature = "nnz_logging")]
 impl Default for NNZPermTracker {
     fn default() -> Self {
-        Self { count: 0, total: 0, coactivations: vec![[0u64; PAIRWISE_LEN]; PAIRWISE_LEN].into_boxed_slice().try_into().unwrap() }
+        Self {
+            count: 0,
+            total: 0,
+            coactivations: vec![[0u64; PAIRWISE_LEN]; PAIRWISE_LEN].into_boxed_slice().try_into().unwrap(),
+            dump_file: File::create("acts.bin").unwrap(),
+        }
     }
 }
 
@@ -144,9 +151,11 @@ impl NNZPermTracker {
     /// Track the current nonzero indices.
     pub fn update(&mut self, ft_out: &Align64<[u8; L1_LEN]>, sparse_count: usize) {
         let mut counts = [0u64; PAIRWISE_LEN];
+        let mut rec = [0u8; PAIRWISE_LEN];
 
         for (i, &act) in ft_out.iter().enumerate() {
             counts[i % PAIRWISE_LEN] += (act != 0) as u64;
+            rec[i % PAIRWISE_LEN] += (act != 0) as u8;
         }
 
         for i in 0..PAIRWISE_LEN {
@@ -157,6 +166,7 @@ impl NNZPermTracker {
             }
         }
 
+        self.dump_file.write_all(&rec).unwrap();
         self.count += sparse_count;
         self.total += L1_LEN / 4;
     }
@@ -171,6 +181,9 @@ impl NNZPermTracker {
             println!("Indices permuted! Coactivations will be incorrect.");
             return Ok(());
         }
+
+        println!("Writing full activations to acts.bin...");
+        self.dump_file.flush().unwrap();
 
         println!("Writing nnz logs to coactivations.txt...");
         std::fs::write("coactivations.txt", format!("{:?}", self.coactivations))

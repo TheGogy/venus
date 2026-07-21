@@ -31,7 +31,11 @@ pub struct NNUE {
 }
 
 impl Default for NNUE {
+    #[allow(unreachable_code)]
     fn default() -> Self {
+        #[cfg(not(feature = "embed"))]
+        panic!("NNUE not embedded!!!!! Must use `embed` features and define EVALFILE");
+
         let nn = get_permuted_nnue();
         Self { cache: FinnyTable::from_nn(nn), stack: boxed_zeroed(), dp_stack: [DirtyPieces::None; MAX_ACCS], idx: 0, nn }
     }

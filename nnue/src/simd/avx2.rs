@@ -9,11 +9,11 @@ pub mod simd {
 
     pub const ARCH_NAME: &str = "avx2";
 
-    pub const CHUNK_SIZE_U8: usize = std::mem::size_of::<U8Vec>() / std::mem::size_of::<u8>();
-    pub const CHUNK_SIZE_I16: usize = std::mem::size_of::<I16Vec>() / std::mem::size_of::<i16>();
-    pub const CHUNK_SIZE_I32: usize = std::mem::size_of::<I32Vec>() / std::mem::size_of::<i32>();
-    pub const CHUNK_SIZE_F32: usize = std::mem::size_of::<F32Vec>() / std::mem::size_of::<f32>();
-    pub const NB_PACKUS_REGS: usize = std::mem::size_of::<I32Vec>() / 8;
+    pub const CHUNK_SIZE_U8: usize = size_of::<U8Vec>() / size_of::<u8>();
+    pub const CHUNK_SIZE_I16: usize = size_of::<I16Vec>() / size_of::<i16>();
+    pub const CHUNK_SIZE_I32: usize = size_of::<I32Vec>() / size_of::<i32>();
+    pub const CHUNK_SIZE_F32: usize = size_of::<F32Vec>() / size_of::<f32>();
+    pub const NB_PACKUS_REGS: usize = size_of::<I32Vec>() / 8;
 
     // | 0  2 | 4  6 |
     // | 1  3 | 5  7 |
@@ -36,43 +36,43 @@ pub mod simd {
 
     /// Loads a vector in directly from the values at the given pointer.
     pub fn from_ptr_i8(ptr: *const i8) -> I8Vec {
-        debug_assert!((ptr as usize).is_multiple_of(std::mem::align_of::<I8Vec>()));
+        debug_assert!((ptr as usize).is_multiple_of(align_of::<I8Vec>()));
         unsafe { _mm256_load_si256(ptr.cast()) }
     }
 
     /// Loads a vector in directly from the values at the given pointer.
     pub fn from_ptr_i16(ptr: *const i16) -> I16Vec {
-        debug_assert!((ptr as usize).is_multiple_of(std::mem::align_of::<I16Vec>()));
+        debug_assert!((ptr as usize).is_multiple_of(align_of::<I16Vec>()));
         unsafe { _mm256_load_si256(ptr.cast()) }
     }
 
     /// Loads a vector in directly from the values at the given pointer.
     pub fn from_ptr_i32(ptr: *const i32) -> I32Vec {
-        debug_assert!((ptr as usize).is_multiple_of(std::mem::align_of::<I32Vec>()));
+        debug_assert!((ptr as usize).is_multiple_of(align_of::<I32Vec>()));
         unsafe { _mm256_load_si256(ptr.cast()) }
     }
 
     /// Loads a vector in directly from the values at the given pointer.
     pub fn from_ptr_f32(ptr: *const f32) -> F32Vec {
-        debug_assert!((ptr as usize).is_multiple_of(std::mem::align_of::<F32Vec>()));
+        debug_assert!((ptr as usize).is_multiple_of(align_of::<F32Vec>()));
         unsafe { _mm256_load_ps(ptr.cast()) }
     }
 
     /// Stores a vector at the given pointer.
     pub fn to_ptr_u8(dst: *mut u8, data: U8Vec) {
-        debug_assert!((dst as usize).is_multiple_of(std::mem::align_of::<U8Vec>()));
+        debug_assert!((dst as usize).is_multiple_of(align_of::<U8Vec>()));
         unsafe { _mm256_store_si256(dst.cast(), data) }
     }
 
     /// Stores a vector at the given pointer.
     pub fn to_ptr_i32(dst: *mut i32, data: I32Vec) {
-        debug_assert!((dst as usize).is_multiple_of(std::mem::align_of::<I32Vec>()));
+        debug_assert!((dst as usize).is_multiple_of(align_of::<I32Vec>()));
         unsafe { _mm256_store_si256(dst.cast(), data) }
     }
 
     /// Stores a vector at the given pointer.
     pub fn to_ptr_f32(dst: *mut f32, data: F32Vec) {
-        debug_assert!((dst as usize).is_multiple_of(std::mem::align_of::<F32Vec>()));
+        debug_assert!((dst as usize).is_multiple_of(align_of::<F32Vec>()));
         unsafe { _mm256_store_ps(dst.cast(), data) }
     }
 

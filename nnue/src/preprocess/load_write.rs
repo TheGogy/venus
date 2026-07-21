@@ -17,7 +17,7 @@ pub trait LoadWrite: Sized {
     fn load_from_file(path: &Path) -> Result<Box<Self>> {
         let mut file = File::open(path)?;
 
-        let expected = std::mem::size_of::<Self>();
+        let expected = size_of::<Self>();
         let actual = file.metadata()?.len();
 
         if (expected as u64) != actual {
@@ -41,7 +41,7 @@ pub trait LoadWrite: Sized {
     ///     Errors when the file cannot be written to.
     fn write_to_file(&self, path: &Path) -> Result<()> {
         let mut file = File::create(path)?;
-        let len = std::mem::size_of::<Self>();
+        let len = size_of::<Self>();
 
         unsafe {
             let buf = std::slice::from_raw_parts(std::ptr::from_ref::<Self>(self).cast::<u8>(), len);

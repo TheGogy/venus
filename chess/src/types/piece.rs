@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{impl_from_type, types::color::Color};
 
 /// Represents a piece, and is ordered by increasing value.
@@ -51,22 +53,28 @@ impl Piece {
     }
 }
 
+impl fmt::Display for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_char())
+    }
+}
+
 impl CPiece {
     const UCI_CHAR: &str = "PpNnBbRrQqKk ";
 
     /// The color of this [`CPiece`].
     pub const fn color(self) -> Color {
-        Color::from_raw(self as u8 & 1)
+        Color::from_raw(self.to_raw() & 1)
     }
 
     /// The type of this [`CPiece`].
     pub const fn pt(self) -> Piece {
-        Piece::from_raw(self as u8 >> 1)
+        Piece::from_raw(self.to_raw() >> 1)
     }
 
     /// Create a [`CPiece`] from a [`Color`] and a [`Piece`].
     pub const fn make(c: Color, p: Piece) -> Self {
-        Self::from_raw(((p as u8) << 1) + c as u8)
+        Self::from_raw(((p.to_raw()) << 1) + c.to_raw())
     }
 
     /// Iterate over all [`CPiece`]s.
@@ -77,6 +85,12 @@ impl CPiece {
     /// Get the UCI character for this [`CPiece`].
     pub fn to_char(self) -> char {
         Self::UCI_CHAR.chars().nth(self as usize).unwrap_or('?')
+    }
+}
+
+impl fmt::Display for CPiece {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_char())
     }
 }
 

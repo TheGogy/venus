@@ -36,7 +36,7 @@ impl_from_type! {
 impl Square {
     /// Make a square from a rank and file.
     pub const fn make(r: Rank, f: File) -> Self {
-        Self::from_raw(((r as u8) << 3) + f as u8)
+        Self::from_raw(((r.to_raw()) << 3) + f.to_raw())
     }
 
     /// Get a bitboard with only this square set.
@@ -46,12 +46,12 @@ impl Square {
 
     /// Get the file the square is on.
     pub const fn file(self) -> File {
-        File::from_raw(self as u8 & 0x7)
+        File::from_raw(self.to_raw() & 0x7)
     }
 
     /// Get the rank the square is on.
     pub const fn rank(self) -> Rank {
-        Rank::from_raw(self as u8 >> 3)
+        Rank::from_raw(self.to_raw() >> 3)
     }
 
     /// Gets the square relative to white's side.
@@ -65,29 +65,29 @@ impl Square {
     /// Moves the square forward by one relative to the side.
     pub const fn forward(self, c: Color) -> Self {
         match c {
-            Color::White => Self::from_raw(self as u8 + 8),
-            Color::Black => Self::from_raw(self as u8 - 8),
+            Color::White => Self::from_raw(self.to_raw() + 8),
+            Color::Black => Self::from_raw(self.to_raw() - 8),
         }
     }
 
     /// Gets the next square. (A1 -> H1 -> A8 -> H8).
     pub const fn next(self) -> Self {
-        Self::from_raw(self as u8 + 1)
+        Self::from_raw(self.to_raw() + 1)
     }
 
     /// Gets the previous square. (H8 -> A8 -> H1 -> A1).
     pub const fn prev(self) -> Self {
-        Self::from_raw(self as u8 - 1)
+        Self::from_raw(self.to_raw() - 1)
     }
 
     /// Flip horizontal.
     pub const fn fliph(self) -> Self {
-        Self::from_raw(self as u8 ^ 7)
+        Self::from_raw(self.to_raw() ^ 7)
     }
 
     /// Flip vertical.
     pub const fn flipv(self) -> Self {
-        Self::from_raw(self as u8 ^ 0o70)
+        Self::from_raw(self.to_raw() ^ 0o70)
     }
 
     /// Iterate over all squares.
@@ -124,8 +124,8 @@ impl FromStr for Square {
 /// Display a square.
 impl fmt::Display for Square {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let file = self.file() as u8;
-        let rank = self.rank() as u8;
+        let file = self.file().to_raw();
+        let rank = self.rank().to_raw();
         write!(f, "{}{}", (b'a' + file) as char, (b'1' + rank) as char)
     }
 }

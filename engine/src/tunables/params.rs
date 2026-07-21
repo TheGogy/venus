@@ -36,8 +36,8 @@ init_tunables! {
     asp_window_div:       i32 = 11400, 8000, 14000, 500;
     asp_window_base:      i32 = 5, 4, 10, 1;
 
-    asp_window_expansion_fail_high: f32 = 0.333, 0.1, 0.5, 0.05;
-    asp_window_expansion_fail_low: f32 = 0.333, 0.1, 0.5, 0.05;
+    asp_window_expansion_fail_high: f32 = 0.34687291, 0.1, 0.5, 0.05;
+    asp_window_expansion_fail_low: f32  = 0.32567887, 0.1, 0.5, 0.05;
 
     // History bonuses.
     hist_bonus_max:  i16 = 1567, 800, 3200, 100;
@@ -64,7 +64,7 @@ init_tunables! {
     pc_beta_base:          i32 = 143, 120, 200, 5;
     pc_beta_non_improving: i32 = 55, 30, 80, 4;
 
-    pc_lerp: f32 = 0.2, 0.1, 0.5, 0.05;
+    pc_lerp: f32 = 0.21256722, 0.1, 0.5, 0.05;
 
     // extensions.
     ext_d_min:  i16 = 8, 5, 10, 1;
@@ -72,15 +72,12 @@ init_tunables! {
     ext_double: i32 = 12, 7, 14, 1;
     ext_triple: i32 = 80, 50, 150, 20;
 
-    // Multi-cut.
-    multicut_lerp: f32 = 1.0, 0.0, 1.0, 0.05;
-
     // Late move reductions.
     lmr_m_min: usize = 2, 1, 4, 1;
 
     // Late move reduction table parameters.
-    lmr_base: f32 = 0.8662109, 0.5, 2.0, 0.1;
-    lmr_mult: f32 = 1.9560547, 1.5, 4.0, 0.1;
+    lmr_base: f32 = 0.95, 0.5, 2.0, 0.1;
+    lmr_mult: f32 = 2.00, 1.5, 4.0, 0.1;
 
     // Late move reduction scales.
     lmr_ttpv:      i32 = 983, -1024, 1024, 200;
@@ -108,7 +105,7 @@ init_tunables! {
     rfp_improving_margin: i32 = 59, 25, 85, 5;
     rfp_worsening_margin: i32 = 6, 5, 20, 1;
 
-    rfp_lerp: f32 = 0.2, 0.1, 0.7, 0.05;
+    rfp_lerp: f32 = 0.18960273, 0.1, 0.7, 0.05;
 
     // Null move pruning.
     nmp_d_min:            i16 = 3, 1, 4, 1;
@@ -146,7 +143,7 @@ init_tunables! {
     sp_qs_margin:    i32 = 33, 10, 50, 2;
 
     // SEE score for giving checks in movepicking.
-    mp_givecheck_see: i32 = -75, -150, 0, 5;
+    mp_givecheck_see: i32 = -20, -150, 0, 5;
 
     // Bonus for checks in movepicking.
     mp_gc_bonus: i32 = 10000, 6000, 14000, 300;
@@ -155,6 +152,6 @@ init_tunables! {
     mp_escapes_threat_bonus: i32 = 25, 10, 50, 2;
 
     // Qsearch beta cutoff lerps.
-    qs_stand_pat_beta_lerp: f32 = 0.5, 0.2, 0.7, 0.05;
-    qs_conservative_beta_lerp: f32 = 0.5, 0.2, 0.7, 0.05;
+    qs_stand_pat_beta_lerp: f32 = 0.51089960, 0.2, 0.7, 0.05;
+    qs_conservative_beta_lerp: f32 = 0.50773965, 0.2, 0.7, 0.05;
 }

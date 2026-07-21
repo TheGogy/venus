@@ -23,8 +23,13 @@ macro_rules! impl_from_type {
             /// Constructs the type from the inner primitive.
             /// Safety: caller guarantees this is within bounds.
             pub const fn from_raw(i: $inner) -> Self {
-                assert!(i <= $max);
+                assert!(i < $max);
                 unsafe { std::mem::transmute(i as $inner) }
+            }
+
+            pub const fn to_raw(self) -> $inner {
+                assert!((self as usize) < $max);
+                self as $inner
             }
         }
     };

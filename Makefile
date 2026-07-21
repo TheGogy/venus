@@ -4,17 +4,18 @@ EXE      ?= Venus
 ARCH     ?= native
 FEATURES ?=
 BUILDDIR := $(CURDIR)/build
-EVALFILE ?= $(CURDIR)/net.bin
-
-export EVALFILE
 
 ifeq ($(OS),Windows_NT)
 	NAME := $(EXE).exe
-    NNUE := $(file < network.txt)
+	NNUE := $(file < network.txt)
 else
 	NAME := $(EXE)
-    NNUE := $(shell cat "net.txt")
+	NNUE := $(shell cat "net.txt")
 endif
+
+DEFAULT_EVALFILE := $(CURDIR)/nn-$(NNUE).bin
+EVALFILE ?= $(DEFAULT_EVALFILE)
+export EVALFILE
 
 FEATURES_ARG := --features embed,$(FEATURES)
 
@@ -23,7 +24,7 @@ CARGO_BUILD := cargo rustc --release --bins $(FEATURES_ARG)
 
 .PHONY: build clean datagen release download-net
 
-build: net.bin
+build: $(EVALFILE)
 	$(info Using EVALFILE $(EVALFILE))
 	$(CARGO_BUILD) --package cli -- $(RUSTFLAGS_BASE) --emit link=$(NAME)
 
@@ -45,6 +46,6 @@ clean:
 	rm -f *.pdb
 	cargo clean
 
-net.bin:
+$(DEFAULT_EVALFILE):
 	$(info "Downloading NNUE $(NNUE)")
 	curl -L -o $@ https://github.com/TheGogy/venus-nets/releases/download/$(NNUE)/net.bin
