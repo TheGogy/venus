@@ -40,7 +40,7 @@ impl From<&Board> for MarlinFmt {
         let mut packed = Self {
             occ: occ.0,
             pcs: [0; 16],
-            stm_epsq: ((b.stm as u8) << 7) | (b.state.epsq as u8),
+            stm_epsq: ((b.stm.to_raw()) << 7) | (b.state.epsq.to_raw()),
             halfmoves: (b.state.halfmoves as u8).to_le(),
             fullmoves: (b.state.fullmoves as u16).to_le(),
             eval: 0,
@@ -56,11 +56,11 @@ impl From<&Board> for MarlinFmt {
             let mut marlin_pc = if pc.pt() == Piece::Rook && b.castlingmask.mask[s.idx()] != CastlingRights::NONE {
                 Self::UNMOVED_ROOK
             } else {
-                pc.pt() as u8
+                pc.pt().to_raw()
             };
 
             // furthest left bit set for color.
-            marlin_pc |= (pc.color() as u8) << 3;
+            marlin_pc |= (pc.color().to_raw()) << 3;
 
             packed.pcs[i / 2] |= marlin_pc << ((i % 2) * 4);
         }

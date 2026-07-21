@@ -28,7 +28,8 @@ impl HistEntry {
 
 /// Get the bonus and malus for history at a given depth.
 pub fn hist_delta(depth: Depth) -> (i16, i16) {
-    let bonus = hist_bonus_max().min(hist_bonus_mult() * depth - hist_bonus_base());
-    let malus = hist_malus_max().min(hist_malus_mult() * depth - hist_malus_base());
-    (bonus, malus)
+    let bonus = hist_bonus_max().min(hist_bonus_mult() * i32::from(depth) - hist_bonus_base());
+    let malus = hist_malus_max().min(hist_malus_mult() * i32::from(depth) - hist_malus_base());
+    // SAFETY: (bonus|malus)_max are both in i16 range.
+    (bonus as i16, malus as i16)
 }
