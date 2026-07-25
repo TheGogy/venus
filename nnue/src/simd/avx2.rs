@@ -1,5 +1,7 @@
 pub mod simd {
+    #[allow(clippy::wildcard_imports)]
     use std::arch::x86_64::*;
+
     pub type I8Vec = __m256i;
     pub type U8Vec = __m256i;
     pub type I16Vec = __m256i;
@@ -167,13 +169,13 @@ pub mod simd {
 
     /// Convert packed u8s -> i32s.
     /// No-op for x86 arch.
-    pub fn reinterpret_u8_i32(x: U8Vec) -> I32Vec {
+    pub const fn reinterpret_u8_i32(x: U8Vec) -> I32Vec {
         x
     }
 
     /// Convert packed i32s -> u8s.
     /// No-op for x86 arch.
-    pub fn reinterpret_i32_u8(x: I32Vec) -> U8Vec {
+    pub const fn reinterpret_i32_u8(x: I32Vec) -> U8Vec {
         x
     }
 }

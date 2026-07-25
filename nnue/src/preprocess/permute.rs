@@ -12,7 +12,6 @@ impl QuantNNUEData {
     ///
     /// Packus interleaves each block of 128 from a and b, but we want them
     /// to be consecutive - so we un-interleave them now so that they'll be properly concatenated.
-    #[allow(clippy::needless_range_loop)]
     #[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
     fn permute_packus(&self, out: &mut Box<NNUEData>) {
         const PACKUS_CHUNK: usize = 8;
@@ -38,15 +37,9 @@ impl QuantNNUEData {
         }
     }
 
-    /// Repermute the NNUE to a format helpful for SIMD.
-    #[allow(unreachable_code, unused_variables)]
-    pub fn permute(&self) -> Box<NNUEData> {
-        let mut out: Box<NNUEData> = boxed_zeroed();
-
-        #[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
-        self.permute_packus(&mut out);
-
-        #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
+    // No packus preprocessing if we don't use simd!
+    #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
+    fn permute_packus(&self, out: &mut Box<NNUEData>) {
         unsafe {
             std::ptr::copy_nonoverlapping(
                 self.ftw.as_ptr() as *const i16,
@@ -55,6 +48,14 @@ impl QuantNNUEData {
             );
             out.ftb.copy_from_slice(&self.ftb);
         }
+    }
+
+    /// Repermute the NNUE to a format helpful for SIMD.
+    #[allow(unreachable_code, unused_variables)]
+    pub fn permute(&self) -> Box<NNUEData> {
+        let mut out: Box<NNUEData> = boxed_zeroed();
+
+        self.permute_packus(&mut out);
 
         for b in 0..NB_OUTPUT_BUCKETS {
             // Transpose L1 weights.
