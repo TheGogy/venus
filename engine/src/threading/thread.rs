@@ -20,7 +20,10 @@ use crate::{
         noisyhist::NoisyHist,
         quiethist::QuietHist,
     },
-    threading::{pv::PVLine, stack::SearchStackEntry},
+    threading::{
+        pv::PVLine,
+        stack::{MAX_STACK_ENTRIES, SearchStackEntry},
+    },
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
     tunables::params::tunables::{hist_corr_other, hist_corr_pawn},
 };
@@ -40,7 +43,10 @@ pub struct Thread {
     pub eval: Eval,
     pub avg_eval: Eval,
     pub pv: PVLine,
-    pub stack: [SearchStackEntry; MAX_PLY],
+
+    // + 1 because we need to clear the next node
+    // for killer moves
+    pub stack: [SearchStackEntry; MAX_STACK_ENTRIES],
 
     // Histories.
     pub hist_quiet: QuietHist,
@@ -66,7 +72,7 @@ impl Thread {
             eval: Eval::DRAW,
             avg_eval: -Eval::INFINITY,
             pv: PVLine::default(),
-            stack: [SearchStackEntry::default(); MAX_PLY],
+            stack: [SearchStackEntry::default(); MAX_STACK_ENTRIES],
 
             hist_quiet: QuietHist::default(),
             hist_noisy: NoisyHist::default(),
