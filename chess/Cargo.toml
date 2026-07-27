@@ -8,7 +8,7 @@ authors = ["TheGogy"]
 ctor = "1.0.7"
 utils = { path = "../utils" }
 clap = { version = "4.6.1", features = ["derive"] }
-arrayvec = "0.7.6"
+arrayvec = "0.7.8"
 
 [lib]
 doctest = false

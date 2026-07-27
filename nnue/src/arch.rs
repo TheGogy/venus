@@ -20,9 +20,6 @@ pub const L1_DEQUANT: f32 = (1 << L1Q_SHIFT) as f32 / (FT_QUANT * FT_QUANT * L1_
 /// Whether to perform FT permutation.
 pub const USE_FTPERM: bool = true;
 
-/// Whether the unquantized output has a king bucket factorizer.
-pub const HAS_FACTORIZER: bool = true;
-
 /// Total input features.
 pub const FEATURES: usize = Color::NUM * Piece::NUM * Square::NUM;
 
@@ -96,7 +93,7 @@ pub struct QuantNNUEData {
 #[repr(C)]
 #[rustfmt::skip]
 pub struct RawNNUEData {
-    pub ftw:  [[f32; L1_LEN * FEATURES]; NB_INPUT_BUCKETS + (HAS_FACTORIZER as usize)],
+    pub ftw:  [[f32; L1_LEN * FEATURES]; NB_INPUT_BUCKETS + 1 /*factorizer*/],
     pub ftb:   [f32; L1_LEN],
     pub l1w: [[[f32; L2_LEN]; NB_OUTPUT_BUCKETS]; L1_LEN],
     pub l1b:  [[f32; L2_LEN]; NB_OUTPUT_BUCKETS],

@@ -37,6 +37,7 @@ impl std::str::FromStr for Position {
             Some("nolot9") => "r4r1k/4bppb/2n1p2p/p1n1P3/1p1p1BNP/3P1NP1/qP2QPB1/2RR2K1 w - - 0 1".parse()?,
             Some("tricky") => "3qk1b1/1p4r1/1n4r1/2P1b2B/p3N2p/P2Q3P/8/1R3R1K w - - 2 39".parse()?,
             Some("endgame") => "r7/6k1/1p6/2pp1p2/7Q/8/p1P2K1P/8 w - - 0 32".parse()?,
+            Some("seldepth_explosion") => "8/4k1p1/8/P6p/8/2P5/K7/8 w - - 0 63".parse()?,
 
             // FEN parsing.
             Some("fen") => {

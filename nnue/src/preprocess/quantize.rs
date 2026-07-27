@@ -2,9 +2,18 @@
 
 use utils::memory::boxed_zeroed;
 
-use crate::arch::{
-    FEATURES, FT_QUANT, HAS_FACTORIZER, L1_LEN, L1_QUANT, L2_LEN, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, QuantNNUEData, RawNNUEData,
-};
+use crate::arch::{FEATURES, FT_QUANT, L1_LEN, L1_QUANT, L2_LEN, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, QuantNNUEData, RawNNUEData};
+
+// Quantize a single value.
+fn quantize(v: f32, q: i32) -> i16 {
+    const B: f32 = 1.98;
+
+    if v.abs() > B {
+        println!("Value exceeds bounds!!! {v} >= {B}");
+    }
+
+    (v.clamp(-B, B) * q as f32).round() as i16
+}
 
 impl RawNNUEData {
     /// Quantize a network from Bullet and save it in a format that we can use for inference.
@@ -12,24 +21,27 @@ impl RawNNUEData {
         let mut out: Box<QuantNNUEData> = boxed_zeroed();
 
         // Quantize FT weights.
+        println!("Quantizing FT weights...");
         for bkt in 0..NB_INPUT_BUCKETS {
             for feat in 0..L1_LEN * FEATURES {
-                // Add in the feature factorizer if we're using it.
-                let v = if HAS_FACTORIZER { self.ftw[bkt + 1][feat] + self.ftw[0][feat] } else { self.ftw[bkt][feat] };
-                out.ftw[bkt * (L1_LEN * FEATURES) + feat] = (v * FT_QUANT as f32).round() as i16;
+                // Merge in factorizer.
+                let v = self.ftw[bkt + 1][feat] + self.ftw[0][feat];
+                out.ftw[bkt * (L1_LEN * FEATURES) + feat] = quantize(v, FT_QUANT);
             }
         }
 
         // Quantize FT biases.
+        println!("Quantizing FT biases...");
         for i in 0..L1_LEN {
-            out.ftb[i] = (self.ftb[i] * FT_QUANT as f32).round() as i16;
+            out.ftb[i] = quantize(self.ftb[i], FT_QUANT);
         }
 
         // Quantize L1 weights.
+        println!("Quantizing L1 biases...");
         for b in 0..NB_OUTPUT_BUCKETS {
             for i in 0..L1_LEN {
                 for j in 0..L2_LEN {
-                    out.l1w[i][b][j] = (self.l1w[i][b][j] * L1_QUANT as f32).round() as i8;
+                    out.l1w[i][b][j] = quantize(self.l1w[i][b][j], L1_QUANT) as i8;
                 }
             }
         }

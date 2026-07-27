@@ -33,8 +33,8 @@ impl FromStr for TimeControl {
             return Ok(Self::Infinite);
         }
 
-        let mut wtime:     Option<u64> = None;
-        let mut btime:     Option<u64> = None;
+        let mut wtime:     u64 = 0;
+        let mut btime:     u64 = 0;
         let mut winc:      Option<u64> = None;
         let mut binc:      Option<u64> = None;
         let mut movestogo: Option<u64> = None;
@@ -49,8 +49,8 @@ impl FromStr for TimeControl {
                 "movetime" => return Ok(Self::FixedTime(parse(&mut tokens)?)),
 
                 // Variable.
-                "wtime"     => wtime = Some(parse(&mut tokens)?),
-                "btime"     => btime = Some(parse(&mut tokens)?),
+                "wtime"     => wtime = parse(&mut tokens)?,
+                "btime"     => btime = parse(&mut tokens)?,
                 "winc"      => winc  = Some(parse(&mut tokens)?),
                 "binc"      => binc  = Some(parse(&mut tokens)?),
                 "movestogo" => movestogo = Some(parse(&mut tokens)?),
@@ -60,11 +60,7 @@ impl FromStr for TimeControl {
             }
         }
 
-        if let (Some(wtime), Some(btime)) = (wtime, btime) {
-            Ok(Self::Variable { wtime, btime, winc, binc, movestogo })
-        } else {
-            Err("Invalid time control!")
-        }
+        Ok(Self::Variable { wtime, btime, winc, binc, movestogo })
     }
 }
 
