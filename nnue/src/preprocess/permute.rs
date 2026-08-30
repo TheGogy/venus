@@ -1,19 +1,19 @@
-#[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
-use utils::memory::Align64;
-use utils::memory::boxed_zeroed;
+use utils::memory::{Align64, boxed_zeroed};
 
-use crate::arch::{EFF_L2_LEN, FEATURES, L1_LEN, L2_LEN, L3_LEN, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, NNUEData, QuantNNUEData};
-#[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
-use crate::simd::simd;
+use crate::{
+    arch::{EFF_L2_LEN, L1_LEN, L2_LEN, L3_LEN, NNUEData, QuantNNUEData},
+    features::NB_OUTPUT_BUCKETS,
+    simd,
+};
 
 impl QuantNNUEData {
     /// Helper function to permute ft weights/biases for packus.
-    /// Only used if we're going to be using manual SIMD.
     ///
     /// Packus interleaves each block of 128 from a and b, but we want them
     /// to be consecutive - so we un-interleave them now so that they'll be properly concatenated.
-    #[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
     fn permute_packus(&self, out: &mut Box<NNUEData>) {
+        use crate::features::psqt::{NB_INPUT_BUCKETS, PSQT_FEATURES};
+
         const PACKUS_CHUNK: usize = 8;
 
         let permute_chunk = |src: &[i16], dst: &mut Align64<[i16; L1_LEN]>, base: usize| {
@@ -25,33 +25,19 @@ impl QuantNNUEData {
         };
 
         // Permute feature transform weights.
-        for feat in 0..NB_INPUT_BUCKETS * FEATURES {
-            for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::NB_PACKUS_REGS) {
+        for feat in 0..NB_INPUT_BUCKETS * PSQT_FEATURES {
+            for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::PACKUS_REGS) {
                 permute_chunk(&self.ftw[feat * L1_LEN..], &mut out.ftw[feat], i * PACKUS_CHUNK);
             }
         }
 
         // Permute feature transform bias.
-        for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::NB_PACKUS_REGS) {
+        for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::PACKUS_REGS) {
             permute_chunk(&self.ftb, &mut out.ftb, i * PACKUS_CHUNK);
         }
     }
 
-    // No packus preprocessing if we don't use simd!
-    #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
-    fn permute_packus(&self, out: &mut Box<NNUEData>) {
-        unsafe {
-            std::ptr::copy_nonoverlapping(
-                self.ftw.as_ptr() as *const i16,
-                out.ftw.as_mut_ptr() as *mut i16,
-                L1_LEN * FEATURES * NB_INPUT_BUCKETS,
-            );
-            out.ftb.copy_from_slice(&self.ftb);
-        }
-    }
-
     /// Repermute the NNUE to a format helpful for SIMD.
-    #[allow(unreachable_code, unused_variables)]
     pub fn permute(&self) -> Box<NNUEData> {
         let mut out: Box<NNUEData> = boxed_zeroed();
 
@@ -59,20 +45,11 @@ impl QuantNNUEData {
 
         for b in 0..NB_OUTPUT_BUCKETS {
             // Transpose L1 weights.
-            #[cfg(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon"))]
             for i in (0..L1_LEN).step_by(4) {
                 for j in 0..L2_LEN {
                     for k in 0..4 {
                         out.l1w[b][i * L2_LEN + j * 4 + k] = self.l1w[i + k][b][j];
                     }
-                }
-            }
-
-            // Transpose L1 weights.
-            #[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
-            for i in 0..L1_LEN {
-                for j in 0..L2_LEN {
-                    out.l1w[b][i * L2_LEN + j] = self.l1w[i][b][j];
                 }
             }
 

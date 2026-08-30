@@ -79,6 +79,11 @@ impl Bitboard {
            | (file_edges & !square.file().bb().0),
         )
     }
+
+    /// Get a mask of all squares below the given square.
+    pub const fn below_mask(square: Square) -> Self {
+        Self((1u64 << square.to_raw()) - 1)
+    }
 }
 
 impl std::ops::Not for Bitboard {

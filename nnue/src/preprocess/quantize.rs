@@ -2,7 +2,13 @@
 
 use utils::memory::boxed_zeroed;
 
-use crate::arch::{FEATURES, FT_QUANT, L1_LEN, L1_QUANT, L2_LEN, NB_INPUT_BUCKETS, NB_OUTPUT_BUCKETS, QuantNNUEData, RawNNUEData};
+use crate::{
+    arch::{FT_QUANT, L1_LEN, L1_QUANT, L2_LEN, QuantNNUEData, RawNNUEData},
+    features::{
+        NB_OUTPUT_BUCKETS,
+        psqt::{NB_INPUT_BUCKETS, PSQT_FEATURES},
+    },
+};
 
 // Quantize a single value.
 fn quantize(v: f32, q: i32) -> i16 {
@@ -23,10 +29,10 @@ impl RawNNUEData {
         // Quantize FT weights.
         println!("Quantizing FT weights...");
         for bkt in 0..NB_INPUT_BUCKETS {
-            for feat in 0..L1_LEN * FEATURES {
+            for feat in 0..L1_LEN * PSQT_FEATURES {
                 // Merge in factorizer.
                 let v = self.ftw[bkt + 1][feat] + self.ftw[0][feat];
-                out.ftw[bkt * (L1_LEN * FEATURES) + feat] = quantize(v, FT_QUANT);
+                out.ftw[bkt * (L1_LEN * PSQT_FEATURES) + feat] = quantize(v, FT_QUANT);
             }
         }
 

@@ -1,6 +1,5 @@
 use crate::types::{
     board::{Board, BoardState},
-    dirtypiece::DirtyPieces,
     moves::{Move, MoveFlag},
     piece::{CPiece, Piece},
 };
@@ -9,7 +8,7 @@ use crate::types::{
 /// WARN: Assumes the move is legal in this position.
 impl Board {
     /// Make a move in the current position.
-    pub fn make_move(&mut self, m: Move) -> DirtyPieces {
+    pub fn make_move(&mut self, m: Move) {
         debug_assert!(!m.is_none());
 
         let flag = m.flag();
@@ -37,25 +36,22 @@ impl Board {
         state.hash.toggle_piece(pc, src);
 
         // Do parts of move that do not include moving the piece.
-        let dp = match flag {
+        match flag {
             // Normal move: increment halfmove clock.
             MoveFlag::Normal => {
                 if pc.pt() == Piece::Pawn {
                     state.halfmoves = 0;
                 }
-                DirtyPieces::Add1Sub1((pc, dst), (pc, src))
             }
 
             // Castle: move rook to castling square.
             MoveFlag::Castling => {
                 let (rf, rt) = self.castlingmask.rook_src_dst(dst);
                 let r = CPiece::make(self.stm, Piece::Rook);
-                let k = CPiece::make(self.stm, Piece::King);
                 self.pop_piece(rf);
                 self.set_piece(r, rt);
                 state.hash.toggle_piece(r, rf);
                 state.hash.toggle_piece(r, rt);
-                DirtyPieces::Add2Sub2((k, dst), (r, rt), (k, src), (r, rf))
             }
 
             // Double push: update epsq.
@@ -64,7 +60,6 @@ impl Board {
                 state.epsq = epsq;
                 state.hash.toggle_ep(epsq);
                 state.halfmoves = 0;
-                DirtyPieces::Add1Sub1((pc, dst), (pc, src))
             }
 
             // Capture: Remove piece at target square.
@@ -74,7 +69,6 @@ impl Board {
                 self.pop_piece(dst);
                 state.hash.toggle_piece(cap, dst);
                 state.halfmoves = 0;
-                DirtyPieces::Add1Sub2((pc, dst), (cap, dst), (pc, src))
             }
 
             // En passant: Remove ep captured piece.
@@ -85,29 +79,24 @@ impl Board {
                 self.pop_piece(epsq);
                 state.hash.toggle_piece(cap, epsq);
                 state.halfmoves = 0;
-                DirtyPieces::Add1Sub2((pc, dst), (cap, epsq), (pc, src))
             }
 
             // Regular promotion: set piece to promoted piece.
             MoveFlag::PromoN | MoveFlag::PromoB | MoveFlag::PromoR | MoveFlag::PromoQ => {
-                let stm_pawn = CPiece::make(self.stm, Piece::Pawn);
                 pc = CPiece::make(self.stm, flag.get_promo());
                 state.halfmoves = 0;
-                DirtyPieces::Add1Sub1((pc, dst), (stm_pawn, src))
             }
 
             // Capture promotion: remove piece from to square and set piece to promoted piece.
             MoveFlag::CPromoN | MoveFlag::CPromoB | MoveFlag::CPromoR | MoveFlag::CPromoQ => {
-                let stm_pawn = CPiece::make(self.stm, Piece::Pawn);
                 let cap = self.pc_at(dst);
                 state.cap = cap;
                 self.pop_piece(dst);
                 state.hash.toggle_piece(cap, dst);
                 pc = CPiece::make(self.stm, flag.get_promo());
                 state.halfmoves = 0;
-                DirtyPieces::Add1Sub2((pc, dst), (cap, dst), (stm_pawn, src))
             }
-        };
+        }
 
         // Zero out bits in castling mask
         state.hash.toggle_castling(state.castling);
@@ -128,8 +117,6 @@ impl Board {
         // Set current state and push old state to history.
         let old_state = std::mem::replace(&mut self.state, state);
         self.history.push(old_state);
-
-        dp
     }
 
     /// Undo a move on the board.

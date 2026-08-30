@@ -489,6 +489,7 @@ dependencies = [
 name = "nnue"
 version = "0.5.4"
 dependencies = [
+ "arrayvec",
  "chess",
  "clap",
  "utils",

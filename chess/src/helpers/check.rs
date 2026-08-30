@@ -1,6 +1,6 @@
 use crate::{
     tables::{
-        atk_by_type,
+        promo_atk_by_type,
         sliding_piece::{between, bishop_atk, rook_atk},
     },
     types::{
@@ -67,7 +67,7 @@ impl Board {
             // Promotions.
             // We have already checked the normal promotion stuff,
             // we just need to see if the piece we are promoting puts the king in check.
-            f if f.is_promo() => !(atk_by_type(f.get_promo(), dst, occ) & opp_kbb).is_empty(),
+            f if f.is_promo() => !(promo_atk_by_type(f.get_promo(), dst, occ) & opp_kbb).is_empty(),
 
             // We have done all the checks for other move types already: they do not give check.
             _ => false,

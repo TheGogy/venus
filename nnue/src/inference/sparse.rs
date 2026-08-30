@@ -1,3 +1,4 @@
+use std::mem::MaybeUninit;
 #[cfg(feature = "nnz_logging")]
 use std::{cell::RefCell, fs::File, io::Write};
 
@@ -5,124 +6,192 @@ use utils::memory::Align64;
 
 #[cfg(feature = "nnz_logging")]
 use crate::arch::USE_FTPERM;
-use crate::{arch::L1_LEN, simd::simd};
+use crate::{arch::L1_LEN, simd};
 
-#[repr(C, align(64))]
-struct NonZeroIndicies {
-    indicies: [[u16; 8]; 256],
-}
-
-impl NonZeroIndicies {
-    pub fn get_idxs(&self, byte: simd::Mask32) -> v128::U16Vec128 {
-        unsafe { v128::from_ptr_u16(self.indicies.as_ptr().add(byte as usize).cast()) }
-    }
-}
-
-#[allow(clippy::cast_possible_truncation)]
-const NNZ_OFFSETS: NonZeroIndicies = {
-    let mut table = [[0; 8]; 256];
-
-    let mut i = 0;
-    while i < 256 {
-        let mut j = i;
-        let mut k = 0;
-        while j != 0 {
-            table[i][k] = j.trailing_zeros() as u16;
-            j &= j - 1;
-            k += 1;
-        }
-        i += 1;
-    }
-
-    NonZeroIndicies { indicies: table }
-};
-
-const NNZ_PER_CHUNK: usize = simd::CHUNK_SIZE_I32 / 4;
-
+/// List of nonzero indices.
 pub struct SparseMat {
-    pub indices: Align64<[u16; L1_LEN / 4]>,
-    pub count: usize,
-
-    base: v128::U16Vec128,
+    indices: Align64<[MaybeUninit<u16>; L1_LEN / 4]>,
 }
 
 impl Default for SparseMat {
     fn default() -> Self {
-        Self { indices: Align64([0; L1_LEN / 4]), count: 0, base: v128::from_val_u16(0) }
+        Self { indices: Align64([MaybeUninit::uninit(); L1_LEN / 4]) }
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct NnzState {
+    pub count: usize,
+    base: nnz::Base,
+}
+
+impl Default for NnzState {
+    fn default() -> Self {
+        Self { count: 0, base: nnz::init() }
+    }
+}
+
+// `nnz::push` writes a whole vector of indices at a time, so the list has to divide evenly into
+// those chunks for the last write of a fully dense layer to land inside it.
+const _: () = assert!((L1_LEN / 4).is_multiple_of(nnz::STRIDE));
+
 impl SparseMat {
-    pub fn update(&mut self, x: simd::I32Vec, y: simd::I32Vec) {
+    /// Append the indices of the nonzero 4-byte groups of `x` and `y` to the index list.
+    pub fn update(&mut self, st: &mut NnzState, x: simd::I32Vec, y: simd::I32Vec) {
+        let mask = simd::nonzero_mask_i32(x) | simd::nonzero_mask_i32(y) << simd::I32_LANES;
+        unsafe { nnz::push(self.indices.as_mut_ptr().cast(), &mut st.count, &mut st.base, mask) }
+    }
+
+    /// # Safety
+    /// `c` must be less than the final [`NnzState::count`] reached while building the list.
+    pub unsafe fn index_for(&self, c: usize) -> usize {
+        unsafe { self.indices.get_unchecked(c).assume_init() as usize }
+    }
+}
+
+/// Turning a nonzero-lane mask into the list of lane indices it names.
+#[cfg(target_feature = "avx512vbmi2")]
+mod nnz {
+    #[allow(clippy::wildcard_imports)]
+    use std::arch::x86_64::*;
+
+    use crate::simd;
+
+    /// The lane index each `u16` slot would contribute, for the chunk currently being scanned.
+    pub type Base = __m512i;
+
+    /// How many lanes one [`push`] covers.
+    pub const STRIDE: usize = 2 * simd::I32_LANES;
+
+    #[rustfmt::skip]
+    pub fn init() -> Base {
         unsafe {
-            let mask = simd::nonzero_mask_i32(x) | simd::nonzero_mask_i32(y) << simd::CHUNK_SIZE_I32;
+            _mm512_set_epi16(
+                31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16,
+                15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
+            )
+        }
+    }
 
-            let iptr = self.indices.as_mut_ptr();
+    /// # Safety
+    /// `dst.add(*count)` must have room for [`STRIDE`] `u16`s: the compressed vector is stored
+    /// whole, and only `count` is advanced by the number of lanes that were actually set.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    pub unsafe fn push(dst: *mut u16, count: &mut usize, base: &mut Base, mask: simd::Mask32) {
+        unsafe {
+            _mm512_storeu_si512(dst.add(*count).cast(), _mm512_maskz_compress_epi16(mask, *base));
+            *count += mask.count_ones() as usize;
+            *base = _mm512_add_epi16(*base, _mm512_set1_epi16(STRIDE as i16));
+        }
+    }
+}
 
-            for i in 0..NNZ_PER_CHUNK {
+#[cfg(not(target_feature = "avx512vbmi2"))]
+mod nnz {
+    use utils::cfor;
+
+    use crate::simd;
+
+    /// For each byte of a mask, the indices of its set bits, packed to the front.
+    #[repr(C, align(64))]
+    struct NonZeroIndices {
+        indices: [[u16; 8]; 256],
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    const NNZ_OFFSETS: NonZeroIndices = {
+        let mut table = [[0; 8]; 256];
+
+        cfor!(let mut i = 0; i < 256; i += 1; {
+            let mut j = i;
+            let mut k = 0;
+            while j != 0 {
+                table[i][k] = j.trailing_zeros() as u16;
+                j &= j - 1;
+                k += 1;
+            }
+        });
+
+        NonZeroIndices { indices: table }
+    };
+
+    pub type Base = v128::U16Vec128;
+
+    /// How many lanes one [`push`] covers.
+    pub const STRIDE: usize = 2 * simd::I32_LANES;
+
+    pub fn init() -> Base {
+        v128::splat_u16(0)
+    }
+
+    /// # Safety
+    /// `dst.add(*count)` must have room for 8 more `u16`s at every step of the walk.
+    pub unsafe fn push(dst: *mut u16, count: &mut usize, base: &mut Base, mask: simd::Mask32) {
+        unsafe {
+            for i in 0..STRIDE / 8 {
                 let byte = (mask >> (i * 8)) & 0xFF;
-                let nnz_idxs = NNZ_OFFSETS.get_idxs(byte);
-                let offset_idxs = v128::add_u16(nnz_idxs, self.base);
+                let idxs = v128::load_u16(NNZ_OFFSETS.indices.as_ptr().add(byte as usize).cast());
 
-                v128::to_ptr_u(iptr.add(self.count).cast(), offset_idxs);
+                v128::store_u16(dst.add(*count), v128::add_u16(idxs, *base));
 
-                self.count += byte.count_ones() as usize;
-                self.base = v128::add_u16(self.base, v128::from_val_u16(8));
+                *count += byte.count_ones() as usize;
+                *base = v128::add_u16(*base, v128::splat_u16(8));
             }
         }
     }
 
-    pub fn index_for(&self, c: usize) -> usize {
-        self.indices[c] as usize
+    #[cfg(not(target_feature = "neon"))]
+    mod v128 {
+        use std::arch::x86_64::{__m128i, _mm_add_epi16, _mm_load_si128, _mm_set1_epi16, _mm_storeu_si128};
+        pub type U16Vec128 = __m128i;
+
+        pub fn splat_u16(val: i16) -> U16Vec128 {
+            unsafe { _mm_set1_epi16(val) }
+        }
+
+        /// # Safety
+        /// `ptr` must be valid for a read of one vector, and aligned to it.
+        pub unsafe fn load_u16(ptr: *const u16) -> U16Vec128 {
+            unsafe { _mm_load_si128(ptr.cast()) }
+        }
+
+        /// # Safety
+        /// `dst` must be valid for a write of one vector.
+        pub unsafe fn store_u16(dst: *mut u16, data: U16Vec128) {
+            unsafe { _mm_storeu_si128(dst.cast(), data) }
+        }
+
+        pub fn add_u16(x: U16Vec128, y: U16Vec128) -> U16Vec128 {
+            unsafe { _mm_add_epi16(x, y) }
+        }
+    }
+
+    #[cfg(target_feature = "neon")]
+    mod v128 {
+        use std::arch::aarch64::{uint16x8_t, vaddq_u16, vdupq_n_u16, vld1q_u16, vst1q_u16};
+        pub type U16Vec128 = uint16x8_t;
+
+        pub fn splat_u16(val: u16) -> U16Vec128 {
+            unsafe { vdupq_n_u16(val) }
+        }
+
+        /// # Safety
+        /// `ptr` must be valid for a read of one vector, and aligned to it.
+        pub unsafe fn load_u16(ptr: *const u16) -> U16Vec128 {
+            unsafe { vld1q_u16(ptr.cast()) }
+        }
+
+        /// # Safety
+        /// `dst` must be valid for a write of one vector.
+        pub unsafe fn store_u16(dst: *mut u16, data: U16Vec128) {
+            unsafe { vst1q_u16(dst.cast(), data) }
+        }
+
+        pub fn add_u16(x: U16Vec128, y: U16Vec128) -> U16Vec128 {
+            unsafe { vaddq_u16(x, y) }
+        }
     }
 }
-
-#[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
-mod v128 {
-    use std::arch::x86_64::{__m128i, _mm_add_epi16, _mm_load_si128, _mm_set1_epi16, _mm_storeu_si128};
-    pub type U16Vec128 = __m128i;
-
-    pub fn from_val_u16(val: i16) -> U16Vec128 {
-        unsafe { _mm_set1_epi16(val) }
-    }
-
-    pub fn from_ptr_u16(ptr: *const u16) -> U16Vec128 {
-        unsafe { _mm_load_si128(ptr.cast()) }
-    }
-
-    pub fn to_ptr_u(dst: *mut u16, data: U16Vec128) {
-        unsafe { _mm_storeu_si128(dst.cast(), data) }
-    }
-
-    pub fn add_u16(x: U16Vec128, y: U16Vec128) -> U16Vec128 {
-        unsafe { _mm_add_epi16(x, y) }
-    }
-}
-
-#[cfg(target_feature = "neon")]
-mod v128 {
-    use std::arch::aarch64::{uint16x8_t, vaddq_u16, vdupq_n_u16, vld1q_u16, vst1q_u16};
-    pub type U16Vec128 = uint16x8_t;
-
-    pub fn from_val_u16(val: u16) -> U16Vec128 {
-        unsafe { vdupq_n_u16(val) }
-    }
-
-    pub fn from_ptr_u16(ptr: *const u16) -> U16Vec128 {
-        unsafe { vld1q_u16(ptr.cast()) }
-    }
-
-    pub fn to_ptr_u(dst: *mut u16, data: U16Vec128) {
-        unsafe { vst1q_u16(dst.cast(), data) }
-    }
-
-    pub fn add_u16(x: U16Vec128, y: U16Vec128) -> U16Vec128 {
-        unsafe { vaddq_u16(x, y) }
-    }
-}
-
-#[cfg(feature = "nnz_logging")]
-const PAIRWISE_LEN: usize = L1_LEN / 2;
 
 #[cfg(feature = "nnz_logging")]
 pub struct NNZPermTracker {

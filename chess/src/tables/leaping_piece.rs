@@ -1,3 +1,5 @@
+use utils::cfor;
+
 use crate::types::{bitboard::Bitboard, color::Color, direction::Direction, square::Square};
 
 /// Get pawn attacks for a given color and square.
@@ -26,14 +28,12 @@ pub const fn all_pawn_atk(bb: Bitboard, c: Color) -> Bitboard {
 /// Pawn attacks bitboard lookup table.
 static PAWN_DATA: [[Bitboard; 64]; 2] = {
     let mut pd = [[Bitboard(0); 64]; 2];
-    let mut sq = 0;
 
-    while sq < Square::NUM {
+    cfor!(let mut sq = 0; sq < Square::NUM; sq += 1; {
         let pawn = Bitboard(1u64 << sq);
         pd[0][sq] = all_pawn_atk(pawn, Color::White);
         pd[1][sq] = all_pawn_atk(pawn, Color::Black);
-        sq += 1;
-    }
+    });
 
     pd
 };
@@ -56,13 +56,11 @@ const fn init_knight_atk(bb: Bitboard) -> Bitboard {
 /// Knight attacks bitboard lookup table.
 static KNIGHT_DATA: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
-    let mut square = 0;
 
-    while square < 64 {
-        let knight = Bitboard(1u64 << square);
-        attacks[square] = init_knight_atk(knight);
-        square += 1;
-    }
+    cfor!(let mut sq = 0; sq < Square::NUM; sq += 1; {
+        let knight = Bitboard(1u64 << sq);
+        attacks[sq] = init_knight_atk(knight);
+    });
 
     attacks
 };
@@ -85,13 +83,10 @@ const fn init_king_atk(bb: Bitboard) -> Bitboard {
 /// King attacks bitboard lookup table.
 static KING_DATA: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
-    let mut square = 0;
-
-    while square < 64 {
-        let king = Bitboard(1u64 << square);
-        attacks[square] = init_king_atk(king);
-        square += 1;
-    }
+    cfor!(let mut sq = 0; sq < Square::NUM; sq += 1; {
+        let king = Bitboard(1u64 << sq);
+        attacks[sq] = init_king_atk(king);
+    });
 
     attacks
 };

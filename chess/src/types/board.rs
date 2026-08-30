@@ -265,7 +265,8 @@ impl Board {
 
         let (n2, b1) = (n / 4, n % 4);
         let (n3, b2) = (n2 / 4, n2 % 4);
-        let (n4, q) = (n3 / 4, n3 % 4);
+        // Both bishops are placed by now, so the queen has 6 free squares to choose from.
+        let (n4, q) = (n3 / 6, n3 % 6);
 
         // Add piece after the first `idx` free slots.
         let insert_into_nth_free = |pcs: &mut [Piece; 8], idx: usize, pc: Piece| {
@@ -556,5 +557,17 @@ mod tests {
             let board: Board = fen.parse().unwrap();
             assert_eq!(board.to_fen(), *fen);
         }
+    }
+
+    #[test]
+    fn test_scharnagl() {
+        // Every Scharnagl index must decode to a full board...
+        for i in 0..960 {
+            let board = Board::from_frc_idx(i, false).unwrap();
+            assert_eq!(board.occ().nbits(), 32, "index {i}");
+        }
+
+        // ...and 518 is the standard starting position.
+        assert_eq!(Board::from_frc_idx(518, false).unwrap().to_fen(), Board::default().to_fen());
     }
 }

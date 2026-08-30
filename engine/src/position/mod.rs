@@ -93,8 +93,8 @@ impl Position {
     /// Make a null move on the board on the given thread.
     pub fn make_move(&mut self, m: Move, t: &mut Thread) {
         t.move_made(PieceTo::from(&self.board, m));
-        let dps = self.board.make_move(m);
-        self.nnue.move_made(&self.board, dps);
+        self.nnue.move_made(&self.board, m);
+        self.board.make_move(m);
     }
 
     /// Undo a move on the board on a given thread.

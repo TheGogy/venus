@@ -1,8 +1,11 @@
 #![warn(clippy::all, clippy::pedantic)]
 
-use std::path::{Path, PathBuf};
+use std::{
+    io::Result,
+    path::{Path, PathBuf},
+};
 
-use clap::{Parser, Subcommand, error::Result};
+use clap::{Parser, Subcommand};
 use nnue::{
     arch::{QuantNNUEData, RawNNUEData},
     preprocess::load_write::LoadWrite,

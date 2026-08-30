@@ -32,12 +32,3 @@ pub fn get_permuted_nnue() -> &'static NNUEData {
         }
     })
 }
-
-impl QuantNNUEData {
-    /// Perform all permutations for the embedded NNUE to get the inference-ready NNUE.
-    #[must_use]
-    pub fn prepare_nnue(mut self: Box<Self>) -> Box<NNUEData> {
-        self.ftperm();
-        self.permute()
-    }
-}
