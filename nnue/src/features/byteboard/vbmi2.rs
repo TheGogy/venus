@@ -21,7 +21,7 @@ pub const FOCUS_WIDTH: usize = 16;
 /// Total number of discovered attacks a move can reveal at once.
 pub const DISCOVERY_WIDTH: usize = 8;
 
-/// Piece byte handed to ray slots that fall off the board. Any value with the high bit set does.
+/// Piece byte used in ray slots that fall off the board.
 const OFF_BOARD_PIECE: i8 = i8::MIN;
 
 pub fn splat_board(b: &Board) -> VecT {

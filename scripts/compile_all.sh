@@ -9,12 +9,11 @@ build() {
     env -u RUSTFLAGS \
         CARGO_TARGET_DIR="$dir" \
         RUSTFLAGS="$flags" \
-        EVALFILE="$(pwd)/net.bin" \
+        EVALFILE="$(pwd)/nn-$(cat net.txt).bin" \
         cargo build --release --features embed --bin cli
 
     cp "$dir"/release/cli test-"$name"
 }
 
-build base "-avx2,-avx512f"
 build avx2 "+avx2,-avx512f"
 build avx512 "+avx2,+avx512f"

@@ -66,14 +66,14 @@ pub fn on_move(tds: &mut ThreatDeltas, b: &Board, m: Move) {
     }
 }
 
-/// The threats toggled by putting `pc` on `sq` (`ADD`) or taking it off again.
+/// The threats toggled by putting `pc` on `sq` or taking it off again.
 fn on_change<const ADD: bool>(tds: &mut ThreatDeltas, board: VecT, pc: CPiece, sq: Square) {
     let perm = perm_for(sq);
     let (pcs, bits) = board_to_rays(perm, board);
     let closest = closest_occupied(bits);
 
-    // Threats to and from `pc` come and go with the piece itself. The lines running through `sq`
-    // do the opposite: a piece landing there blocks exactly what a piece leaving there reveals.
+    // If the piece is added, then it focuses its own threats and removes discovered ones,
+    // vice versa for if the piece is removed.
     let (focus, disco) = if ADD { (&mut tds.adds, &mut tds.subs) } else { (&mut tds.subs, &mut tds.adds) };
 
     // Kings cannot threaten or be threatened.
@@ -90,14 +90,11 @@ fn on_change<const ADD: bool>(tds: &mut ThreatDeltas, board: VecT, pc: CPiece, s
     push_discovery(disco, perm, pcs, sliders & valid, victims & valid);
 }
 
-/// The threats toggled by `new` replacing `old` on `sq`.
-/// `sq` stays occupied throughout, so no line through it opens or closes.
+/// The threats toggled by replacing `old` on `sq` with `new`. No discovered attacks.
 fn on_replace(tds: &mut ThreatDeltas, board: VecT, old: CPiece, new: CPiece, sq: Square) {
     let perm = perm_for(sq);
     let (pcs, bits) = board_to_rays(perm, board);
     let closest = closest_occupied(bits);
-
-    // Who attacks `sq` does not depend on what stands there, so this is shared.
     let incoming = incoming_threats(bits, closest);
 
     // A captured piece is never a king.

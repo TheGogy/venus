@@ -1,6 +1,10 @@
 use std::mem::MaybeUninit;
 #[cfg(feature = "nnz_logging")]
-use std::{cell::RefCell, fs::File, io::Write};
+use std::{
+    cell::RefCell,
+    fs::File,
+    io::{BufWriter, Seek, SeekFrom, Write},
+};
 
 use utils::memory::Align64;
 
@@ -127,7 +131,7 @@ mod nnz {
     }
 
     /// # Safety
-    /// `dst.add(*count)` must have room for 8 more `u16`s at every step of the walk.
+    /// `dst.add(*count)` must have room for 8 more `u16`s.
     pub unsafe fn push(dst: *mut u16, count: &mut usize, base: &mut Base, mask: simd::Mask32) {
         unsafe {
             for i in 0..STRIDE / 8 {
@@ -196,24 +200,31 @@ mod nnz {
 }
 
 #[cfg(feature = "nnz_logging")]
+pub const ACTS_MAGIC: &[u8; 8] = b"NNZACT01";
+#[cfg(feature = "nnz_logging")]
+pub const ACTS_DUMP_FILE: &str = "acts.bin";
+
+/// Records which pairwise neurons fired at each position.
+#[cfg(feature = "nnz_logging")]
 pub struct NNZPermTracker {
-    pub coactivations: Box<[[u64; PAIRWISE_LEN]; PAIRWISE_LEN]>,
+    chunk: [[u64; PAIRWISE_LEN]; 2],
+    positions: usize,
 
     pub count: usize,
     pub total: usize,
 
-    pub dump_file: File,
+    pub dump_file: BufWriter<File>,
 }
 
 #[cfg(feature = "nnz_logging")]
 impl Default for NNZPermTracker {
     fn default() -> Self {
-        Self {
-            count: 0,
-            total: 0,
-            coactivations: vec![[0u64; PAIRWISE_LEN]; PAIRWISE_LEN].into_boxed_slice().try_into().unwrap(),
-            dump_file: File::create("acts.bin").unwrap(),
-        }
+        let mut dump_file = BufWriter::new(File::create(ACTS_DUMP_FILE).unwrap());
+        // Magic.
+        dump_file.write_all(ACTS_MAGIC).unwrap();
+        // No. of positions.
+        dump_file.write_all(&0u64.to_le_bytes()).unwrap();
+        Self { count: 0, total: 0, chunk: [[0; PAIRWISE_LEN]; 2], positions: 0, dump_file }
     }
 }
 
@@ -222,42 +233,54 @@ impl NNZPermTracker {
     /// Track the current nonzero indices.
     pub fn update(&mut self, ft_out: &Align64<[u8; L1_LEN]>, sparse_count: usize) {
         let mut counts = [0u64; PAIRWISE_LEN];
-        let mut rec = [0u8; PAIRWISE_LEN];
+        let bit = self.positions % 64;
 
         for (i, &act) in ft_out.iter().enumerate() {
-            counts[i % PAIRWISE_LEN] += (act != 0) as u64;
-            rec[i % PAIRWISE_LEN] += (act != 0) as u8;
+            let fired = u64::from(act != 0);
+            counts[i % PAIRWISE_LEN] += fired;
+            self.chunk[i / PAIRWISE_LEN][i % PAIRWISE_LEN] |= fired << bit;
         }
 
-        for i in 0..PAIRWISE_LEN {
-            if counts[i] != 0 {
-                for j in 0..PAIRWISE_LEN {
-                    self.coactivations[i][j] += counts[i] * counts[j];
-                }
-            }
+        self.positions += 1;
+        if self.positions.is_multiple_of(64) {
+            self.flush_chunk();
         }
 
-        self.dump_file.write_all(&rec).unwrap();
         self.count += sparse_count;
         self.total += L1_LEN / 4;
+    }
+
+    /// Flush the current chunk to the output file.
+    fn flush_chunk(&mut self) {
+        let chunk = std::mem::replace(&mut self.chunk, [[0; PAIRWISE_LEN]; 2]);
+        for half in &chunk {
+            for word in half {
+                self.dump_file.write_all(&word.to_le_bytes()).unwrap();
+            }
+        }
     }
 
     /// Dump logs to file for processing.
     pub fn dump_stats(&mut self) -> Result<(), std::io::Error> {
         println!("Acts done:  {}", self.count);
         println!("Total acts: {}", self.total);
-        println!("Nnz ratio:  {:.5}", self.count as f64 / self.total as f64);
+        println!("NNZ ratio:  {:.5}", self.count as f64 / self.total as f64);
 
         if USE_FTPERM {
-            println!("Indices permuted! Coactivations will be incorrect.");
-            return Ok(());
+            println!("Indices permuted! Activations will be incorrect.");
         }
 
-        println!("Writing full activations to acts.bin...");
-        self.dump_file.flush().unwrap();
+        // Flush data if we haven't written it.
+        if !self.positions.is_multiple_of(64) {
+            self.flush_chunk();
+        }
 
-        println!("Writing nnz logs to coactivations.txt...");
-        std::fs::write("coactivations.txt", format!("{:?}", self.coactivations))
+        self.dump_file.seek(SeekFrom::Start(ACTS_MAGIC.len() as u64))?;
+        self.dump_file.write_all(&(self.positions as u64).to_le_bytes())?;
+        self.dump_file.flush()?;
+        println!("Wrote {} positions of activations to acts.bin.", self.positions);
+
+        Ok(())
     }
 }
 

@@ -6,7 +6,7 @@ mod simdvec {
     #[cfg(feature = "nnz_logging")]
     use crate::inference::sparse::NNZ_TRACKER;
     use crate::{
-        arch::{EFF_L2_LEN, FT_QUANT, HalfAcc, L1_DEQUANT, L1_LEN, L1Q_BITS, L2_LEN, L3_LEN, NNUEData, PAIRWISE_LEN},
+        arch::{EFF_L2_LEN, FT_QUANT, HalfAcc, L1_DEQUANT, L1_LEN, L1Q_SHIFT, L2_LEN, L3_LEN, NNUEData, PAIRWISE_LEN},
         inference::sparse::{NnzState, SparseMat},
         simd,
     };
@@ -22,11 +22,6 @@ mod simdvec {
         clippy::cast_ptr_alignment
     )]
     pub fn propagate_all_layers(nn: &NNUEData, psqt: [&HalfAcc; 2], thrt: [&HalfAcc; 2], obkt: usize) -> f32 {
-        /// On ARM NEON, the mulhi instruction actually computes 2*x*y.
-        /// This is effectively a left shift by itself, so when we shift left
-        /// we do 1 less to compensate.
-        const L1_DEQ_SHIFT: simd::ShiftT = L1Q_BITS - cfg!(target_feature = "neon") as simd::ShiftT;
-
         let mut ft_out = Align64([0u8; L1_LEN]);
         let mut l1_out = Align64([0.0; EFF_L2_LEN]);
         let mut l2_out = Align64([0.0; L3_LEN]);
@@ -82,28 +77,24 @@ mod simdvec {
                         simd::load_i16(thrt.add(i + simd::I16_LANES * 3 + PAIRWISE_LEN)),
                     );
 
-                    // Clip y inputs from above.
-                    // We don't care about clipping these from below:
-                    // mulhi (positive << shift) * negative
-                    // will be negative, so it will saturate to 0 with packus.
-                    let y0_clip = simd::min_i16(y0, ft_quant);
-                    let y1_clip = simd::min_i16(y1, ft_quant);
-                    let y2_clip = simd::min_i16(y2, ft_quant);
-                    let y3_clip = simd::min_i16(y3, ft_quant);
+                    // Clip both inputs to [0..FT_QUANT], giving CReLU on each half.
+                    let x0_clip = simd::clamp_i16(x0, zero_i, ft_quant);
+                    let x1_clip = simd::clamp_i16(x1, zero_i, ft_quant);
+                    let x2_clip = simd::clamp_i16(x2, zero_i, ft_quant);
+                    let x3_clip = simd::clamp_i16(x3, zero_i, ft_quant);
 
-                    // Clip x inputs to [0..FT_QUANT] and then left shift so that
-                    // mulhi gives CReLU(x) * CReLU(y)
-                    let x0_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x0, zero_i, ft_quant));
-                    let x1_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x1, zero_i, ft_quant));
-                    let x2_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x2, zero_i, ft_quant));
-                    let x3_clip = simd::shl_i16::<L1_DEQ_SHIFT>(simd::clamp_i16(x3, zero_i, ft_quant));
+                    let y0_clip = simd::clamp_i16(y0, zero_i, ft_quant);
+                    let y1_clip = simd::clamp_i16(y1, zero_i, ft_quant);
+                    let y2_clip = simd::clamp_i16(y2, zero_i, ft_quant);
+                    let y3_clip = simd::clamp_i16(y3, zero_i, ft_quant);
 
-                    let xy0 = simd::mulhi_i16(x0_clip, y0_clip);
-                    let xy1 = simd::mulhi_i16(x1_clip, y1_clip);
-                    let xy2 = simd::mulhi_i16(x2_clip, y2_clip);
-                    let xy3 = simd::mulhi_i16(x3_clip, y3_clip);
+                    // Take the whole product and shift it back down to 0..=PAIRWISE_MAX.
+                    let xy0 = simd::mulshr_u16::<L1Q_SHIFT>(x0_clip, y0_clip);
+                    let xy1 = simd::mulshr_u16::<L1Q_SHIFT>(x1_clip, y1_clip);
+                    let xy2 = simd::mulshr_u16::<L1Q_SHIFT>(x2_clip, y2_clip);
+                    let xy3 = simd::mulshr_u16::<L1Q_SHIFT>(x3_clip, y3_clip);
 
-                    // Pack i16 -> u8, saturate negatives to 0 (to clip y from below).
+                    // Pack i16 -> u8.
                     let prod_u8_01 = simd::packus_i16_u8(xy0, xy1);
                     let prod_u8_23 = simd::packus_i16_u8(xy2, xy3);
 
@@ -230,13 +221,20 @@ mod simdvec {
             let l2_out_ptr = l2_out.as_ptr();
             let weight_ptr = nn.l3w[obkt].as_ptr();
 
-            // Affine with skip conn.
-            for i in (0..L3_LEN).step_by(simd::F32_LANES) {
+            // Affine over the skip connection.
+            for i in (0..EFF_L2_LEN).step_by(simd::F32_LANES) {
                 let x = simd::load_f32(l1_out_ptr.add(i));
-                let y = simd::load_f32(l2_out_ptr.add(i));
                 let wgt = simd::load_f32(weight_ptr.add(i));
 
-                sum = simd::fmadd_f32(simd::add_f32(x, y), wgt, sum);
+                sum = simd::fmadd_f32(x, wgt, sum);
+            }
+
+            // L2 output into L3.
+            for i in (0..L3_LEN).step_by(simd::F32_LANES) {
+                let y = simd::load_f32(l2_out_ptr.add(i));
+                let wgt = simd::load_f32(weight_ptr.add(EFF_L2_LEN + i));
+
+                sum = simd::fmadd_f32(y, wgt, sum);
             }
 
             simd::reduce_add_f32(sum) + nn.l3b[obkt]

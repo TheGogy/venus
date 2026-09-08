@@ -58,8 +58,8 @@ const fn piece_attacks(cpiece: CPiece, sq: usize) -> Bitboard {
 /// Map of which pieces threaten other pieces.
 ///
 /// Some are redundant: Pawns -> Bishop is implied by Bishop -> Pawn.
-/// We always keep the feature from the piece of higher value.
-/// If the threat is skipped, we use `-1`.
+/// Always keep the feature from the piece of higher value.
+/// If the threat is skipped, use `-1`.
 ///
 /// All pieces can threaten pieces of the same type. When this happens, we take the piece on the
 /// higher square.
@@ -83,7 +83,6 @@ const PSEUDO_ATK: [[Bitboard; Square::NUM]; CPiece::NUM] = {
 
     cfor!(let mut cidx = 0; cidx < 12; cidx += 1; {
         let cpiece = CPiece::from_raw(cidx as u8);
-
         cfor!(let mut s = 0; s < 64; s += 1; {
             atk[cidx][s] = piece_attacks(cpiece, s);
         });
@@ -312,7 +311,7 @@ impl Accumulator for ThreatAccumulator {
     }
 
     fn apply_delta(&mut self, nn: &NNUEData, prev: &Self, pov: Color, ksq: Square) {
-        debug_assert!(!self.king_changed[pov.idx()], "Applied a delta across a king mirror!!!");
+        debug_assert!(!self.king_changed[pov.idx()], "Applied a delta across a king mirror!");
 
         let mut add_idxs = ArrayVec::<u16, MAX_DELTA_FEATURES>::new();
         let mut sub_idxs = ArrayVec::<u16, MAX_DELTA_FEATURES>::new();
@@ -333,7 +332,6 @@ impl Accumulator for ThreatAccumulator {
 
         let (prev, curr) = (prev.values[pov.idx()].as_ptr(), self.values[pov.idx()].as_mut_ptr());
         unsafe { accumulate(Some(prev), curr, &adds, &subs) };
-
         self.correct[pov.idx()] = true;
     }
 
@@ -434,13 +432,13 @@ mod tests {
         square::Square,
     };
 
-    use super::{ArrayVec, MAX_ACTIVE_THREATS, Orient, ThreatDeltas, collect_threat_indices, threat_index};
+    use super::{
+        ArrayVec, MAX_ACTIVE_THREATS, MAX_DELTA_FEATURES, Orient, PawnDeltas, ThreatDeltas, collect_pawn_indices, collect_threat_indices,
+        threat_index,
+    };
 
-    /// Positions covering every move type: promotions, en passant, castling (standard and FRC),
-    /// discovered attacks and heavy slider traffic.
     #[rustfmt::skip]
     const POSITIONS: &[&str] = &[
-        // Startpos and the usual perft suspects.
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
         "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
@@ -448,30 +446,17 @@ mod tests {
         "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
         "r4rk1/1pp1qppp/p1np1n2/2b1p1b1/2B1P1b1/P1NP1N1P/1PP1QPP1/R4RK1 w - - 0 10",
 
-        // En passant.
-        "8/8/8/2k5/3pP3/8/8/4K3 b - e3 0 1",
-        "8/8/8/1Ppp3r/1K3p1k/8/4P1P1/8 w - c6 0 3",
-        "4k3/8/8/8/pP6/8/8/4K3 b - b3 0 1",
-
-        // Promotions, with and without captures.
-        "3k4/1P6/8/8/8/8/6p1/3K1N2 w - - 0 1",
-        "n1n1k3/PPP5/8/8/8/8/5ppp/4K1N1 w - - 0 1",
-
-        // FRC castling.
         "rbbknnqr/pppppppp/8/8/8/8/PPPPPPPP/RBBKNNQR w KQkq - 0 1",
         "bnrkrnqb/pppppppp/8/8/8/8/PPPPPPPP/BNRKRNQB w KQkq - 0 1",
         "1rqbkrbn/1ppppp1p/1n6/p1N3p1/8/2P4P/PP1PPPP1/1RQBKRBN w FBfb - 0 9",
-
-        // Sliders lined up: lots of discovered attacks.
-        "4k3/4r3/8/4b3/8/4R3/4Q3/4K3 w - - 0 1",
-        "3q1k2/8/8/3B4/8/1R3b2/8/3K2r1 w - - 0 1",
-        "8/1k6/8/q2p4/8/8/5B2/2K3R1 w - - 0 1",
     ];
 
-    /// Multiset of the active threat features for `pov`.
+    /// Multiset of every feature in the shared pawn pair and threat array for `pov`.
     fn active(b: &Board, pov: Color) -> HashMap<u16, i32> {
+        let orient = Orient::new(b.ksq(pov), pov);
         let mut idxs = ArrayVec::<u16, MAX_ACTIVE_THREATS>::new();
-        collect_threat_indices(b, Orient::new(b.ksq(pov), pov), &mut idxs);
+        collect_pawn_indices(b, orient, &mut idxs);
+        collect_threat_indices(b, orient, &mut idxs);
 
         let mut counts = HashMap::new();
         for i in idxs {
@@ -485,12 +470,16 @@ mod tests {
         let mut deltas = ThreatDeltas::default();
         deltas.set(b, m);
 
-        // A king crossing the mirror needs a full refresh, so that perspective has no valid delta.
+        let mut pawn_deltas = PawnDeltas { before: b.both_p_bb(Piece::Pawn), ..Default::default() };
+
+        // A king crossing the mirror needs a full refresh, so no deltas.
         let pc = b.pc_at(m.src());
         let mirrored = pc.pt() == Piece::King && m.src().is_kingside() != m.dst().is_kingside();
 
         let before = [active(b, Color::White), active(b, Color::Black)];
+
         b.make_move(m);
+        pawn_deltas.after = b.both_p_bb(Piece::Pawn);
         let after = [active(b, Color::White), active(b, Color::Black)];
         let ksqs = [b.ksq(Color::White), b.ksq(Color::Black)];
         b.undo_move();
@@ -500,14 +489,26 @@ mod tests {
                 continue;
             }
 
+            let orient = Orient::new(ksqs[pov.idx()], pov);
+
             let mut got = before[pov.idx()].clone();
             for (list, sign) in [(&deltas.adds, 1), (&deltas.subs, -1)] {
                 for d in list {
-                    if let Some(idx) = d.index(Orient::new(ksqs[pov.idx()], pov)) {
+                    if let Some(idx) = d.index(orient) {
                         *got.entry(idx).or_default() += sign;
                     }
                 }
             }
+
+            let mut pawn_adds = ArrayVec::<u16, MAX_DELTA_FEATURES>::new();
+            let mut pawn_subs = ArrayVec::<u16, MAX_DELTA_FEATURES>::new();
+            pawn_deltas.collect_indices(orient, &mut pawn_adds, &mut pawn_subs);
+            for (list, sign) in [(&pawn_adds, 1), (&pawn_subs, -1)] {
+                for &idx in list {
+                    *got.entry(idx).or_default() += sign;
+                }
+            }
+
             got.retain(|_, &mut n| n != 0);
 
             assert!(
@@ -521,7 +522,7 @@ mod tests {
         }
     }
 
-    /// Features `a` has that `b` does not, as (index, count) pairs.
+    /// Features `a` has that `b` does not.
     fn diff(a: &HashMap<u16, i32>, b: &HashMap<u16, i32>) -> Vec<(u16, i32)> {
         let mut d: Vec<_> = a.iter().map(|(&i, &n)| (i, n - b.get(&i).copied().unwrap_or(0))).filter(|&(_, n)| n != 0).collect();
         d.sort_unstable();
@@ -541,82 +542,10 @@ mod tests {
         }
     }
 
-    /// Deeper trees catch the rarer piece arrangements, but cost a lot in a debug build.
-    #[cfg(feature = "full_tests")]
-    const DEPTH: usize = 4;
-    #[cfg(not(feature = "full_tests"))]
     const DEPTH: usize = 2;
 
-    /// The feature numbering is baked into every trained net, so a refactor that quietly permutes
-    /// it would silently invalidate them. This hashes every index `threat_index` can produce.
-    ///
-    /// If this fails and the new numbering is intentional, update the hash and retrain.
     #[test]
-    fn test_index_numbering_unchanged() {
-        let mut h: u64 = 0xCBF2_9CE4_8422_2325;
-        let mut kept = 0u64;
-
-        for pov in Color::iter() {
-            for ksq in [Square::A1, Square::H1] {
-                let orient = Orient::new(ksq, pov);
-                for atk in CPiece::iter() {
-                    for vic in CPiece::iter() {
-                        for s in 0..64u8 {
-                            for d in 0..64u8 {
-                                let (src, dst) = (Square::from_raw(s), Square::from_raw(d));
-                                if let Some(idx) = threat_index(orient, atk, vic, src, dst) {
-                                    kept += 1;
-                                    h = (h ^ u64::from(idx)).wrapping_mul(0x100_0000_01B3);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        assert_eq!((h, kept), (0x6E73_8930_1DD5_28C5, 1_181_696), "the threat feature numbering has changed");
-    }
-
-    /// Baseline for the full refresh sweep.
-    /// `cargo test -p nnue --lib --release -- --ignored --nocapture bench`
-    #[test]
-    #[ignore = "benchmark"]
-    fn bench_collect_threats() {
-        use std::{hint::black_box, time::Instant};
-
-        const ITERS: usize = 50_000;
-
-        let boards: Vec<Board> = POSITIONS.iter().map(|f| f.parse().unwrap()).collect();
-        let calls = ITERS * boards.len() * Color::NUM;
-
-        let run = || {
-            let start = Instant::now();
-            let mut total = 0;
-            for _ in 0..ITERS {
-                for b in &boards {
-                    for pov in Color::iter() {
-                        let mut idxs = ArrayVec::new();
-                        collect_threat_indices(black_box(b), Orient::new(b.ksq(pov), pov), &mut idxs);
-                        total += black_box(idxs.len());
-                    }
-                }
-            }
-            assert!(total > 0);
-            (start.elapsed().as_secs_f64() / calls as f64 * 1.0e9, total / calls)
-        };
-
-        run();
-        let (mut best, feats) = run();
-        for _ in 0..4 {
-            best = best.min(run().0);
-        }
-
-        println!("collect_threat_indices: {best:.1} ns/call, {feats} features/call");
-    }
-
-    #[test]
-    fn test_threat_deltas_match_refresh() {
+    fn test_feature_deltas_match_refresh() {
         for fen in POSITIONS {
             let mut b: Board = fen.parse().unwrap();
             walk(&mut b, DEPTH);

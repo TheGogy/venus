@@ -48,11 +48,7 @@ const PIECE_STRIDE: usize = Square::NUM;
 const OPPONENT_STRIDE: usize = Square::NUM * Piece::NUM;
 const BUCKET_STRIDE: usize = PSQT_FEATURES;
 
-/// One perspective's view of the board: how it reorients squares and colours, and where its king
-/// puts it in the feature array.
-///
-/// Everything but the square of the piece being indexed is fixed for a perspective, so building
-/// this once lets an index collapse to `base + square`.
+/// One perspective's view of the board.
 #[derive(Copy, Clone, Debug)]
 struct View {
     orient: Orient,
@@ -66,34 +62,13 @@ impl View {
         Self { orient, bucket_base: bucket * BUCKET_STRIDE }
     }
 
-    /// Base index of the block of 64 squares holding "piece `p` of colour `c`".
     const fn base(self, p: Piece, c: Color) -> usize {
         self.bucket_base + self.orient.color(c) * OPPONENT_STRIDE + p.idx() * PIECE_STRIDE
     }
 
-    /// Index of the feature "piece `p` of colour `c` stands on `s`".
     const fn idx(self, p: Piece, c: Color, s: Square) -> usize {
         self.base(p, c) + self.orient.sq(s) as usize
     }
-}
-
-/// Every active PSQT feature index for `pov`, in board order.
-///
-/// Only used by the offline tooling that checks the engine's feature numbering against the
-/// trainer's; inference builds these indices inline.
-pub fn collect_psqt_indices(b: &Board, pov: Color) -> Vec<usize> {
-    let view = View::new(b.ksq(pov), pov);
-    let mut out = Vec::new();
-
-    for c in Color::iter() {
-        for p in Piece::iter() {
-            for sq in b.pc_bb(c, p) {
-                out.push(view.idx(p, c, sq));
-            }
-        }
-    }
-
-    out
 }
 
 /// One feature index, as seen from each perspective.

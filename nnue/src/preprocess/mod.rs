@@ -2,11 +2,9 @@ pub mod ftperm;
 pub mod load_write;
 pub mod permute;
 
-pub mod quantize;
+use crate::arch::{EmbedNNUEData, NNUEData};
 
-use crate::arch::{NNUEData, QuantNNUEData};
-
-impl QuantNNUEData {
+impl EmbedNNUEData {
     /// Take a quantized net all the way to the layout inference wants: first the feature transform
     /// permutation, then the SIMD repermutation.
     #[must_use]

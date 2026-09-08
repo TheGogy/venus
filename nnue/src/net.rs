@@ -98,10 +98,7 @@ impl NNUE {
         Eval(self.evaluate_raw(b) as i32)
     }
 
-    /// Evaluate the board using the NNUE, without rounding to whole centipawns.
-    ///
-    /// This is what the trainer prints for a position, so it is the value the offline tooling
-    /// compares against.
+    /// Evaluate the board using the NNUE and get the full precision result.
     pub fn evaluate_raw(&mut self, b: &Board) -> f32 {
         self.update_incremental(b);
 

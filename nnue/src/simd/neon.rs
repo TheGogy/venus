@@ -121,16 +121,21 @@ pub fn clamp_i16(v: I16Vec, min: I16Vec, max: I16Vec) -> I16Vec {
     min_i16(max, max_i16(v, min))
 }
 
-/// Shift left by <SHIFT> and pad with 0s.
+/// Shift amount type.
 /// HACK: Have to accommodate for avx2.
 pub type ShiftT = i32;
-pub fn shl_i16<const SHIFT: ShiftT>(v: I16Vec) -> I16Vec {
-    unsafe { vshlq_n_s16::<SHIFT>(v) }
-}
 
 /// Convert packed i16s to u8s with unsigned saturation (0..255).
 pub fn packus_i16_u8(x: I16Vec, y: I16Vec) -> U8Vec {
     unsafe { vcombine_u8(vqmovun_s16(x), vqmovun_s16(y)) }
+}
+
+/// Whether this backend has a true unsigned-by-signed dot product in [`dotprod_i32`].
+pub const HAS_USDOT: bool = false;
+
+/// Multiplies two vectors together and shifts the whole product right by `SHIFT`.
+pub fn mulshr_u16<const SHIFT: ShiftT>(x: I16Vec, y: I16Vec) -> I16Vec {
+    unsafe { vreinterpretq_s16_u16(vshrq_n_u16::<SHIFT>(vreinterpretq_u16_s16(vmulq_s16(x, y)))) }
 }
 
 /// Sums two vectors together.

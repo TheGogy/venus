@@ -116,9 +116,12 @@ pub unsafe fn store_f32(dst: *mut f32, data: F32Vec) {
     unsafe { _mm512_store_ps(dst.cast(), data) }
 }
 
-/// Multiplies two vectors together and takes the high 16 bits.
-pub fn mulhi_i16(x: I16Vec, y: I16Vec) -> I16Vec {
-    unsafe { _mm512_mulhi_epi16(x, y) }
+/// Whether this backend has a true unsigned-by-signed dot product in [`dotprod_i32`].
+pub const HAS_USDOT: bool = cfg!(target_feature = "avx512vnni");
+
+/// Multiplies two vectors together and shifts the whole product right by `SHIFT`.
+pub fn mulshr_u16<const SHIFT: ShiftT>(x: I16Vec, y: I16Vec) -> I16Vec {
+    unsafe { _mm512_srli_epi16(_mm512_mullo_epi16(x, y), SHIFT) }
 }
 
 /// Multiplies two vectors together.
@@ -134,11 +137,6 @@ pub fn add_i16(x: I16Vec, y: I16Vec) -> I16Vec {
 /// Subtracts the second vector from the first.
 pub fn sub_i16(x: I16Vec, y: I16Vec) -> I16Vec {
     unsafe { _mm512_sub_epi16(x, y) }
-}
-
-/// Sums two vectors together.
-pub fn add_f32(x: F32Vec, y: F32Vec) -> F32Vec {
-    unsafe { _mm512_add_ps(x, y) }
 }
 
 /// Multiplies x and y and adds to z.
@@ -171,12 +169,9 @@ pub fn min_f32(x: F32Vec, y: F32Vec) -> F32Vec {
     unsafe { _mm512_min_ps(x, y) }
 }
 
-/// Shift left by <SHIFT> and pad with 0s.
-/// HACK: Have to accommodate for avx2. Who wrote this interface
+/// Shift amount type.
+/// HACK: Have to accommodate for avx2.
 pub type ShiftT = u32;
-pub fn shl_i16<const SHIFT: ShiftT>(v: I16Vec) -> I16Vec {
-    unsafe { _mm512_slli_epi16(v, SHIFT) }
-}
 
 /// Convert packed i16s to u8s with unsigned saturation (0..255).
 pub fn packus_i16_u8(x: I16Vec, y: I16Vec) -> I16Vec {
@@ -195,7 +190,7 @@ pub fn reduce_add_f32(v: F32Vec) -> f32 {
 
 /// Gets a mask of all the nonzero elements in the vector.
 pub fn nonzero_mask_i32(v: I32Vec) -> Mask32 {
-    unsafe { Mask32::from(_mm512_cmpgt_epi32_mask(v, _mm512_setzero_si512())) }
+    unsafe { Mask32::from(_mm512_test_epi32_mask(v, v)) }
 }
 
 /// Multiply groups of u8s -> i16s -> i32s and sum these with `sum`.

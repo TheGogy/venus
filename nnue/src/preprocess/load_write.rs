@@ -6,7 +6,7 @@ use std::{
 
 use utils::memory::boxed_zeroed;
 
-use crate::arch::{NNUEData, QuantNNUEData, RawNNUEData};
+use crate::arch::{EmbedNNUEData, NNUEData};
 
 pub trait LoadWrite: Sized {
     /// Load the given type from some file.
@@ -52,5 +52,4 @@ pub trait LoadWrite: Sized {
 }
 
 impl LoadWrite for NNUEData {}
-impl LoadWrite for RawNNUEData {}
-impl LoadWrite for QuantNNUEData {}
+impl LoadWrite for EmbedNNUEData {}
