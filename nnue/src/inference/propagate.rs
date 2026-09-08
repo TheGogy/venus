@@ -11,6 +11,7 @@ mod simdvec {
         simd,
     };
 
+    #[rustfmt::skip]
     #[allow(
         clippy::erasing_op,
         clippy::identity_op,
@@ -20,7 +21,7 @@ mod simdvec {
         clippy::cast_possible_truncation,
         clippy::cast_ptr_alignment
     )]
-    pub fn propagate_all_layers(nn: &NNUEData, stm: &HalfAcc, opp: &HalfAcc, obkt: usize) -> f32 {
+    pub fn propagate_all_layers(nn: &NNUEData, psqt: [&HalfAcc; 2], thrt: [&HalfAcc; 2], obkt: usize) -> f32 {
         /// On ARM NEON, the mulhi instruction actually computes 2*x*y.
         /// This is effectively a left shift by itself, so when we shift left
         /// we do 1 less to compensate.
@@ -42,20 +43,44 @@ mod simdvec {
         // ------------- Feature Transform --------------
 
         unsafe {
-            let mut activate = |accumulator: &HalfAcc, offset: usize| {
-                let acc = accumulator.as_ptr();
+            let mut activate = |psqt: &HalfAcc, thrt: &HalfAcc, offset: usize| {
+                let (psqt, thrt) = (psqt.as_ptr(), thrt.as_ptr());
                 let ft_out_ptr = ft_out.as_mut_ptr();
 
                 for i in (0..PAIRWISE_LEN).step_by(simd::I16_LANES * 4) {
-                    let x0 = simd::load_i16(acc.add(i + simd::I16_LANES * 0));
-                    let x1 = simd::load_i16(acc.add(i + simd::I16_LANES * 1));
-                    let x2 = simd::load_i16(acc.add(i + simd::I16_LANES * 2));
-                    let x3 = simd::load_i16(acc.add(i + simd::I16_LANES * 3));
-
-                    let y0 = simd::load_i16(acc.add(i + simd::I16_LANES * 0 + PAIRWISE_LEN));
-                    let y1 = simd::load_i16(acc.add(i + simd::I16_LANES * 1 + PAIRWISE_LEN));
-                    let y2 = simd::load_i16(acc.add(i + simd::I16_LANES * 2 + PAIRWISE_LEN));
-                    let y3 = simd::load_i16(acc.add(i + simd::I16_LANES * 3 + PAIRWISE_LEN));
+                    // Sum together the psqt and threat accumulators.
+                    let x0 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 0)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 0)),
+                    );
+                    let x1 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 1)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 1)),
+                    );
+                    let x2 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 2)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 2)),
+                    );
+                    let x3 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 3)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 3)),
+                    );
+                    let y0 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 0 + PAIRWISE_LEN)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 0 + PAIRWISE_LEN)),
+                    );
+                    let y1 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 1 + PAIRWISE_LEN)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 1 + PAIRWISE_LEN)),
+                    );
+                    let y2 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 2 + PAIRWISE_LEN)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 2 + PAIRWISE_LEN)),
+                    );
+                    let y3 = simd::add_i16(
+                        simd::load_i16(psqt.add(i + simd::I16_LANES * 3 + PAIRWISE_LEN)),
+                        simd::load_i16(thrt.add(i + simd::I16_LANES * 3 + PAIRWISE_LEN)),
+                    );
 
                     // Clip y inputs from above.
                     // We don't care about clipping these from below:
@@ -94,8 +119,8 @@ mod simdvec {
                 }
             };
 
-            activate(stm, 0);
-            activate(opp, PAIRWISE_LEN);
+            activate(psqt[0], thrt[0], 0);
+            activate(psqt[1], thrt[1], PAIRWISE_LEN);
         }
 
         #[cfg(feature = "nnz_logging")]

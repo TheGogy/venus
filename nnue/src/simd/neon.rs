@@ -6,7 +6,6 @@ pub type U8Vec = uint8x16_t;
 pub type I16Vec = int16x8_t;
 pub type I32Vec = int32x4_t;
 pub type U32Vec = uint32x4_t;
-pub type F32Vec = float32x4_t;
 pub type Mask32 = u32;
 
 pub const ARCH_NAME: &str = "neon";
@@ -14,7 +13,6 @@ pub const ARCH_NAME: &str = "neon";
 pub const U8_LANES: usize = size_of::<U8Vec>() / size_of::<u8>();
 pub const I16_LANES: usize = size_of::<I16Vec>() / size_of::<i16>();
 pub const I32_LANES: usize = size_of::<I32Vec>() / size_of::<i32>();
-pub const F32_LANES: usize = size_of::<F32Vec>() / size_of::<f32>();
 pub const PACKUS_REGS: usize = size_of::<I32Vec>() / 8;
 
 // | 0  1 |
@@ -28,11 +26,6 @@ pub fn splat_i16(val: i16) -> I16Vec {
 /// Returns a vector set to the given value.
 pub fn splat_i32(val: i32) -> I32Vec {
     unsafe { vdupq_n_s32(val) }
-}
-
-/// Returns a vector set to the given value.
-pub fn splat_f32(val: f32) -> F32Vec {
-    unsafe { vdupq_n_f32(val) }
 }
 
 /// Loads a vector in directly from the values at the given pointer.
@@ -53,6 +46,15 @@ pub unsafe fn load_i16(ptr: *const i16) -> I16Vec {
     unsafe { vld1q_s16(ptr.cast()) }
 }
 
+/// Loads [`I16_LANES`] i8s and sign extends them into a vector of i16s.
+///
+/// # Safety
+/// `ptr` must be valid for a read of [`I16_LANES`] bytes, and aligned to that many bytes.
+pub unsafe fn load_extend_i8(ptr: *const i8) -> I16Vec {
+    debug_assert!((ptr as usize).is_multiple_of(I16_LANES));
+    unsafe { vmovl_s8(vld1_s8(ptr.cast())) }
+}
+
 /// Loads a vector in directly from the values at the given pointer.
 ///
 /// # Safety
@@ -60,15 +62,6 @@ pub unsafe fn load_i16(ptr: *const i16) -> I16Vec {
 pub unsafe fn load_i32(ptr: *const i32) -> I32Vec {
     debug_assert!((ptr as usize).is_multiple_of(align_of::<I32Vec>()));
     unsafe { vld1q_s32(ptr.cast()) }
-}
-
-/// Loads a vector in directly from the values at the given pointer.
-///
-/// # Safety
-/// `ptr` must be valid for a read of one vector, and aligned to it.
-pub unsafe fn load_f32(ptr: *const f32) -> F32Vec {
-    debug_assert!((ptr as usize).is_multiple_of(align_of::<F32Vec>()));
-    unsafe { vld1q_f32(ptr.cast()) }
 }
 
 /// Stores a vector at the given pointer.
@@ -98,24 +91,9 @@ pub unsafe fn store_i32(dst: *mut i32, data: I32Vec) {
     unsafe { vst1q_s32(dst.cast(), data) }
 }
 
-/// Stores a vector at the given pointer.
-///
-/// # Safety
-/// `dst` must be valid for a write of one vector, and aligned to it.
-pub unsafe fn store_f32(dst: *mut f32, data: F32Vec) {
-    debug_assert!((dst as usize).is_multiple_of(align_of::<F32Vec>()));
-    unsafe { vst1q_f32(dst.cast(), data) }
-}
-
-/// Multiplies two vectors together and takes the high 16 bits.
-/// WARN: This is a DOUBLED mulhi!!
-pub fn mulhi_i16(x: I16Vec, y: I16Vec) -> I16Vec {
-    unsafe { vqdmulhq_s16(x, y) }
-}
-
-/// Multiplies two vectors together.
-pub fn mul_f32(x: F32Vec, y: F32Vec) -> F32Vec {
-    unsafe { vmulq_f32(x, y) }
+/// Multiplies two vectors together, keeping the rounded high 16 bits of `2 * x * y`.
+pub fn mulhrs_i16(x: I16Vec, y: I16Vec) -> I16Vec {
+    unsafe { vqrdmulhq_s16(x, y) }
 }
 
 /// Sums two vectors together.
@@ -126,16 +104,6 @@ pub fn add_i16(x: I16Vec, y: I16Vec) -> I16Vec {
 /// Subtracts the second vector from the first.
 pub fn sub_i16(x: I16Vec, y: I16Vec) -> I16Vec {
     unsafe { vsubq_s16(x, y) }
-}
-
-/// Sums two vectors together.
-pub fn add_f32(x: F32Vec, y: F32Vec) -> F32Vec {
-    unsafe { vaddq_f32(x, y) }
-}
-
-/// Multiplies x and y and adds to z.
-pub fn fmadd_f32(x: F32Vec, y: F32Vec, z: F32Vec) -> F32Vec {
-    unsafe { vfmaq_f32(z, x, y) }
 }
 
 /// Returns min of two vectors.
@@ -153,16 +121,6 @@ pub fn clamp_i16(v: I16Vec, min: I16Vec, max: I16Vec) -> I16Vec {
     min_i16(max, max_i16(v, min))
 }
 
-/// Clamps a vector between two values.
-pub fn clamp_f32(v: F32Vec, min: F32Vec, max: F32Vec) -> F32Vec {
-    unsafe { vminq_f32(max, vmaxq_f32(v, min)) }
-}
-
-/// Retuns min of two values.
-pub fn min_f32(x: F32Vec, y: F32Vec) -> F32Vec {
-    unsafe { vminq_f32(x, y) }
-}
-
 /// Shift left by <SHIFT> and pad with 0s.
 /// HACK: Have to accommodate for avx2.
 pub type ShiftT = i32;
@@ -175,14 +133,49 @@ pub fn packus_i16_u8(x: I16Vec, y: I16Vec) -> U8Vec {
     unsafe { vcombine_u8(vqmovun_s16(x), vqmovun_s16(y)) }
 }
 
-/// Convert packed i32s -> f32s.
-pub fn cvt_i32_f32(x: I32Vec) -> F32Vec {
-    unsafe { vcvtq_f32_s32(x) }
+/// Sums two vectors together.
+pub fn add_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { vaddq_s32(x, y) }
+}
+
+/// Multiplies two vectors together, keeping the low 32 bits of each product.
+pub fn mul_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { vmulq_s32(x, y) }
+}
+
+/// Multiplies x and y and adds to z.
+pub fn mul_add_i32(x: I32Vec, y: I32Vec, z: I32Vec) -> I32Vec {
+    unsafe { vmlaq_s32(z, x, y) }
+}
+
+/// Returns min of two vectors.
+pub fn min_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { vminq_s32(x, y) }
+}
+
+/// Returns max of two vectors.
+pub fn max_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { vmaxq_s32(x, y) }
+}
+
+/// Clamps a vector between two values.
+pub fn clamp_i32(v: I32Vec, min: I32Vec, max: I32Vec) -> I32Vec {
+    min_i32(max, max_i32(v, min))
+}
+
+/// Shift left by <SHIFT> and pad with 0s.
+pub fn shl_i32<const SHIFT: ShiftT>(v: I32Vec) -> I32Vec {
+    unsafe { vshlq_n_s32::<SHIFT>(v) }
+}
+
+/// Arithmetic shift right by <SHIFT>.
+pub fn shr_i32<const SHIFT: ShiftT>(v: I32Vec) -> I32Vec {
+    unsafe { vshrq_n_s32::<SHIFT>(v) }
 }
 
 /// Gets the sum of the values in the vector.
-pub fn reduce_add_f32(v: F32Vec) -> f32 {
-    unsafe { vaddvq_f32(v) }
+pub fn reduce_add_i32(v: I32Vec) -> i32 {
+    unsafe { vaddvq_s32(v) }
 }
 
 /// Gets a mask of all the nonzero elements in the vector.
@@ -208,3 +201,8 @@ pub fn cast_i32_u8(x: I32Vec) -> U8Vec {
 pub fn cast_u8_i32(x: U8Vec) -> I32Vec {
     unsafe { std::mem::transmute(x) }
 }
+
+/// Fetch the cache line at `ptr` into every level of cache.
+/// The prefetch intrinsics are still unstable on aarch64, so this is a no-op.
+#[allow(unused_variables, clippy::missing_const_for_fn)]
+pub fn prefetch(ptr: *const u8) {}

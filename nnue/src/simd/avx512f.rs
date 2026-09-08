@@ -53,6 +53,15 @@ pub unsafe fn load_i16(ptr: *const i16) -> I16Vec {
     unsafe { _mm512_load_si512(ptr.cast()) }
 }
 
+/// Loads [`I16_LANES`] i8s and sign extends them into a vector of i16s.
+///
+/// # Safety
+/// `ptr` must be valid for a read of [`I16_LANES`] bytes, and aligned to that many bytes.
+pub unsafe fn load_extend_i8(ptr: *const i8) -> I16Vec {
+    debug_assert!((ptr as usize).is_multiple_of(I16_LANES));
+    unsafe { _mm512_cvtepi8_epi16(_mm256_load_si256(ptr.cast())) }
+}
+
 /// Loads a vector in directly from the values at the given pointer.
 ///
 /// # Safety
@@ -213,4 +222,9 @@ pub const fn cast_u8_i32(x: U8Vec) -> I32Vec {
 /// No-op for x86 arch.
 pub const fn cast_i32_u8(x: I32Vec) -> U8Vec {
     x
+}
+
+/// Fetch the cache line at `ptr` into every level of cache.
+pub fn prefetch(ptr: *const u8) {
+    unsafe { _mm_prefetch::<_MM_HINT_T0>(ptr.cast()) }
 }

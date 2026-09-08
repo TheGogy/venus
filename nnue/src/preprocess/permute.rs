@@ -1,40 +1,37 @@
-use utils::memory::{Align64, boxed_zeroed};
+use utils::memory::boxed_zeroed;
 
 use crate::{
-    arch::{EFF_L2_LEN, L1_LEN, L2_LEN, L3_LEN, NNUEData, QuantNNUEData},
+    arch::{EFF_L2_LEN, FT_PSQT_ROWS, FT_THRT_ROWS, L1_LEN, L2_LEN, L3_LEN, NNUEData, QuantNNUEData},
     features::NB_OUTPUT_BUCKETS,
     simd,
 };
 
+/// Number of lanes packus keeps together.
+const PACKUS_CHUNK: usize = 8;
+
+/// Packus interleaves each block of [`PACKUS_CHUNK`] lanes from a and b, but we want them to be
+/// consecutive - so we un-interleave a row now so that they'll be properly concatenated.
+fn permute_row<T: Copy>(src: &[T], dst: &mut [T]) {
+    for base in (0..L1_LEN).step_by(simd::PACKUS_REGS * PACKUS_CHUNK) {
+        for (d, &s) in simd::PACKUS_ORDER.iter().enumerate() {
+            let (si, di) = (base + s * PACKUS_CHUNK, base + d * PACKUS_CHUNK);
+            dst[di..di + PACKUS_CHUNK].copy_from_slice(&src[si..si + PACKUS_CHUNK]);
+        }
+    }
+}
+
 impl QuantNNUEData {
-    /// Helper function to permute ft weights/biases for packus.
-    ///
-    /// Packus interleaves each block of 128 from a and b, but we want them
-    /// to be consecutive - so we un-interleave them now so that they'll be properly concatenated.
-    fn permute_packus(&self, out: &mut Box<NNUEData>) {
-        use crate::features::psqt::{NB_INPUT_BUCKETS, PSQT_FEATURES};
-
-        const PACKUS_CHUNK: usize = 8;
-
-        let permute_chunk = |src: &[i16], dst: &mut Align64<[i16; L1_LEN]>, base: usize| {
-            for (d, &s) in simd::PACKUS_ORDER.iter().enumerate() {
-                let src_idx = base + s * PACKUS_CHUNK;
-                let dst_idx = base + d * PACKUS_CHUNK;
-                dst[dst_idx..dst_idx + PACKUS_CHUNK].copy_from_slice(&src[src_idx..src_idx + PACKUS_CHUNK]);
-            }
-        };
-
-        // Permute feature transform weights.
-        for feat in 0..NB_INPUT_BUCKETS * PSQT_FEATURES {
-            for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::PACKUS_REGS) {
-                permute_chunk(&self.ftw[feat * L1_LEN..], &mut out.ftw[feat], i * PACKUS_CHUNK);
-            }
+    /// Un-interleave every feature transform row (and the bias) for packus.
+    fn permute_packus(&self, out: &mut NNUEData) {
+        for feat in 0..FT_PSQT_ROWS {
+            permute_row(&self.ftw_psqt[feat * L1_LEN..], &mut out.ftw_psqt[feat].0);
         }
 
-        // Permute feature transform bias.
-        for i in (0..L1_LEN / PACKUS_CHUNK).step_by(simd::PACKUS_REGS) {
-            permute_chunk(&self.ftb, &mut out.ftb, i * PACKUS_CHUNK);
+        for feat in 0..FT_THRT_ROWS {
+            permute_row(&self.ftw_thrt[feat * L1_LEN..], &mut out.ftw_thrt[feat].0);
         }
+
+        permute_row(&self.ftb, &mut out.ftb.0);
     }
 
     /// Repermute the NNUE to a format helpful for SIMD.
@@ -76,3 +73,5 @@ impl QuantNNUEData {
         out
     }
 }
+
+const _: () = assert!(L1_LEN.is_multiple_of(simd::PACKUS_REGS * PACKUS_CHUNK));

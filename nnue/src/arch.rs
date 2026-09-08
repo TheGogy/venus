@@ -3,15 +3,24 @@ use utils::memory::Align64;
 use crate::{
     features::{
         NB_OUTPUT_BUCKETS,
+        pawn::PAWN_FEATURES,
         psqt::{NB_INPUT_BUCKETS, PSQT_FEATURES},
+        threat::THRT_FEATURES,
     },
     simd,
 };
 
 /// Quantization factors.
-pub const SCALE: i32 = 400;
+pub const SCALE: f32 = 400.0;
 pub const FT_QUANT: i32 = 255;
 pub const L1_QUANT: i32 = 64;
+
+pub const L1Q_BITS: simd::ShiftT = 7;
+pub const L1Q_SHIFT: simd::ShiftT = 16 - L1Q_BITS;
+
+/// Invert quantization steps (clamp by `FT_QUANT`, downscale by `FT_SHIFT`, quantize by `FT_QUANT * L1_QUANT`).
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+pub const L1_DEQUANT: f32 = (1 << L1Q_SHIFT) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
 
 /// Input bucket map.
 #[rustfmt::skip]
@@ -26,20 +35,15 @@ pub const HALF_BUCKET_MAP: [usize; 32] = [
   14, 14, 15, 15,
 ];
 
-/// HACK: This should just be a u32 everywhere, but avx2 decided to be special
-#[allow(clippy::cast_sign_loss)]
-pub const L1Q_BITS: simd::ShiftT = L1_QUANT.trailing_zeros() as simd::ShiftT;
-pub const L1Q_SHIFT: simd::ShiftT = 16 - L1Q_BITS;
-
-/// Invert quantization steps (clamp by `FT_QUANT`, downscale by `FT_SHIFT`, quantize by `FT_QUANT * L1_QUANT`).
-#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-pub const L1_DEQUANT: f32 = (1 << L1Q_SHIFT) as f32 / (FT_QUANT * FT_QUANT * L1_QUANT) as f32;
-
-/// Whether to perform FT permutation.
-pub const USE_FTPERM: bool = true;
+/// Rows in each feature transform.
+///
+/// The pawn pair and threat inputs share one weight array, with the pawn pairs first, so anything
+/// walking that array has to cover both.
+pub const FT_THRT_ROWS: usize = PAWN_FEATURES + THRT_FEATURES;
+pub const FT_PSQT_ROWS: usize = PSQT_FEATURES * NB_INPUT_BUCKETS;
 
 /// Layer sizes.
-pub const L1_LEN: usize = 1792;
+pub const L1_LEN: usize = 1024;
 pub const L2_LEN: usize = 32;
 pub const L3_LEN: usize = 32;
 
@@ -58,7 +62,9 @@ pub const EFF_L2_LEN: usize = L2_LEN * 2;
 #[repr(C)]
 #[rustfmt::skip]
 pub struct NNUEData {
-    pub ftw: [Align64<[i16; L1_LEN]>; PSQT_FEATURES * NB_INPUT_BUCKETS],
+    pub ftw_psqt: [Align64<[i16; L1_LEN]>; FT_PSQT_ROWS],
+    pub ftw_thrt: [Align64<[i8 ; L1_LEN]>; FT_THRT_ROWS],
+
     pub ftb:  Align64<[i16; L1_LEN]>,
     pub l1w: [Align64<[i8 ; L1_LEN *     L2_LEN]>; NB_OUTPUT_BUCKETS],
     pub l1b: [Align64<[f32; L2_LEN]>;              NB_OUTPUT_BUCKETS],
@@ -72,7 +78,9 @@ pub struct NNUEData {
 #[repr(C)]
 #[rustfmt::skip]
 pub struct QuantNNUEData {
-    pub ftw:   [i16; L1_LEN * PSQT_FEATURES * NB_INPUT_BUCKETS],
+    pub ftw_psqt:   [i16; L1_LEN * FT_PSQT_ROWS],
+    pub ftw_thrt:   [i8 ; L1_LEN * FT_THRT_ROWS],
+
     pub ftb:   [i16; L1_LEN],
     pub l1w: [[[i8 ; L2_LEN]; NB_OUTPUT_BUCKETS]; L1_LEN],
     pub l1b:  [[f32; L2_LEN]; NB_OUTPUT_BUCKETS],
@@ -86,7 +94,9 @@ pub struct QuantNNUEData {
 #[repr(C)]
 #[rustfmt::skip]
 pub struct RawNNUEData {
-    pub ftw:  [[f32; L1_LEN * PSQT_FEATURES]; NB_INPUT_BUCKETS + 1 /*factorizer*/],
+    pub ftw_psqt: [[f32; L1_LEN * PSQT_FEATURES]; NB_INPUT_BUCKETS],
+    pub ftw_thrt:  [f32; L1_LEN * FT_THRT_ROWS],
+
     pub ftb:   [f32; L1_LEN],
     pub l1w: [[[f32; L2_LEN]; NB_OUTPUT_BUCKETS]; L1_LEN],
     pub l1b:  [[f32; L2_LEN]; NB_OUTPUT_BUCKETS],

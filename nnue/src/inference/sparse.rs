@@ -5,7 +5,9 @@ use std::{cell::RefCell, fs::File, io::Write};
 use utils::memory::Align64;
 
 #[cfg(feature = "nnz_logging")]
-use crate::arch::USE_FTPERM;
+use crate::arch::PAIRWISE_LEN;
+#[cfg(feature = "nnz_logging")]
+use crate::preprocess::ftperm::USE_FTPERM;
 use crate::{arch::L1_LEN, simd};
 
 /// List of nonzero indices.

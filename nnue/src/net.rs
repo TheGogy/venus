@@ -9,6 +9,7 @@ use crate::{
     features::{
         Accumulator, output_bucket,
         psqt::{PsqtAccumulator, PsqtCache},
+        threat::ThreatAccumulator,
         update_stack,
     },
     inference::propagate::propagate_all_layers,
@@ -33,68 +34,84 @@ pub struct NNUE {
     nn: &'static NNUEData,
     cache: PsqtCache,
     psqt_stack: Box<[PsqtAccumulator; MAX_ACCS]>,
+    thrt_stack: Box<[ThreatAccumulator; MAX_ACCS]>,
     idx: usize,
 }
 
 impl Default for NNUE {
     #[allow(unreachable_code)]
     fn default() -> Self {
-        #[cfg(not(feature = "embed"))]
-        panic!("NNUE not embedded!!!!! Must use `embed` features and define EVALFILE");
+        // #[cfg(not(feature = "embed"))]
+        // panic!("NNUE not embedded!!!!! Must use `embed` features and define EVALFILE");
 
-        let nn = get_permuted_nnue();
-        Self { cache: PsqtCache::new(nn), psqt_stack: new_stack(nn), idx: 0, nn }
+        Self::with_net(get_permuted_nnue())
     }
 }
 
 impl NNUE {
+    /// Build an NNUE around an already permuted network.
+    pub fn with_net(nn: &'static NNUEData) -> Self {
+        Self { cache: PsqtCache::new(nn), psqt_stack: new_stack(nn), thrt_stack: new_stack(nn), idx: 0, nn }
+    }
+
     /// Reset the NNUE.
     pub fn reset(&mut self) {
         self.cache.reset(self.nn);
         self.idx = 0;
     }
 
-    /// A move has been made in the position: push its delta onto the stack.
-    /// `b` must be the board *before* the move is made.
-    pub fn move_made(&mut self, b: &Board, m: Move) {
+    /// Make a move on the board, pushing its delta onto the stack.
+    pub fn make_move(&mut self, b: &mut Board, m: Move) {
         self.idx += 1;
-        self.psqt_stack[self.idx].push_move(b, m);
+
+        self.psqt_stack[self.idx].push_move_before(b, m);
+        self.thrt_stack[self.idx].push_move_before(b, m);
+        b.make_move(m);
+        self.psqt_stack[self.idx].push_move_after(b);
+        self.thrt_stack[self.idx].push_move_after(b);
     }
 
-    /// A move has been undone in the position: pop 1 off the stack.
-    pub const fn move_undo(&mut self) {
+    /// Undo a move on the board, popping its delta off the stack.
+    pub fn undo_move(&mut self, b: &mut Board) {
+        b.undo_move();
         self.idx -= 1;
     }
 
     /// Update everything in the NNUE to match the current board.
-    /// This could be expensive, use refresh where possible.
+    /// This could be expensive, use [`update_incremental`] where possible.
     pub fn update_all(&mut self, b: &Board) {
         for pov in Color::iter() {
             self.psqt_stack[self.idx].refresh(self.nn, &mut self.cache, b, pov);
+            self.thrt_stack[self.idx].refresh(self.nn, &mut (), b, pov);
         }
     }
 
     /// Bring every input set at the current ply up to date with the board.
     fn update_incremental(&mut self, b: &Board) {
         update_stack(self.nn, &mut *self.psqt_stack, &mut self.cache, self.idx, b);
+        update_stack(self.nn, &mut *self.thrt_stack, &mut (), self.idx, b);
     }
 
     /// Evaluate the board using the NNUE.
     pub fn evaluate(&mut self, b: &Board) -> Eval {
+        #[allow(clippy::cast_possible_truncation)]
+        Eval(self.evaluate_raw(b) as i32)
+    }
+
+    /// Evaluate the board using the NNUE, without rounding to whole centipawns.
+    ///
+    /// This is what the trainer prints for a position, so it is the value the offline tooling
+    /// compares against.
+    pub fn evaluate_raw(&mut self, b: &Board) -> f32 {
         self.update_incremental(b);
 
         let obkt = output_bucket(b.occ().nbits() as usize);
-        let acc = &self.psqt_stack[self.idx];
-        debug_assert!(Color::iter().all(|pov| acc.correct(pov)));
+        let psqt_acc = &self.psqt_stack[self.idx];
+        let thrt_acc = &self.thrt_stack[self.idx];
 
-        let (stm, opp) = match b.stm {
-            Color::White => (&acc.values[0], &acc.values[1]),
-            Color::Black => (&acc.values[1], &acc.values[0]),
-        };
+        debug_assert!(Color::iter().all(|pov| psqt_acc.correct(pov)));
+        debug_assert!(Color::iter().all(|pov| thrt_acc.correct(pov)));
 
-        let out = propagate_all_layers(self.nn, stm, opp, obkt);
-
-        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-        Eval((out * SCALE as f32) as i32)
+        propagate_all_layers(self.nn, psqt_acc.values(b.stm), thrt_acc.values(b.stm), obkt) * SCALE
     }
 }

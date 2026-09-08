@@ -90,18 +90,16 @@ impl Position {
         self.nnue.update_all(&self.board);
     }
 
-    /// Make a null move on the board on the given thread.
+    /// Make a move on the board on the given thread.
     pub fn make_move(&mut self, m: Move, t: &mut Thread) {
         t.move_made(PieceTo::from(&self.board, m));
-        self.nnue.move_made(&self.board, m);
-        self.board.make_move(m);
+        self.nnue.make_move(&mut self.board, m);
     }
 
     /// Undo a move on the board on a given thread.
     pub fn undo_move(&mut self, t: &mut Thread) {
         t.move_undo();
-        self.board.undo_move();
-        self.nnue.move_undo();
+        self.nnue.undo_move(&mut self.board);
     }
 
     /// Make a null move on the board on a given thread.

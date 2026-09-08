@@ -9,8 +9,8 @@ nice cutechess-cli \
     -each timemargin=400 tc=8+0.08 proto=uci \
     -openings file="$BOOK" order=random format=epd \
     -rounds 10000 \
-    -games 2 \
-    -concurrency 20 \
+    -games 4 \
+    -concurrency 16 \
     -ratinginterval 100 \
     -sprt elo0=0.0 elo1=5.0 alpha=0.05 beta=0.05 \
     -repeat \

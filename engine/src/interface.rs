@@ -9,7 +9,7 @@ use std::{
 };
 
 use chess::{tables::atk_by_type, types::color::Color};
-use nnue::features::threat::threat_index;
+use nnue::features::{orient::Orient, threat::threat_index};
 
 #[cfg(feature = "tune")]
 use crate::tunables::params::tunables;
@@ -227,7 +227,7 @@ impl Engine {
             println!("- - - {perspective} - - -");
             let mut indices = vec![];
             let occ = self.pos.board.occ();
-            let ksq = self.pos.board.ksq(perspective);
+            let orient = Orient::new(self.pos.board.ksq(perspective), perspective);
 
             for src in occ {
                 let attacker = self.pos.board.pc_at(src);
@@ -235,9 +235,7 @@ impl Engine {
 
                 for dst in threats {
                     let victim = self.pos.board.pc_at(dst);
-                    let (valid, idx) = threat_index(ksq, perspective, attacker, victim, src, dst);
-
-                    if valid {
+                    if let Some(idx) = threat_index(orient, attacker, victim, src, dst) {
                         indices.push(idx);
                     }
                 }

@@ -91,16 +91,6 @@ impl CPiece {
     pub const fn flip_color(self) -> Self {
         Self::from_raw(self.to_raw() ^ 1)
     }
-
-    /// TODO: CHANGE ME
-    /// Get the colored index for the piece (P-K-p-k)
-    pub const fn colored_idx(self) -> usize {
-        (self.pt().to_raw() + self.color().to_raw() * 6) as usize
-    }
-
-    pub const fn from_colored_idx(cidx: usize) -> Self {
-        Self::make(Color::from_raw((cidx / 6) as u8), Piece::from_raw((cidx % 6) as u8))
-    }
 }
 
 impl fmt::Display for CPiece {

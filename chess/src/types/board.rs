@@ -265,7 +265,6 @@ impl Board {
 
         let (n2, b1) = (n / 4, n % 4);
         let (n3, b2) = (n2 / 4, n2 % 4);
-        // Both bishops are placed by now, so the queen has 6 free squares to choose from.
         let (n4, q) = (n3 / 6, n3 % 6);
 
         // Add piece after the first `idx` free slots.
@@ -385,6 +384,11 @@ impl Board {
     /// Get the bitboard of a given piece + color.
     pub fn pc_bb(&self, c: Color, p: Piece) -> Bitboard {
         self.p_bb(p) & self.c_bb(c)
+    }
+
+    /// Get both bitboards for a given piece.
+    pub fn both_p_bb(&self, p: Piece) -> [Bitboard; Color::NUM] {
+        [self.pc_bb(Color::White, p), self.pc_bb(Color::Black, p)]
     }
 
     /// Get all the diagonal sliders on the board (queens + bishops) of a specific color.

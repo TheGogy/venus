@@ -22,7 +22,7 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Quantizes a (raw) model and dumps the output
+    /// Permutes a (quantized) model and dumps the output
     Quantize { infile: PathBuf, outfile: PathBuf },
 
     /// Permutes a (quantized) model and dumps the output

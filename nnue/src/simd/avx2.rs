@@ -5,7 +5,6 @@ pub type I8Vec = __m256i;
 pub type U8Vec = __m256i;
 pub type I16Vec = __m256i;
 pub type I32Vec = __m256i;
-pub type F32Vec = __m256;
 pub type Mask32 = __mmask32;
 
 pub const ARCH_NAME: &str = "avx2";
@@ -13,7 +12,6 @@ pub const ARCH_NAME: &str = "avx2";
 pub const U8_LANES: usize = size_of::<U8Vec>() / size_of::<u8>();
 pub const I16_LANES: usize = size_of::<I16Vec>() / size_of::<i16>();
 pub const I32_LANES: usize = size_of::<I32Vec>() / size_of::<i32>();
-pub const F32_LANES: usize = size_of::<F32Vec>() / size_of::<f32>();
 pub const PACKUS_REGS: usize = size_of::<I32Vec>() / 8;
 
 // | 0  2 | 4  6 |
@@ -28,11 +26,6 @@ pub fn splat_i16(val: i16) -> I16Vec {
 /// Returns a vector set to the given value.
 pub fn splat_i32(val: i32) -> I32Vec {
     unsafe { _mm256_set1_epi32(val) }
-}
-
-/// Returns a vector set to the given value.
-pub fn splat_f32(val: f32) -> F32Vec {
-    unsafe { _mm256_set1_ps(val) }
 }
 
 /// Loads a vector in directly from the values at the given pointer.
@@ -53,6 +46,15 @@ pub unsafe fn load_i16(ptr: *const i16) -> I16Vec {
     unsafe { _mm256_load_si256(ptr.cast()) }
 }
 
+/// Loads [`I16_LANES`] i8s and sign extends them into a vector of i16s.
+///
+/// # Safety
+/// `ptr` must be valid for a read of [`I16_LANES`] bytes, and aligned to that many bytes.
+pub unsafe fn load_extend_i8(ptr: *const i8) -> I16Vec {
+    debug_assert!((ptr as usize).is_multiple_of(I16_LANES));
+    unsafe { _mm256_cvtepi8_epi16(_mm_load_si128(ptr.cast())) }
+}
+
 /// Loads a vector in directly from the values at the given pointer.
 ///
 /// # Safety
@@ -60,15 +62,6 @@ pub unsafe fn load_i16(ptr: *const i16) -> I16Vec {
 pub unsafe fn load_i32(ptr: *const i32) -> I32Vec {
     debug_assert!((ptr as usize).is_multiple_of(align_of::<I32Vec>()));
     unsafe { _mm256_load_si256(ptr.cast()) }
-}
-
-/// Loads a vector in directly from the values at the given pointer.
-///
-/// # Safety
-/// `ptr` must be valid for a read of one vector, and aligned to it.
-pub unsafe fn load_f32(ptr: *const f32) -> F32Vec {
-    debug_assert!((ptr as usize).is_multiple_of(align_of::<F32Vec>()));
-    unsafe { _mm256_load_ps(ptr.cast()) }
 }
 
 /// Stores a vector at the given pointer.
@@ -98,18 +91,9 @@ pub unsafe fn store_i32(dst: *mut i32, data: I32Vec) {
     unsafe { _mm256_store_si256(dst.cast(), data) }
 }
 
-/// Stores a vector at the given pointer.
-///
-/// # Safety
-/// `dst` must be valid for a write of one vector, and aligned to it.
-pub unsafe fn store_f32(dst: *mut f32, data: F32Vec) {
-    debug_assert!((dst as usize).is_multiple_of(align_of::<F32Vec>()));
-    unsafe { _mm256_store_ps(dst.cast(), data) }
-}
-
-/// Multiplies two vectors together and takes the high 16 bits.
-pub fn mulhi_i16(x: I16Vec, y: I16Vec) -> I16Vec {
-    unsafe { _mm256_mulhi_epi16(x, y) }
+/// Multiplies two vectors together, keeping the rounded high 16 bits of `2 * x * y`.
+pub fn mulhrs_i16(x: I16Vec, y: I16Vec) -> I16Vec {
+    unsafe { _mm256_mulhrs_epi16(x, y) }
 }
 
 /// Sums two vectors together.
@@ -120,21 +104,6 @@ pub fn add_i16(x: I16Vec, y: I16Vec) -> I16Vec {
 /// Subtracts the second vector from the first.
 pub fn sub_i16(x: I16Vec, y: I16Vec) -> I16Vec {
     unsafe { _mm256_sub_epi16(x, y) }
-}
-
-/// Sums two vectors together.
-pub fn add_f32(x: F32Vec, y: F32Vec) -> F32Vec {
-    unsafe { _mm256_add_ps(x, y) }
-}
-
-/// Multiplies two vectors together.
-pub fn mul_f32(x: F32Vec, y: F32Vec) -> F32Vec {
-    unsafe { _mm256_mul_ps(x, y) }
-}
-
-/// Multiplies x and y and adds to z.
-pub fn fmadd_f32(x: F32Vec, y: F32Vec, z: F32Vec) -> F32Vec {
-    unsafe { _mm256_fmadd_ps(x, y, z) }
 }
 
 /// Returns min of two vectors.
@@ -152,16 +121,6 @@ pub fn clamp_i16(v: I16Vec, min: I16Vec, max: I16Vec) -> I16Vec {
     min_i16(max, max_i16(v, min))
 }
 
-/// Clamps a vector between two values.
-pub fn clamp_f32(v: F32Vec, min: F32Vec, max: F32Vec) -> F32Vec {
-    unsafe { _mm256_min_ps(max, _mm256_max_ps(v, min)) }
-}
-
-/// Retuns min of two values.
-pub fn min_f32(x: F32Vec, y: F32Vec) -> F32Vec {
-    unsafe { _mm256_min_ps(x, y) }
-}
-
 /// Shift left by <SHIFT> and pad with 0s.
 /// HACK: Who decided this one is an i32???
 pub type ShiftT = i32;
@@ -174,25 +133,57 @@ pub fn packus_i16_u8(x: I16Vec, y: I16Vec) -> U8Vec {
     unsafe { _mm256_packus_epi16(x, y) }
 }
 
-/// Convert packed i32s -> f32s.
-pub fn cvt_i32_f32(x: I32Vec) -> F32Vec {
-    unsafe { _mm256_cvtepi32_ps(x) }
+/// Sums two vectors together.
+pub fn add_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { _mm256_add_epi32(x, y) }
+}
+
+/// Multiplies two vectors together, keeping the low 32 bits of each product.
+pub fn mul_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { _mm256_mullo_epi32(x, y) }
+}
+
+/// Multiplies x and y and adds to z.
+pub fn mul_add_i32(x: I32Vec, y: I32Vec, z: I32Vec) -> I32Vec {
+    add_i32(mul_i32(x, y), z)
+}
+
+/// Returns min of two vectors.
+pub fn min_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { _mm256_min_epi32(x, y) }
+}
+
+/// Returns max of two vectors.
+pub fn max_i32(x: I32Vec, y: I32Vec) -> I32Vec {
+    unsafe { _mm256_max_epi32(x, y) }
+}
+
+/// Clamps a vector between two values.
+pub fn clamp_i32(v: I32Vec, min: I32Vec, max: I32Vec) -> I32Vec {
+    min_i32(max, max_i32(v, min))
+}
+
+/// Shift left by <SHIFT> and pad with 0s.
+pub fn shl_i32<const SHIFT: ShiftT>(v: I32Vec) -> I32Vec {
+    unsafe { _mm256_slli_epi32(v, SHIFT) }
+}
+
+/// Arithmetic shift right by <SHIFT>.
+pub fn shr_i32<const SHIFT: ShiftT>(v: I32Vec) -> I32Vec {
+    unsafe { _mm256_srai_epi32(v, SHIFT) }
 }
 
 /// Gets the sum of the values in the vector.
-pub fn reduce_add_f32(v: F32Vec) -> f32 {
+pub fn reduce_add_i32(v: I32Vec) -> i32 {
     unsafe {
-        let hi = _mm256_extractf128_ps(v, 1);
-        let lo = _mm256_castps256_ps128(v);
-        let sum_128 = _mm_add_ps(hi, lo);
+        let hi = _mm256_extracti128_si256::<1>(v);
+        let lo = _mm256_castsi256_si128(v);
+        let sum_128 = _mm_add_epi32(hi, lo);
 
-        let upper_64 = _mm_movehl_ps(sum_128, sum_128);
-        let sum_64 = _mm_add_ps(upper_64, sum_128);
+        let sum_64 = _mm_add_epi32(sum_128, _mm_shuffle_epi32::<0b0100_1110>(sum_128));
+        let sum_32 = _mm_add_epi32(sum_64, _mm_shuffle_epi32::<0b1011_0001>(sum_64));
 
-        let upper_32 = _mm_shuffle_ps(sum_64, sum_64, 1);
-        let sum_32 = _mm_add_ss(upper_32, sum_64);
-
-        _mm_cvtss_f32(sum_32)
+        _mm_cvtsi128_si32(sum_32)
     }
 }
 
@@ -218,4 +209,9 @@ pub const fn cast_u8_i32(x: U8Vec) -> I32Vec {
 /// No-op for x86 arch.
 pub const fn cast_i32_u8(x: I32Vec) -> U8Vec {
     x
+}
+
+/// Fetch the cache line at `ptr` into every level of cache.
+pub fn prefetch(ptr: *const u8) {
+    unsafe { _mm_prefetch::<_MM_HINT_T0>(ptr.cast()) }
 }
