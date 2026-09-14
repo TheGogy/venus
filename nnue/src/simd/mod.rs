@@ -1,40 +1,16 @@
-#[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
-pub mod avx2;
+#[cfg(all(target_feature = "avx512f", target_feature = "avx512bw"))]
+#[path = "avx512.rs"]
+mod backend;
 
-#[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
-pub use avx2::*;
+#[cfg(all(target_feature = "avx2", not(all(target_feature = "avx512f", target_feature = "avx512bw"))))]
+#[path = "avx2.rs"]
+mod backend;
 
-#[cfg(target_feature = "avx512f")]
-pub mod avx512f;
+#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+#[path = "neon.rs"]
+mod backend;
 
-#[cfg(target_feature = "avx512f")]
-pub use avx512f::*;
+#[cfg(not(any(target_feature = "avx512f", target_feature = "avx2", target_feature = "neon")))]
+compile_error!("No SIMD backend available: build with target-cpu=native, or enable one of avx2, avx512f+avx512bw or neon.");
 
-#[cfg(target_feature = "neon")]
-pub mod neon;
-
-#[cfg(target_feature = "neon")]
-pub use neon::*;
-
-// Preserve interface if we're using a different type.
-#[cfg(not(any(target_feature = "avx2", target_feature = "avx512f", target_feature = "neon")))]
-#[allow(clippy::module_inception)]
-pub mod simd {
-    pub const ARCH_NAME: &str = "fallback";
-    pub const CHUNK_SIZE_I16: usize = 1;
-
-    pub type ShiftT = u32;
-
-    pub fn reduce_add(arr: &mut [f32], len: usize) -> f32 {
-        debug_assert!(len.is_power_of_two());
-        if len == 2 {
-            return arr[0] + arr[1];
-        }
-
-        for i in 0..(len / 2) {
-            arr[i] += arr[i + len / 2];
-        }
-
-        reduce_add(arr, len / 2)
-    }
-}
+pub use backend::*;

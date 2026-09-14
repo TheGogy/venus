@@ -8,6 +8,9 @@ use std::{
     time::Instant,
 };
 
+use chess::{tables::atk_by_type, types::color::Color};
+use nnue::features::{orient::Orient, threat::threat_index};
+
 #[cfg(feature = "tune")]
 use crate::tunables::params::tunables;
 use crate::{
@@ -49,6 +52,8 @@ pub enum EngineCommand {
     Eval,
     Move(String),
     Undo,
+
+    Threats,
 }
 
 /// Setup engine in new thread.
@@ -98,6 +103,7 @@ impl Engine {
             EngineCommand::Undo          => self.handle_undo(),
             EngineCommand::Print         => println!("{}", self.pos.board),
 
+            EngineCommand::Threats       => self.handle_threats(),
             // Should have been handled already.
             EngineCommand::Stop          => unreachable!()
         }
@@ -207,5 +213,39 @@ impl Engine {
     /// Handle undo command.
     fn handle_undo(&mut self) {
         self.pos.undo_move(&mut Thread::placeholder());
+    }
+
+    /// TODO: REMOVE
+    /// Print out all threats
+    pub fn handle_threats(&self) {
+        if self.pos.board.in_check() {
+            println!("IN CHECK, NO THREAT EVAL");
+            return;
+        }
+
+        for perspective in Color::iter() {
+            println!("- - - {perspective} - - -");
+            let mut indices = vec![];
+            let occ = self.pos.board.occ();
+            let orient = Orient::new(self.pos.board.ksq(perspective), perspective);
+
+            for src in occ {
+                let attacker = self.pos.board.pc_at(src);
+                let threats = atk_by_type(attacker, src, occ) & occ;
+
+                for dst in threats {
+                    let victim = self.pos.board.pc_at(dst);
+                    if let Some(idx) = threat_index(orient, attacker, victim, src, dst) {
+                        indices.push(idx);
+                    }
+                }
+            }
+
+            indices.sort_unstable();
+            for i in indices {
+                print!("{i}, ")
+            }
+            println!();
+        }
     }
 }

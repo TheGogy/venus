@@ -86,6 +86,11 @@ impl CPiece {
     pub fn to_char(self) -> char {
         Self::UCI_CHAR.chars().nth(self as usize).unwrap_or('?')
     }
+
+    /// Change to opposing side.
+    pub const fn flip_color(self) -> Self {
+        Self::from_raw(self.to_raw() ^ 1)
+    }
 }
 
 impl fmt::Display for CPiece {

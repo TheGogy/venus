@@ -54,6 +54,11 @@ impl Square {
         Rank::from_raw(self.to_raw() >> 3)
     }
 
+    /// Whether or not this square is on the king side.
+    pub const fn is_kingside(self) -> bool {
+        self.file().idx() >= File::FE.idx()
+    }
+
     /// Gets the square relative to white's side.
     pub const fn relative(self, c: Color) -> Self {
         match c {

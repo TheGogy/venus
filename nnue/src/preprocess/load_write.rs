@@ -1,13 +1,12 @@
 use std::{
     fs::File,
-    io::{Read, Write},
+    io::{Error, ErrorKind, Read, Result, Write},
     path::Path,
 };
 
-use clap::error::{Error, ErrorKind, Result};
 use utils::memory::boxed_zeroed;
 
-use crate::arch::{NNUEData, QuantNNUEData, RawNNUEData};
+use crate::arch::{EmbedNNUEData, NNUEData};
 
 pub trait LoadWrite: Sized {
     /// Load the given type from some file.
@@ -21,8 +20,8 @@ pub trait LoadWrite: Sized {
         let actual = file.metadata()?.len();
 
         if (expected as u64) != actual {
-            return Err(Error::raw(
-                ErrorKind::InvalidValue,
+            return Err(Error::new(
+                ErrorKind::InvalidData,
                 format!("Error loading {}: Expected {expected} bytes, found {actual} bytes!", std::any::type_name::<Self>()),
             ));
         }
@@ -53,5 +52,4 @@ pub trait LoadWrite: Sized {
 }
 
 impl LoadWrite for NNUEData {}
-impl LoadWrite for RawNNUEData {}
-impl LoadWrite for QuantNNUEData {}
+impl LoadWrite for EmbedNNUEData {}

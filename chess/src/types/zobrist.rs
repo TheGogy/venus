@@ -1,6 +1,6 @@
 use core::fmt;
 
-use utils::rng::next_rng;
+use utils::{cfor, rng::next_rng};
 
 use crate::types::{
     castling::CastlingRights,
@@ -67,16 +67,12 @@ pub(crate) static PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
     let mut piece_sq = [[0; Square::NUM]; CPiece::NUM];
     let mut state = 0xDE0D_71DD_0844_AD02;
 
-    let mut p = 0;
-    while p < CPiece::NUM {
-        let mut s = 0;
-        while s < Square::NUM {
+    cfor!(let mut p = 0; p < CPiece::NUM; p += 1; {
+        cfor!(let mut s = 0; s < Square::NUM; s += 1; {
             piece_sq[p][s] = state;
             state = next_rng(state);
-            s += 1;
-        }
-        p += 1;
-    }
+        });
+    });
 
     piece_sq
 };
@@ -85,12 +81,11 @@ pub(crate) static PIECE_KEYS: [[u64; Square::NUM]; CPiece::NUM] = {
 static CASTLING_KEYS: [u64; CastlingRights::NUM] = {
     let mut castling = [0; CastlingRights::NUM];
     let mut state = 0xAC3B_55E2_31CE_6ABB;
-    let mut i = 0;
-    while i < CastlingRights::NUM {
+
+    cfor!(let mut i = 0; i < CastlingRights::NUM; i += 1; {
         castling[i] = state;
         state = next_rng(state);
-        i += 1;
-    }
+    });
 
     castling
 };
@@ -101,12 +96,10 @@ static EN_PASSANT_KEYS: [u64; File::NUM + 1] = {
     let mut en_passant = [0; File::NUM + 1];
     let mut state = 0x3855_0AD0_83D9_4048;
 
-    let mut i = 0;
-    while i < File::NUM {
+    cfor!(let mut i = 0; i < File::NUM; i += 1; {
         en_passant[i] = state;
         state = next_rng(state);
-        i += 1;
-    }
+    });
 
     en_passant
 };

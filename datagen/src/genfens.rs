@@ -7,12 +7,12 @@ const RANDOM_MOVE_SEE_ATTEMPTS: usize = 8;
 const SEE_THRESHOLD: Eval = Eval(-1000);
 
 pub fn gen_random_position(p: &mut Position, rng: &mut Rng, moves: usize, dfrc: bool) {
-    p.reset();
+    p.board = Board::default();
 
     if dfrc {
-        // Can unwrap here because index is guaranteed to be valid
+        // # SAFETY:
+        // Can unwrap here because index is guaranteed to be valid.
         p.board = Board::from_frc_idx(rng.usize(0..(960 * 960)), true).unwrap();
-        p.reinit_nnue();
     }
 
     // Randomize starting side to prevent bias.
@@ -44,6 +44,8 @@ pub fn gen_random_position(p: &mut Position, rng: &mut Rng, moves: usize, dfrc: 
             p.board.make_move(m);
         }
     }
+
+    p.reinit_nnue();
 
     // Wildly unbalanced position: try again.
     if p.evaluate().abs() > Eval(1000) {

@@ -3,11 +3,11 @@
 
 pub mod arch;
 pub mod embed;
+pub mod features;
 pub mod inference;
 pub mod net;
 pub mod preprocess;
 
 mod simd;
-mod utils;
 
-pub const ARCH: &str = simd::simd::ARCH_NAME;
+pub const ARCH: &str = simd::ARCH_NAME;

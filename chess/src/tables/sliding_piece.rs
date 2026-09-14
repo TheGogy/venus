@@ -1,4 +1,5 @@
 use ctor::ctor;
+use utils::cfor;
 
 use crate::types::{
     bitboard::Bitboard,
@@ -40,12 +41,10 @@ const fn bishop_atk_init(s: usize, occ: u64) -> u64 {
 /// Raw bishop attacks table. This does not take blockers into account.
 pub static BISHOP_ATTACKS: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
-    let mut square = 0;
 
-    while square < 64 {
-        attacks[square] = Bitboard(bishop_atk_init(square, 0));
-        square += 1;
-    }
+    cfor!(let mut sq = 0; sq < 64; sq += 1; {
+        attacks[sq] = Bitboard(bishop_atk_init(sq, 0));
+    });
 
     attacks
 };
@@ -62,12 +61,10 @@ const fn rook_atk_init(s: usize, occ: u64) -> u64 {
 /// Raw rook attacks table. This does not take blockers into account.
 pub static ROOK_ATTACKS: [Bitboard; 64] = {
     let mut attacks = [Bitboard(0); 64];
-    let mut square = 0;
 
-    while square < 64 {
-        attacks[square] = Bitboard(rook_atk_init(square, 0));
-        square += 1;
-    }
+    cfor!(let mut sq = 0; sq < 64; sq += 1; {
+        attacks[sq] = Bitboard(rook_atk_init(sq, 0));
+    });
 
     attacks
 };
@@ -77,11 +74,8 @@ pub static ROOK_ATTACKS: [Bitboard; 64] = {
 pub static BETWEEN_TABLE: [[Bitboard; 64]; 64] = {
     let mut between = [[Bitboard(0); 64]; 64];
 
-    let mut s1 = 0;
-
-    while s1 < 64 {
-        let mut s2 = 0;
-        while s2 < 64 {
+    cfor!(let mut s1 = 0; s1 < 64; s1 += 1; {
+        cfor!(let mut s2 = 0; s2 < 64; s2 += 1; {
             let bb1 = 1u64 << s1;
             let bb2 = 1u64 << s2;
 
@@ -90,10 +84,8 @@ pub static BETWEEN_TABLE: [[Bitboard; 64]; 64] = {
             } else if ROOK_ATTACKS[s1].0 & bb2 != 0 {
                 between[s1][s2] = Bitboard(rook_atk_init(s1, bb2) & rook_atk_init(s2, bb1));
             }
-            s2 += 1;
-        }
-        s1 += 1;
-    }
+        });
+    });
 
     between
 };

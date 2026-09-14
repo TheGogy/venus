@@ -1,3 +1,5 @@
+use utils::cfor;
+
 use crate::{
     tables::{atk_by_type_const, sliding_piece::between},
     types::{
@@ -91,20 +93,19 @@ const fn h2(k: u64) -> usize {
 static CUCKOO: CuckooTable = {
     let mut ct = CuckooTable { keys: [0; 8192], moves: [Move::NONE; 8192] };
 
-    let mut c = 0; // White ..= Black
-    while c < 2 {
-        let mut p = 1; // Knight ..= King
-        while p < 6 {
+    cfor!(let mut c = 0; c < 2; c += 1; {
+
+        // Knight..=King
+        cfor!(let mut p = 1; p < 6; p += 1; {
             let pc = CPiece::make(Color::from_raw(c), Piece::from_raw(p));
 
-            let mut x = 0;
-            while x < 64 {
-                let mut y = x + 1;
-                while y < 64 {
-                    let sq_x = Square::from_raw(x);
+            cfor!(let mut x = 0; x < 64; x += 1; {
+                let sq_x = Square::from_raw(x);
+
+                cfor!(let mut y = x + 1; y < 64; y += 1; {
                     let sq_y = Square::from_raw(y);
 
-                    if atk_by_type_const(pc.pt(), sq_x).has(sq_y) {
+                    if atk_by_type_const(pc.pt(), sq_x, Color::from_raw(c)).has(sq_y) {
                         let mut mv = Move::new(sq_x, sq_y, MoveFlag::Normal);
                         let mut key = PIECE_KEYS[pc.idx()][x as usize] ^ PIECE_KEYS[pc.idx()][y as usize] ^ COLOR_KEY;
 
@@ -121,14 +122,10 @@ static CUCKOO: CuckooTable = {
                             idx = if idx == h1(key) { h2(key) } else { h1(key) };
                         }
                     }
-                    y += 1;
-                }
-                x += 1;
-            }
-            p += 1;
-        }
-        c += 1;
-    }
+                });
+            });
+        });
+    });
 
     ct
 };

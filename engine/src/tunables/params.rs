@@ -25,15 +25,15 @@ use crate::init_tunables;
 // mult => The multiplier (combined with a base value).
 init_tunables! {
     // Material scaling values.
-    ms_base: i32 = 715, 600, 900, 10;
-    ms_knight: i32 = 446, 400, 500, 5;
-    ms_bishop: i32 = 459, 400, 500, 5;
-    ms_rook:   i32 = 705, 600, 800, 10;
-    ms_queen:  i32 = 1313, 1200, 1400, 10;
+    ms_base: i32 = 714, 600, 900, 10;
+    ms_knight: i32 = 447, 400, 500, 5;
+    ms_bishop: i32 = 460, 400, 500, 5;
+    ms_rook:   i32 = 703, 600, 800, 10;
+    ms_queen:  i32 = 1312, 1200, 1400, 10;
 
     // Aspiration window.
     asp_window_d_min:     i16 = 4, 2, 7, 1;
-    asp_window_div:       i32 = 11400, 8000, 14000, 500;
+    asp_window_div:       i32 = 11650, 8000, 30000, 1100;
     asp_window_base:      i32 = 5, 4, 10, 1;
 
     asp_window_expansion_fail_high: f32 = 0.34687291, 0.1, 0.5, 0.05;
@@ -54,7 +54,7 @@ init_tunables! {
     hist_noisy_div: i32 = 6329, 5000, 8000, 150;
 
     // Correction history weights. (scaled up x1024).
-    hist_corr_pawn:  i32 = 80, 60, 100, 2;
+    hist_corr_pawn:  i32 = 81, 60, 100, 2;
     hist_corr_other: i32 = 100, 80, 120, 2;
 
     // transposition table.
@@ -62,7 +62,7 @@ init_tunables! {
 
     // Probcut.
     pc_beta_base:          i32 = 143, 120, 200, 5;
-    pc_beta_non_improving: i32 = 55, 30, 80, 4;
+    pc_beta_non_improving: i32 = 56, 30, 80, 4;
 
     pc_lerp: f32 = 0.21256722, 0.1, 0.5, 0.05;
 
@@ -86,7 +86,7 @@ init_tunables! {
     lmr_ttdeeper:  i32 = 988, 512, 2048, 150;
     lmr_nonpv:     i32 = 587, 512, 2048, 150;
     lmr_cutnode:   i32 = 2004, 1024, 4096, 400;
-    lmr_nonimprov: i32 = 872, 512, 2048, 150;
+    lmr_nonimprov: i32 = 795, 512, 2048, 150;
     lmr_ttnoisy:   i32 = 1063, 512, 2048, 150;
     lmr_histscale: i32 = 906, 512, 2048, 150;
 
@@ -101,15 +101,15 @@ init_tunables! {
 
     // Reverse futility pruning.
     rfp_d_max:            i16 = 8, 5, 12, 1;
-    rfp_mult:             i32 = 82, 40, 120, 5;
-    rfp_improving_margin: i32 = 59, 25, 85, 5;
-    rfp_worsening_margin: i32 = 6, 5, 20, 1;
+    rfp_mult:             i32 = 83, 40, 120, 5;
+    rfp_improving_margin: i32 = 60, 25, 85, 5;
+    rfp_worsening_margin: i32 = 6, 0, 20, 1;
 
-    rfp_lerp: f32 = 0.18960273, 0.1, 0.7, 0.05;
+    rfp_lerp: f32 = 0.18571568, 0.05, 0.7, 0.05;
 
     // Null move pruning.
     nmp_d_min:            i16 = 3, 1, 4, 1;
-    nmp_improving_margin: i32 = 68, 40, 100, 5;
+    nmp_improving_margin: i32 = 66, 40, 100, 5;
     nmp_base:             i16 = 5, 2, 7, 1;
     nmp_factor:           i16 = 3, 2, 8, 1;
 
@@ -117,20 +117,20 @@ init_tunables! {
     iir_d_min:  i16 = 2, 1, 4, 1;
 
     // Razoring.
-    rz_base: i32 = 470, 350, 550, 40;
-    rz_mult: i32 = 300, 250, 400, 30;
+    rz_base: i32 = 474, 350, 550, 40;
+    rz_mult: i32 = 298, 250, 400, 30;
 
     // History pruning.
     hp_d_min: i16 = 2, 1, 5, 1;
     hp_s_min: i32 = 5000, 3500, 6000, 100;
 
     // Futility pruning.
-    fp_base:  i32 = 80, 50, 100, 2;
+    fp_base:  i32 = 81, 50, 100, 2;
     fp_mult:  i32 = 91, 50, 100, 2;
     fp_d_min: i32 = 5, 3, 8, 1;
 
     // Futility pruning for qsearch.
-    fp_qs_base: i32 = 353, 300, 400, 5;
+    fp_qs_base: i32 = 352, 300, 400, 5;
 
     // Late move pruning.
     lmp_base:  i16 = 2, 2, 8, 1;

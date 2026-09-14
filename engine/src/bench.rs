@@ -7,12 +7,7 @@ use utils::parse::parse_file_ignore_hash;
 use crate::{position::Position, tb::probe::SyzygyTB, threading::thread::Thread, time_management::timecontrol::TimeControl, tt::table::TT};
 
 // NOTE:  Make sure that bench depth is at least as high as the highest of any min depths in tuning.
-#[cfg(not(feature = "nnz_logging"))]
 const BENCH_DEPTH: i16 = 14;
-
-// Use a lower depth if we just want to record neuron coactivations.
-#[cfg(feature = "nnz_logging")]
-const BENCH_DEPTH: i16 = 10;
 
 /// Runs a benchmark of the engine on a number of positions.
 /// # Panics
