@@ -7,11 +7,11 @@ use chess::types::{
     piece::Piece,
     square::Square,
 };
-use utils::{cfor, max, min};
+use utils::{cfor, max};
 
 use crate::{
     arch::{HALF_BUCKET_MAP, HalfAcc, L1_LEN, NNUEData},
-    features::{Accumulator, orient::Orient},
+    features::{Accumulator, accumulate, orient::Orient},
     simd,
 };
 
@@ -56,7 +56,7 @@ struct View {
 }
 
 impl View {
-    fn new(ksq: Square, pov: Color) -> Self {
+    const fn new(ksq: Square, pov: Color) -> Self {
         let orient = Orient::new(ksq, pov);
         let bucket = BUCKET_MAP[orient.sq(ksq) as usize];
         Self { orient, bucket_base: bucket * BUCKET_STRIDE }
@@ -130,11 +130,11 @@ impl PsqtDelta {
     }
 
     fn apply(&self, nn: &NNUEData, curr: &mut HalfAcc, prev: &HalfAcc, pov: Color) {
-        debug_assert!(self.refresh != Some(pov), "applied a delta across a king bucket change");
+        debug_assert!(self.refresh != Some(pov), "applied a delta across a king bucket change!");
 
         let row = |feat: usize| nn.ftw_psqt[feat].as_ptr();
         let mut add_sub = |adds: &[*const i16], subs: &[*const i16]| unsafe {
-            accumulate::<DELTA_REGS>(prev.as_ptr(), curr.as_mut_ptr(), adds, subs);
+            accumulate::<i16, DELTA_REGS, false>(prev.as_ptr(), curr.as_mut_ptr(), adds, subs);
         };
 
         let p = pov.idx();
@@ -214,7 +214,7 @@ impl Accumulator for PsqtAccumulator {
 
         // Update the cache entry and the accumulator.
         let feats = entry.values[pov.idx()].as_mut_ptr();
-        unsafe { accumulate::<REFRESH_REGS>(feats, feats, &adds, &subs) }
+        unsafe { accumulate::<i16, REFRESH_REGS, false>(feats, feats, &adds, &subs) }
 
         entry.pieces[pov.idx()] = b.pieces;
         entry.colors[pov.idx()] = b.colors;
@@ -270,41 +270,3 @@ const DELTA_REGS: usize = 1;
 
 const _: () = assert!(L1_LEN.is_multiple_of(REFRESH_REGS * simd::I16_LANES));
 const _: () = assert!(L1_LEN.is_multiple_of(DELTA_REGS * simd::I16_LANES));
-
-#[inline]
-unsafe fn accumulate<const REGS: usize>(src: *const i16, dst: *mut i16, adds: &[*const i16], subs: &[*const i16]) {
-    let pairs = min!(adds.len(), subs.len());
-    let mut regs = [simd::splat_i16(0); REGS];
-
-    for base in (0..L1_LEN).step_by(REGS * simd::I16_LANES) {
-        let off = |r: usize| base + r * simd::I16_LANES;
-
-        unsafe {
-            for (r, v) in regs.iter_mut().enumerate() {
-                *v = simd::load_i16(src.add(off(r)));
-            }
-
-            for j in 0..pairs {
-                let (a, s) = (adds[j], subs[j]);
-                for (r, v) in regs.iter_mut().enumerate() {
-                    let o = off(r);
-                    *v = simd::add_i16(*v, simd::sub_i16(simd::load_i16(a.add(o)), simd::load_i16(s.add(o))));
-                }
-            }
-            for &a in &adds[pairs..] {
-                for (r, v) in regs.iter_mut().enumerate() {
-                    *v = simd::add_i16(*v, simd::load_i16(a.add(off(r))));
-                }
-            }
-            for &s in &subs[pairs..] {
-                for (r, v) in regs.iter_mut().enumerate() {
-                    *v = simd::sub_i16(*v, simd::load_i16(s.add(off(r))));
-                }
-            }
-
-            for (r, v) in regs.iter().enumerate() {
-                simd::store_i16(dst.add(off(r)), *v);
-            }
-        }
-    }
-}

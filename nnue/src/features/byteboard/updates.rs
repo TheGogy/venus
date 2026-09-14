@@ -7,11 +7,9 @@ use chess::types::{
 
 use crate::features::{
     byteboard::{
+        backend::{Rays, VecT, set_square, splat_board},
         luts::NON_KNIGHTS_MASK,
-        vbmi2::{
-            VecT, board_to_rays, closest_occupied, incoming_sliders, incoming_threats, outgoing_threats, perm_for, push_discovery,
-            push_focus, ray_fill, set_square, splat_board,
-        },
+        outgoing_threats, ray_fill,
     },
     threat::ThreatDeltas,
 };
@@ -68,9 +66,7 @@ pub fn on_move(tds: &mut ThreatDeltas, b: &Board, m: Move) {
 
 /// The threats toggled by putting `pc` on `sq` or taking it off again.
 fn on_change<const ADD: bool>(tds: &mut ThreatDeltas, board: VecT, pc: CPiece, sq: Square) {
-    let perm = perm_for(sq);
-    let (pcs, bits) = board_to_rays(perm, board);
-    let closest = closest_occupied(bits);
+    let rays = Rays::new(board, sq);
 
     // If the piece is added, then it focuses its own threats and removes discovered ones,
     // vice versa for if the piece is removed.
@@ -78,32 +74,28 @@ fn on_change<const ADD: bool>(tds: &mut ThreatDeltas, board: VecT, pc: CPiece, s
 
     // Kings cannot threaten or be threatened.
     if pc.pt() != Piece::King {
-        push_focus::<true>(focus, perm, pcs, outgoing_threats(pc, closest), pc, sq);
-        push_focus::<false>(focus, perm, pcs, incoming_threats(bits, closest), pc, sq);
+        rays.push_focus::<true>(focus, outgoing_threats(pc, rays.closest), pc, sq);
+        rays.push_focus::<false>(focus, rays.threats, pc, sq);
     }
 
     // Pair each slider aimed at `sq` with the first piece directly behind it.
-    let sliders = incoming_sliders(bits, closest);
-    let victims = (closest & NON_KNIGHTS_MASK).rotate_right(32);
-    let valid = ray_fill(sliders) & ray_fill(victims);
+    let victims = (rays.closest & NON_KNIGHTS_MASK).rotate_right(32);
+    let valid = ray_fill(rays.sliders) & ray_fill(victims);
 
-    push_discovery(disco, perm, pcs, sliders & valid, victims & valid);
+    rays.push_discovery(disco, rays.sliders & valid, victims & valid);
 }
 
 /// The threats toggled by replacing `old` on `sq` with `new`. No discovered attacks.
 fn on_replace(tds: &mut ThreatDeltas, board: VecT, old: CPiece, new: CPiece, sq: Square) {
-    let perm = perm_for(sq);
-    let (pcs, bits) = board_to_rays(perm, board);
-    let closest = closest_occupied(bits);
-    let incoming = incoming_threats(bits, closest);
+    let rays = Rays::new(board, sq);
 
     // A captured piece is never a king.
-    push_focus::<true>(&mut tds.subs, perm, pcs, outgoing_threats(old, closest), old, sq);
-    push_focus::<false>(&mut tds.subs, perm, pcs, incoming, old, sq);
+    rays.push_focus::<true>(&mut tds.subs, outgoing_threats(old, rays.closest), old, sq);
+    rays.push_focus::<false>(&mut tds.subs, rays.threats, old, sq);
 
     // Kings cannot threaten or be threatened.
     if new.pt() != Piece::King {
-        push_focus::<true>(&mut tds.adds, perm, pcs, outgoing_threats(new, closest), new, sq);
-        push_focus::<false>(&mut tds.adds, perm, pcs, incoming, new, sq);
+        rays.push_focus::<true>(&mut tds.adds, outgoing_threats(new, rays.closest), new, sq);
+        rays.push_focus::<false>(&mut tds.adds, rays.threats, new, sq);
     }
 }

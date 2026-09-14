@@ -44,8 +44,12 @@ pub mod threat;
 mod byteboard;
 
 use chess::types::{board::Board, color::Color, moves::Move, square::Square};
+use utils::min;
 
-use crate::arch::{HalfAcc, NNUEData};
+use crate::{
+    arch::{HalfAcc, L1_LEN, NNUEData},
+    simd,
+};
 
 /// Total number of output experts.
 pub const NB_OUTPUT_BUCKETS: usize = 8;
@@ -117,6 +121,76 @@ pub fn update_stack<A: Accumulator>(nn: &NNUEData, stack: &mut [A], cache: &mut 
             }
         } else {
             stack[idx].refresh(nn, cache, b, pov);
+        }
+    }
+}
+
+/// One row of a feature transform.
+pub(crate) trait FtRow: Copy {
+    /// # Safety
+    /// `ptr` must be valid for a read of [`simd::I16_LANES`] values, and vector aligned.
+    unsafe fn load(ptr: *const Self) -> simd::I16Vec;
+}
+
+impl FtRow for i16 {
+    unsafe fn load(ptr: *const Self) -> simd::I16Vec {
+        unsafe { simd::load_i16(ptr) }
+    }
+}
+
+impl FtRow for i8 {
+    unsafe fn load(ptr: *const Self) -> simd::I16Vec {
+        unsafe { simd::load_extend_i8(ptr) }
+    }
+}
+
+/// Add every row in `adds` to `src` and take off every row in `subs`, writing the result to `dst`.
+/// `REGS` accumulators are kept live at a time.
+/// `FROM_ZERO` initializes sum as 0 instead of from `src`.
+///
+/// # Safety
+/// `dst` must be valid for a write of [`L1_LEN`] i16s, every row must be valid for a read of
+/// [`L1_LEN`] values, and `src` likewise unless `FROM_ZERO`. Everything must be vector aligned.
+#[inline]
+pub(crate) unsafe fn accumulate<T: FtRow, const REGS: usize, const FROM_ZERO: bool>(
+    src: *const i16,
+    dst: *mut i16,
+    adds: &[*const T],
+    subs: &[*const T],
+) {
+    // Fuse adds and subs where we can.
+    let pairs = min!(adds.len(), subs.len());
+    let mut regs = [simd::splat_i16(0); REGS];
+
+    for base in (0..L1_LEN).step_by(REGS * simd::I16_LANES) {
+        let off = |r: usize| base + r * simd::I16_LANES;
+
+        unsafe {
+            for (r, v) in regs.iter_mut().enumerate() {
+                *v = if FROM_ZERO { simd::splat_i16(0) } else { simd::load_i16(src.add(off(r))) };
+            }
+
+            for i in 0..pairs {
+                let (a, s) = (adds[i], subs[i]);
+                for (r, v) in regs.iter_mut().enumerate() {
+                    let o = off(r);
+                    *v = simd::add_i16(*v, simd::sub_i16(T::load(a.add(o)), T::load(s.add(o))));
+                }
+            }
+            for &a in &adds[pairs..] {
+                for (r, v) in regs.iter_mut().enumerate() {
+                    *v = simd::add_i16(*v, T::load(a.add(off(r))));
+                }
+            }
+            for &s in &subs[pairs..] {
+                for (r, v) in regs.iter_mut().enumerate() {
+                    *v = simd::sub_i16(*v, T::load(s.add(off(r))));
+                }
+            }
+
+            for (r, v) in regs.iter().enumerate() {
+                simd::store_i16(dst.add(off(r)), *v);
+            }
         }
     }
 }

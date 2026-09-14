@@ -15,5 +15,6 @@ build() {
     cp "$dir"/release/cli test-"$name"
 }
 
-build avx2 "+avx2,-avx512f"
-build avx512 "+avx2,+avx512f"
+build avx2 "+avx2,+fma,-avx512f"
+build avx512 "+avx2,+fma,+avx512f,+avx512bw"
+build vbmi2 "+avx2,+fma,+avx512f,+avx512bw,+avx512vbmi,+avx512vbmi2"

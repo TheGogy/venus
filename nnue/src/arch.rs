@@ -16,7 +16,7 @@ pub const FT_QUANT: i32 = 255;
 pub const L1_QUANT: i32 = 128;
 
 /// How far right the pairwise product is shifted before `packus` puts it in a `u8`.
-pub const L1Q_SHIFT: simd::ShiftT = if simd::HAS_USDOT { 8 } else { 9 };
+pub const L1Q_SHIFT: simd::ShiftT = 8;
 
 /// Invert the quantization steps: both feature transform halves carry a factor of `FT_QUANT`, the
 /// pairwise product gives back `L1Q_SHIFT` bits, and the L1 weights carry `L1_QUANT`.

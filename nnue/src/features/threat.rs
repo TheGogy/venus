@@ -11,12 +11,12 @@ use chess::{
         square::Square,
     },
 };
-use utils::{cfor, memory::Align64, min};
+use utils::{cfor, memory::Align64};
 
 use crate::{
     arch::{HalfAcc, L1_LEN, NNUEData},
     features::{
-        Accumulator,
+        Accumulator, accumulate,
         byteboard::updates::on_move,
         orient::Orient,
         pawn::{MAX_PAWN_DELTAS_PER_MOVE, PAWN_FEATURES, PawnDeltas, collect_pawn_indices},
@@ -27,7 +27,7 @@ use crate::{
 /// Total threat features.
 pub const THRT_FEATURES: usize = 59808;
 
-/// Total active threat features.
+/// Max active threat features.
 pub const MAX_ACTIVE_THREATS: usize = 4096;
 
 const _: () = assert!(PAWN_FEATURES + THRT_FEATURES <= u16::MAX as usize);
@@ -44,6 +44,7 @@ pub const MAX_THREAT_DELTAS_PER_MOVE: usize = 96;
 /// Total features each delta can touch.
 pub const MAX_DELTA_FEATURES: usize = MAX_THREAT_DELTAS_PER_MOVE + MAX_PAWN_DELTAS_PER_MOVE;
 
+#[allow(clippy::cast_possible_truncation)]
 const fn piece_attacks(cpiece: CPiece, sq: usize) -> Bitboard {
     let square = Square::from_raw(sq as u8);
 
@@ -78,6 +79,7 @@ const PIECE_TARGET_MAP: [[i32; Piece::NUM]; Piece::NUM] = [
 const PIECE_TARGET_COUNT: [i32; Piece::NUM] = [4, 10, 8, 8, 10, 0];
 
 /// Squares each piece pseudo-attacks from each square.
+#[allow(clippy::cast_possible_truncation)]
 const PSEUDO_ATK: [[Bitboard; Square::NUM]; CPiece::NUM] = {
     let mut atk = [[Bitboard::EMPTY; 64]; 12];
 
@@ -94,6 +96,7 @@ const PSEUDO_ATK: [[Bitboard; Square::NUM]; CPiece::NUM] = {
 /// Total number of attacks for each piece.
 /// The first value is the total number of squares threatened by all the pseudo attacks of that piece,
 /// the second value is the running total of threats from all pieces up to that piece.
+#[allow(clippy::cast_possible_wrap)]
 const PIECE_TOTAL_ATTACKS: [(i32, i32); CPiece::NUM] = {
     let mut tot_atk = [(0, 0); 12];
 
@@ -118,6 +121,7 @@ const PIECE_TOTAL_ATTACKS: [(i32, i32); CPiece::NUM] = {
 /// Offset for each source square.
 /// This table holds the cumulative count of the number of attack squares, which can then be used as
 /// a relative offset in the feature array.
+#[allow(clippy::cast_possible_truncation)]
 const ATTACKER_SQ_OFFSET: [[u32; Square::NUM]; CPiece::NUM] = {
     let mut attacker_sq_offset = [[0; 64]; 12];
 
@@ -127,7 +131,7 @@ const ATTACKER_SQ_OFFSET: [[u32; Square::NUM]; CPiece::NUM] = {
         let mut piece_off = 0;
         cfor!(let mut sq = 0; sq < 64; sq += 1; {
             attacker_sq_offset[cidx][sq] = piece_off;
-            piece_off += piece_attacks(cpiece, sq).nbits() as u32;
+            piece_off += piece_attacks(cpiece, sq).nbits();
         });
 
     });
@@ -137,6 +141,7 @@ const ATTACKER_SQ_OFFSET: [[u32; Square::NUM]; CPiece::NUM] = {
 
 /// Base feature index for a given (attacker, victim, direction).
 /// If the feature is excluded, use `u32::MAX`.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 const ATTACK_INDEX: [[[u32; 2]; CPiece::NUM]; CPiece::NUM] = {
     let mut atk_idx = [[[0; 2]; 12]; 12];
 
@@ -175,6 +180,7 @@ const ATTACK_INDEX: [[[u32; 2]; CPiece::NUM]; CPiece::NUM] = {
 };
 
 /// Get the index into the threat features, or None if excluded.
+#[allow(clippy::cast_possible_truncation)]
 pub fn threat_index(orient: Orient, attacker: CPiece, victim: CPiece, src: Square, dst: Square) -> Option<u16> {
     let (atk, vic) = (orient.piece(attacker), orient.piece(victim));
     let (src, dst) = (orient.sq(src), orient.sq(dst));
@@ -232,6 +238,10 @@ const _: () = assert!(
 );
 
 impl ThreatDelta {
+    pub const fn new(atk: CPiece, src: Square, vic: CPiece, dst: Square) -> Self {
+        Self { atk, src, vic, dst }
+    }
+
     pub fn index(self, orient: Orient) -> Option<u16> {
         threat_index(orient, self.atk, self.vic, self.src, self.dst)
     }
@@ -331,11 +341,12 @@ impl Accumulator for ThreatAccumulator {
         feat_rows(nn, &sub_idxs, &mut subs);
 
         let (prev, curr) = (prev.values[pov.idx()].as_ptr(), self.values[pov.idx()].as_mut_ptr());
-        unsafe { accumulate(Some(prev), curr, &adds, &subs) };
+        prefetch_rows(&adds, &subs);
+        unsafe { accumulate::<i8, REGS, false>(prev, curr, &adds, &subs) };
         self.correct[pov.idx()] = true;
     }
 
-    fn refresh(&mut self, nn: &NNUEData, _: &mut Self::Cache, b: &Board, pov: Color) {
+    fn refresh(&mut self, nn: &NNUEData, (): &mut Self::Cache, b: &Board, pov: Color) {
         let orient = Orient::new(b.ksq(pov), pov);
 
         let mut add_idxs = ArrayVec::<u16, MAX_ACTIVE_THREATS>::new();
@@ -345,7 +356,8 @@ impl Accumulator for ThreatAccumulator {
         let mut adds = ArrayVec::<*const i8, MAX_ACTIVE_THREATS>::new();
         feat_rows(nn, &add_idxs, &mut adds);
 
-        unsafe { accumulate(None, self.values[pov.idx()].as_mut_ptr(), &adds, &[]) };
+        prefetch_rows(&adds, &[]);
+        unsafe { accumulate::<i8, REGS, true>(std::ptr::null(), self.values[pov.idx()].as_mut_ptr(), &adds, &[]) };
         self.correct[pov.idx()] = true;
     }
 }
@@ -367,56 +379,15 @@ fn feat_rows<const N: usize>(nn: &NNUEData, feats: &[u16], rows: &mut ArrayVec<*
     }
 }
 
-#[cfg(target_feature = "avx512f")]
-const REGS: usize = L1_LEN / simd::I16_LANES;
-#[cfg(not(target_feature = "avx512f"))]
-const REGS: usize = 8;
+/// With 512 bit registers there are enough of them to hold the whole accumulator at once.
+const REGS: usize = if simd::I16_LANES == 32 { L1_LEN / simd::I16_LANES } else { 8 };
 
 const _: () = assert!(L1_LEN.is_multiple_of(REGS * simd::I16_LANES));
 
-/// # Safety
-/// `src` / `dst` must be valid for a read / write of [`L1_LEN`] i16s, and every row in `adds` and
-/// `subs` must be valid for a read of [`L1_LEN`] i8s. Everything must be vector aligned.
-#[inline]
-unsafe fn accumulate(src: Option<*const i16>, dst: *mut i16, adds: &[*const i8], subs: &[*const i8]) {
+/// Pull every row about to be accumulated into cache.
+fn prefetch_rows(adds: &[*const i8], subs: &[*const i8]) {
     for row in adds.iter().chain(subs) {
         simd::prefetch(row.cast());
-    }
-
-    // Fuse adds and subs where we can.
-    let pairs = min!(adds.len(), subs.len());
-    let mut regs = [simd::splat_i16(0); REGS];
-
-    for base in (0..L1_LEN).step_by(REGS * simd::I16_LANES) {
-        let off = |r: usize| base + r * simd::I16_LANES;
-
-        unsafe {
-            for (r, v) in regs.iter_mut().enumerate() {
-                *v = src.map_or_else(|| simd::splat_i16(0), |src| simd::load_i16(src.add(off(r))));
-            }
-
-            for i in 0..pairs {
-                let (a, s) = (adds[i], subs[i]);
-                for (r, v) in regs.iter_mut().enumerate() {
-                    let o = off(r);
-                    *v = simd::add_i16(*v, simd::sub_i16(simd::load_extend_i8(a.add(o)), simd::load_extend_i8(s.add(o))));
-                }
-            }
-            for &a in &adds[pairs..] {
-                for (r, v) in regs.iter_mut().enumerate() {
-                    *v = simd::add_i16(*v, simd::load_extend_i8(a.add(off(r))));
-                }
-            }
-            for &s in &subs[pairs..] {
-                for (r, v) in regs.iter_mut().enumerate() {
-                    *v = simd::sub_i16(*v, simd::load_extend_i8(s.add(off(r))));
-                }
-            }
-
-            for (r, v) in regs.iter().enumerate() {
-                simd::store_i16(dst.add(off(r)), *v);
-            }
-        }
     }
 }
 
@@ -424,17 +395,10 @@ unsafe fn accumulate(src: Option<*const i16>, dst: *mut i16, adds: &[*const i8],
 mod tests {
     use std::collections::HashMap;
 
-    use chess::types::{
-        board::Board,
-        color::Color,
-        moves::Move,
-        piece::{CPiece, Piece},
-        square::Square,
-    };
+    use chess::types::{board::Board, color::Color, moves::Move, piece::Piece};
 
     use super::{
         ArrayVec, MAX_ACTIVE_THREATS, MAX_DELTA_FEATURES, Orient, PawnDeltas, ThreatDeltas, collect_pawn_indices, collect_threat_indices,
-        threat_index,
     };
 
     #[rustfmt::skip]

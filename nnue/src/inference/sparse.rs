@@ -232,13 +232,8 @@ impl Default for NNZPermTracker {
 impl NNZPermTracker {
     /// Track the current nonzero indices.
     pub fn update(&mut self, ft_out: &Align64<[u8; L1_LEN]>, sparse_count: usize) {
-        let mut counts = [0u64; PAIRWISE_LEN];
-        let bit = self.positions % 64;
-
         for (i, &act) in ft_out.iter().enumerate() {
-            let fired = u64::from(act != 0);
-            counts[i % PAIRWISE_LEN] += fired;
-            self.chunk[i / PAIRWISE_LEN][i % PAIRWISE_LEN] |= fired << bit;
+            self.chunk[i / PAIRWISE_LEN][i % PAIRWISE_LEN] |= (u64::from(act != 0) << self.positions % 64);
         }
 
         self.positions += 1;
@@ -268,6 +263,7 @@ impl NNZPermTracker {
 
         if USE_FTPERM {
             println!("Indices permuted! Activations will be incorrect.");
+            return Ok(());
         }
 
         // Flush data if we haven't written it.
