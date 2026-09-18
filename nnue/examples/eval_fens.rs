@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for line in std::io::stdin().lock().lines() {
         let line = line.unwrap();
         let fen = line.trim();
-        if fen.is_empty() {
+        if fen.is_empty() || fen.starts_with("#") {
             continue;
         }
         let b: Board = fen.parse()?;
