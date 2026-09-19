@@ -233,7 +233,7 @@ impl NNZPermTracker {
     /// Track the current nonzero indices.
     pub fn update(&mut self, ft_out: &Align64<[u8; L1_LEN]>, sparse_count: usize) {
         for (i, &act) in ft_out.iter().enumerate() {
-            self.chunk[i / PAIRWISE_LEN][i % PAIRWISE_LEN] |= (u64::from(act != 0) << self.positions % 64);
+            self.chunk[i / PAIRWISE_LEN][i % PAIRWISE_LEN] |= u64::from(act != 0) << (self.positions % 64);
         }
 
         self.positions += 1;
@@ -256,6 +256,9 @@ impl NNZPermTracker {
     }
 
     /// Dump logs to file for processing.
+    /// # Errors
+    ///     Errors when we can't write to [`ACTS_DUMP_FILE`].
+    #[allow(clippy::cast_precision_loss)]
     pub fn dump_stats(&mut self) -> Result<(), std::io::Error> {
         println!("Acts done:  {}", self.count);
         println!("Total acts: {}", self.total);
