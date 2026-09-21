@@ -41,13 +41,11 @@ impl std::str::FromStr for Position {
 
             // FEN parsing.
             Some("fen") => {
-                let fen = &tokens.clone().take(6).collect::<Vec<&str>>().join(" ")[..];
-
-                for _ in 0..6 {
-                    tokens.next().ok_or("Invalid FEN!")?;
+                let fen = tokens.by_ref().take(6).collect::<Vec<_>>();
+                if fen.len() < 2 {
+                    return Err("Invalid FEN, must contain at least 2 parts.");
                 }
-
-                fen.parse()?
+                fen.join(" ").parse()?
             }
 
             // FRC parsing.

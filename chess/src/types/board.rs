@@ -164,7 +164,7 @@ impl FromStr for Board {
 
         board.update_masks(&mut state);
 
-        let (c_rights, c_mask) = match CastlingRights::parse(&board, fen[2]) {
+        let (c_rights, c_mask) = match CastlingRights::parse(&board, fen.get(2).unwrap_or(&"-")) {
             Ok((r, m)) => (r, m),
             Err(e) => return Err(e),
         };
@@ -173,17 +173,17 @@ impl FromStr for Board {
         state.castling = c_rights;
         state.hash.toggle_castling(c_rights);
 
-        match fen[3] {
-            "-" => state.epsq = Square::Invalid,
-            s => {
+        match fen.get(3) {
+            Some(&"-") | None => state.epsq = Square::Invalid,
+            Some(s) => {
                 let epsq: Square = s.parse()?;
                 state.epsq = epsq;
                 state.hash.toggle_ep(epsq);
             }
         }
 
-        state.halfmoves = fen[4].parse().map_err(|_| "Invalid halfmove count!")?;
-        state.fullmoves = fen[5].parse().map_err(|_| "Invalid fullmove count!")?;
+        state.halfmoves = fen.get(4).map(|s| s.parse().map_err(|_| "Invalid halfmove count!")).transpose()?.unwrap_or(0);
+        state.fullmoves = fen.get(5).map(|s| s.parse().map_err(|_| "Invalid fullmove count!")).transpose()?.unwrap_or(1);
 
         board.state = state;
         Ok(board)

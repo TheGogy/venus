@@ -4,17 +4,17 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.104"
+arrayvec = "0.7.8"
 chess = { path = "../chess" }
-engine = { path = "../engine", features = ["datagen", "syzygy"] }
-nnue = { path = "../nnue" }
-clap = { version = "4.6.1", features = ["derive"] }
-arrayvec = "0.7.6"
+chrono = "0.4.45"
+clap = { version = "4.6.7", features = ["derive"] }
 ctrlc = "3.5.2"
-anyhow = "1.0.102"
-chrono = "0.4.44"
-fastrand = "2.4.1"
-humantime = "2.3.0"
+engine = { path = "../engine", features = ["datagen", "syzygy"] }
+fastrand = "2.5.0"
+humantime = "2.4.0"
+nnue = { path = "../nnue" }
 
 [features]
-syzygy = ["engine/syzygy"]
 embed = ["nnue/embed"]
+syzygy = ["engine/syzygy"]

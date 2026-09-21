@@ -81,7 +81,6 @@ impl UCIReader {
                 "move" | "m"     => self.cmd_move(&mut tokens)?,
                 "undo" | "u"     => self.interface.handle_command(EngineCommand::Undo),
 
-                "threats" | "t"  => self.interface.handle_command(EngineCommand::Threats),
                 _ => return Err(anyhow!("Unknown command!"))
             },
             None => return Err(anyhow!("Empty command!")),
