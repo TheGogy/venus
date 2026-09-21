@@ -94,6 +94,17 @@ pub fn mulshr_u16<const SHIFT: ShiftT>(x: I16Vec, y: I16Vec) -> I16Vec {
     unsafe { vreinterpretq_s16_u16(vshrq_n_u16::<SHIFT>(vreinterpretq_u16_s16(vmulq_s16(x, y)))) }
 }
 
+/// Multiplies two vectors together, keeping the low 16 bits of each product.
+pub fn mul_i16(x: I16Vec, y: I16Vec) -> I16Vec {
+    unsafe { vmulq_s16(x, y) }
+}
+
+/// Multiplies two vectors together and rounds each product to its top half, `(x * y + 2^14) >> 15`.
+pub fn mulhrs_i16(x: I16Vec, y: I16Vec) -> I16Vec {
+    // NOTE: Saturates at -32768 * -32768.
+    unsafe { vqrdmulhq_s16(x, y) }
+}
+
 /// Convert packed i16s to u8s with unsigned saturation (0..255), in [`PACKUS_ORDER`].
 pub fn packus_i16_u8(x: I16Vec, y: I16Vec) -> U8Vec {
     unsafe { vcombine_u8(vqmovun_s16(x), vqmovun_s16(y)) }

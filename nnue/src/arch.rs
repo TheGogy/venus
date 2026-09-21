@@ -15,6 +15,13 @@ pub const SCALE: f32 = 400.0;
 pub const FT_QUANT: i32 = 255;
 pub const L1_QUANT: i32 = 128;
 
+/// hswish |y| = y * (y / 6.0 + 0.5)
+/// y * (y / 6.0 + 0.5) = 1
+/// y = (sqrt(33) - 3) / 2
+/// y = 1.37228
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+pub const FT_GATE_MAX: i32 = (1.37228 * FT_QUANT as f32).round() as i32;
+
 /// How far right the pairwise product is shifted before `packus` puts it in a `u8`.
 pub const L1Q_SHIFT: simd::ShiftT = 8;
 
@@ -53,7 +60,7 @@ pub type HalfAcc = Align64<[i16; L1_LEN]>;
 /// Length of L1 for each side.
 pub const PAIRWISE_LEN: usize = L1_LEN / 2;
 
-/// L2 architecture has first half CReLU, second half squared and then CReLU.
+/// L2 architecture has first half [`CReLU`], second half squared and then [`CReLU`].
 pub const EFF_L2_LEN: usize = L2_LEN * 2;
 
 /// L3 takes both halves of the L1 output and L2's output.

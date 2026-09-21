@@ -28,7 +28,7 @@ use crate::{
 pub const THRT_FEATURES: usize = 59808;
 
 /// Max active threat features.
-pub const MAX_ACTIVE_THREATS: usize = 4096;
+pub const MAX_ACTIVE_THREATS: usize = 128;
 
 const _: () = assert!(PAWN_FEATURES + THRT_FEATURES <= u16::MAX as usize);
 
