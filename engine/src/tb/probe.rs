@@ -179,28 +179,29 @@ mod tests {
 
     use crate::tb::probe::{SyzygyTB, WDL};
 
-    static TB: std::sync::LazyLock<SyzygyTB> = std::sync::LazyLock::new(|| {
+    static TB: LazyLock<Option<SyzygyTB>> = LazyLock::new(|| {
+        let path = std::env::var("SYZYGY_PATH").ok()?;
         let mut tb = SyzygyTB::default();
-        tb.init(std::env::var("SYZYGY_PATH").unwrap_or_else(|_| "/home/gogy/syzygy/".to_string()).as_str());
-        tb
+        tb.init(path.as_str());
+        Some(tb)
     });
 
     #[test]
     fn test_tb_wdl() {
-        LazyLock::force(&TB);
+        let Some(tb) = TB.as_ref() else { return };
         let win: Board = "4k3/8/1nb5/8/8/8/8/4K3 b - - 0 1".parse().unwrap();
         let draw: Board = "4k3/2r5/8/8/8/8/5B2/4K3 w - - 0 1".parse().unwrap();
         let loss: Board = "7r/6k1/8/4K3/8/8/8/8 w - - 0 1".parse().unwrap();
-        assert_eq!(TB.probe_wdl(&win), Some(WDL::Win));
-        assert_eq!(TB.probe_wdl(&draw), Some(WDL::Draw));
-        assert_eq!(TB.probe_wdl(&loss), Some(WDL::Loss));
+        assert_eq!(tb.probe_wdl(&win), Some(WDL::Win));
+        assert_eq!(tb.probe_wdl(&draw), Some(WDL::Draw));
+        assert_eq!(tb.probe_wdl(&loss), Some(WDL::Loss));
     }
 
     #[test]
     fn test_tb_full() {
-        LazyLock::force(&TB);
+        let Some(tb) = TB.as_ref() else { return };
         let b: Board = "4k3/8/1nb5/8/8/8/8/4K3 b - - 0 1".parse().unwrap();
-        if let Some(res) = TB.probe_root(&b) {
+        if let Some(res) = tb.probe_root(&b) {
             assert_eq!(res.wdl, WDL::Win);
             assert_eq!(res.dtz, 48);
             assert_eq!(res.mov.to_uci(&b.castlingmask), "b6c4");
