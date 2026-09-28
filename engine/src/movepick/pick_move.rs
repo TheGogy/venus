@@ -1,4 +1,4 @@
-use chess::types::{board::Board, moves::Move};
+use chess::types::{board::Board, eval::Eval, moves::Move};
 
 use super::{MPStage, MovePicker};
 use crate::{position::see::see, threading::thread::Thread};
@@ -26,8 +26,18 @@ impl MovePicker {
             }
 
             // Return all winning noisies.
-            MPStage::PvNoisyWin | MPStage::QsNoisyAll | MPStage::EvAll => {
-                if let Some(m) = self.move_list.next_good() {
+            MPStage::PvNoisyWin => {
+                if let Some((m, s)) = self.move_list.next_good() {
+                    if see(b, m, Eval(-s / 32)) && !m.flag().is_underpromo() {
+                        return Some(m);
+                    } else {
+                        self.move_list.push_bad(m, s);
+                    }
+                }
+            }
+
+            MPStage::QsNoisyAll | MPStage::EvAll => {
+                if let Some((m, _)) = self.move_list.next_good() {
                     return Some(m);
                 }
             }
@@ -42,7 +52,7 @@ impl MovePicker {
             // Return all quiets.
             MPStage::PvQuietAll => {
                 if !self.skip_quiets
-                    && let Some(m) = self.move_list.next_good()
+                    && let Some((m, _)) = self.move_list.next_good()
                 {
                     return Some(m);
                 }
@@ -50,7 +60,7 @@ impl MovePicker {
 
             // Return all remaining moves.
             MPStage::PvNoisyLoss => {
-                if let Some(m) = self.move_list.next_bad() {
+                if let Some((m, _)) = self.move_list.next_bad() {
                     return Some(m);
                 }
             }
@@ -62,7 +72,7 @@ impl MovePicker {
 
             // Return all moves over the given SEE threshold.
             MPStage::PcNoisyAll => {
-                if let Some(m) = self.move_list.next_good()
+                if let Some((m, _)) = self.move_list.next_good()
                     && see(b, m, self.see_threshold)
                 {
                     return Some(m);

@@ -147,6 +147,10 @@ init_tunables! {
     sp_d_max:        i16 = 10, 6, 14, 1;
     sp_qs_margin:    i32 = 33, 10, 50, 2;
 
+    // Bonus for capturing a piece in movepicking.
+    mp_quiet_threat_pc_value:   i32 = 20, 10, 30, 2;
+    mp_noisy_captured_pc_value: i32 = 15, 10, 30, 2;
+
     // SEE score for giving checks in movepicking.
     mp_givecheck_see: i32 = -20, -150, 0, 5;
 

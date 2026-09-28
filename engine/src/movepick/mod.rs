@@ -66,8 +66,6 @@ pub struct MovePicker {
     pub stage: MPStage,
     // Whether or not we should skip quiet moves.
     pub skip_quiets: bool,
-    // The type of search we are currently in.
-    searchtype: SearchType,
     // The move from the TT if it exists.
     tt_move: Move,
     // The SEE threshold (for Probcut).
@@ -94,6 +92,6 @@ impl MovePicker {
             Move::NONE
         });
 
-        Self { stage, searchtype, tt_move, see_threshold, skip_quiets: false, move_list: MoveList::default() }
+        Self { stage, tt_move, see_threshold, skip_quiets: false, move_list: MoveList::default() }
     }
 }

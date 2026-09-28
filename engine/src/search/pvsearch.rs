@@ -515,7 +515,7 @@ impl Position {
             if is_quiet {
                 // SAFETY: at most MAX_MOVES legal moves can be tried in this node.
                 unsafe { quiets_tried.push_unchecked(m) };
-            } else if m.flag().is_cap() {
+            } else if m.flag().is_noisy() {
                 // SAFETY: at most MAX_MOVES legal moves can be tried in this node.
                 unsafe { caps_tried.push_unchecked(m) };
             }

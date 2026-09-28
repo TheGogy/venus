@@ -31,7 +31,7 @@ impl MoveList {
     }
 
     /// Get the next good move.
-    pub fn next_good(&mut self) -> Option<Move> {
+    pub fn next_good(&mut self) -> Option<(Move, i32)> {
         if self.good_cur >= self.good_end {
             return None;
         }
@@ -41,7 +41,7 @@ impl MoveList {
     }
 
     /// Get the next bad move.
-    pub fn next_bad(&mut self) -> Option<Move> {
+    pub fn next_bad(&mut self) -> Option<(Move, i32)> {
         if self.bad_cur <= self.bad_start {
             return None;
         }
@@ -51,9 +51,9 @@ impl MoveList {
     }
 
     /// Partial insertion sort to get the next best move.
-    fn take_best(&mut self, range: impl Iterator<Item = usize>, dest: usize) -> Move {
+    fn take_best(&mut self, range: impl Iterator<Item = usize>, dest: usize) -> (Move, i32) {
         let best_idx = range.max_by_key(|&i| self.moves[i].1).unwrap();
         self.moves.swap(dest, best_idx);
-        self.moves[dest].0
+        self.moves[dest]
     }
 }

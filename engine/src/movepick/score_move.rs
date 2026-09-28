@@ -1,20 +1,15 @@
 use chess::{
     movegen::{Allmv, Noisy, Quiet},
-    types::{
-        bitboard::Bitboard,
-        board::Board,
-        eval::Eval,
-        piece::{CPiece, Piece},
-    },
+    types::{bitboard::Bitboard, board::Board, eval::Eval, piece::Piece},
 };
 
-use super::{MovePicker, SearchType};
+use super::MovePicker;
 use crate::{
     position::see::see,
     threading::thread::Thread,
     tunables::params::{
         piece_value,
-        tunables::{mp_gc_bonus, mp_givecheck_see},
+        tunables::{mp_gc_bonus, mp_givecheck_see, mp_noisy_captured_pc_value, mp_quiet_threat_pc_value},
     },
 };
 
@@ -62,7 +57,7 @@ impl MovePicker {
 
             let threat = threat_masks[pc.pt().idx()];
             let v = i32::from(threat.has(src)) - i32::from(threat.has(dst));
-            score += v * piece_value(pc) * 20;
+            score += v * piece_value(pc) * mp_quiet_threat_pc_value();
 
             self.move_list.push_good(m, score);
         });
@@ -76,21 +71,8 @@ impl MovePicker {
                 return;
             }
 
-            let cap = b.captured(m);
-            let mut score = piece_value(cap) * 20;
-
-            if cap != CPiece::None {
-                score += t.hist_noisy.get_bonus(b, m);
-            }
-
-            // If this move doesn't pass the SEE test (or is an underpromotion),
-            // move it back to the start with the other noisy moves.
-            let threshold = if self.searchtype == SearchType::Pv { Eval(-score / 32) } else { self.see_threshold };
-            if see(b, m, threshold) && !m.flag().is_underpromo() {
-                self.move_list.push_good(m, score);
-            } else {
-                self.move_list.push_bad(m, score);
-            }
+            let score = piece_value(b.captured(m)) * mp_noisy_captured_pc_value() + t.hist_noisy.get_bonus(b, m);
+            self.move_list.push_good(m, score);
         });
     }
 
