@@ -7,11 +7,14 @@ use crate::{defs::MAX_PLY, impl_all_math_ops};
 /// Represents the evaluation within a game.
 ///
 /// All valid evaluations are between        [-32000, 32000].
-/// All non-terminal evaluations are between [-30000, 30000].
+/// All non-terminal evaluations are between [-30873, 30873].
 ///
 /// 0     => draw
-/// 30000 => checkmate according to tablebase
+/// 31000 => checkmate according to tablebase
 /// 32000 => checkmate now
+///
+/// Scores near either mate bound count down with distance, so a score of
+/// `MATE - n` is a forced mate `n` plies away.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[repr(transparent)]
 pub struct Eval(pub i32);
@@ -24,22 +27,13 @@ impl Eval {
     pub const MATE: Self = Self(32000);
     pub const INFINITY: Self = Self(32001);
 
+    /// The furthest away a mate can be and still be representable.
     pub const LONGEST_MATE: Self = Self(Self::MATE.0 - MAX_PLY as i32);
     pub const LONGEST_TB_MATE: Self = Self(Self::TB_MATE.0 - MAX_PLY as i32);
 
     /// Gets the absolute value of the Eval.
     pub const fn abs(self) -> Self {
         Self(self.0.abs())
-    }
-
-    /// Gets the max of this eval and another.
-    pub fn max(self, other: Self) -> Self {
-        Self(self.0.max(other.0))
-    }
-
-    /// Gets the min of this eval and another.
-    pub fn min(self, other: Self) -> Self {
-        Self(self.0.min(other.0))
     }
 
     /// Gets the midpoint between two evaluations.
@@ -78,38 +72,40 @@ impl Eval {
         Self(-Self::TB_MATE.0 + ply as i32)
     }
 
-    /// Whether this score implies a win.
+    /// Whether the search has proven a forced mate for us.
     pub const fn is_search_win(self) -> bool {
         self.0 >= Self::LONGEST_MATE.0
     }
 
-    /// Whether this score implies a loss.
+    /// Whether the search has proven a forced mate against us.
     pub const fn is_search_loss(self) -> bool {
         self.0 <= -Self::LONGEST_MATE.0
     }
 
-    /// Whether this score implies a win.
+    /// Whether this score implies a win, whether proven by search or by tablebase.
     pub const fn is_win(self) -> bool {
         self.0 >= Self::LONGEST_TB_MATE.0
     }
 
-    /// Whether this score implies a loss.
+    /// Whether this score implies a loss, whether proven by search or by tablebase.
     pub const fn is_loss(self) -> bool {
         self.0 <= -Self::LONGEST_TB_MATE.0
     }
 
-    /// Whether this score implies either side has a proven mate.
+    /// Whether this score implies either side has a proven result.
     pub const fn is_terminal(self) -> bool {
         self.is_win() || self.is_loss()
     }
 
     /// Whether or not this is a valid score.
-    pub const fn is_valid(&self) -> bool {
+    pub const fn is_valid(self) -> bool {
         self.0.abs() < Self::INFINITY.0
     }
 
     /// Gets the eval from the corrected value stored in the TT.
-    pub const fn from_tb_score(self, ply: usize) -> Self {
+    /// Mate scores are stored relative to the node they were found at, so that an entry
+    /// stays correct no matter which ply it is read back from.
+    pub const fn from_tt_score(self, ply: usize) -> Self {
         if self.is_win() {
             Self(self.0 - ply as i32)
         } else if self.is_loss() {
@@ -120,7 +116,8 @@ impl Eval {
     }
 
     /// Converts the eval to the corrected value stored in the TT.
-    pub const fn to_tb_score(self, ply: usize) -> Self {
+    /// See [`Self::from_tt_score`].
+    pub const fn to_tt_score(self, ply: usize) -> Self {
         if self.is_win() {
             Self(self.0 + ply as i32)
         } else if self.is_loss() {
@@ -130,30 +127,29 @@ impl Eval {
         }
     }
 
-    /// Normalizes the evaluation.
-    /// TODO: Feed it more games
-    /// <https://github.com/official-stockfish/WDL_model>
-    pub const fn to_centipawns(self) -> i32 {
-        const NORMALIZE_PAWN_VALUE: i32 = 168;
-
-        if !self.is_terminal() { (self.0 * 100) / NORMALIZE_PAWN_VALUE } else { self.0 }
-    }
-
     /// Clamps eval to the valid (non-terminal) range.
     pub fn clamp_to_nonterminal(self) -> Self {
         Self(self.0.clamp(-Self::LONGEST_TB_MATE.0 + 1, Self::LONGEST_TB_MATE.0 - 1))
+    }
+
+    /// Normalizes the evaluation.
+    /// TODO: Feed it more games
+    /// <https://github.com/official-stockfish/WDL_model>
+    const fn to_centipawns(self) -> i32 {
+        const NORMALIZE_PAWN_VALUE: i32 = 168;
+        if self.is_terminal() { self.0 } else { (self.0 * 100) / NORMALIZE_PAWN_VALUE }
     }
 }
 
 /// Display the eval according to UCI format.
 impl fmt::Display for Eval {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !self.is_terminal() {
-            write!(f, "cp {}", self.to_centipawns())
-        } else {
+        if self.is_search_win() || self.is_search_loss() {
             let moves_to_mate = (Self::MATE.0 - self.abs().0 + 1) / 2;
             let sign = if *self > Self::DRAW { "" } else { "-" };
             write!(f, "mate {sign}{moves_to_mate}")
+        } else {
+            write!(f, "cp {}", self.to_centipawns())
         }
     }
 }

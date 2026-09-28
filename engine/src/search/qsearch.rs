@@ -61,7 +61,7 @@ impl Position {
         let mut tt_depth = -TT_DEPTH_OFFSET;
         let mut tt_pv = false;
 
-        if let Some(tte) = tt.probe(self.hash()) {
+        if let Some(tte) = tt.probe(self.board.hash()) {
             tt_eval = tte.eval();
             tt_value = tte.value(t.ply);
             tt_bound = tte.bound();
@@ -123,7 +123,7 @@ impl Position {
 
                 // Throw the static eval into the tt if we won't overwrite anything.
                 if tt_depth == -TT_DEPTH_OFFSET {
-                    tt.insert(self.hash(), Bound::None, Move::NONE, raw_value, best_value, TT_DEPTH_UNSEARCHED, t.ply, false);
+                    tt.insert(self.board.hash(), Bound::None, Move::NONE, raw_value, best_value, TT_DEPTH_UNSEARCHED, t.ply, false);
                 }
                 return best_value;
             }
@@ -166,6 +166,7 @@ impl Position {
             //             Make Move
             // -----------------------------------
             self.make_move(m, t);
+            tt.prefetch(self.board.hash());
             let v = -self.qsearch::<NT::Next>(t, tt, -beta, -alpha);
             self.undo_move(t);
 
@@ -213,7 +214,7 @@ impl Position {
         // We can't use an exact bound as we don't know if we've searched all the moves.
         let bound = if best_value >= beta { Bound::Lower } else { Bound::Upper };
         let depth = TT_DEPTH_QS + Depth::from(self.board.in_check());
-        tt.insert(self.hash(), bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
+        tt.insert(self.board.hash(), bound, best_move, raw_value, best_value, depth, t.ply, tt_pv);
 
         best_value
     }

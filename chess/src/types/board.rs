@@ -15,7 +15,7 @@ use crate::{
         piece::{CPiece, Piece},
         rank_file::{File, Rank},
         square::Square,
-        zobrist::Hash,
+        zobrist::{Hash, Key},
     },
 };
 
@@ -533,6 +533,11 @@ impl Board {
     /// Get all king attacks for the given side.
     pub fn all_king_atk(&self, c: Color) -> Bitboard {
         king_atk(self.ksq(c))
+    }
+
+    /// Get the current board hash.
+    pub fn hash(&self) -> Key {
+        self.state.hash.key_adjusted_50mr(self.state.halfmoves)
     }
 }
 

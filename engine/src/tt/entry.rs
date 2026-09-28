@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Hash};
+use chess::types::{Depth, eval::Eval, moves::Move, zobrist::Key};
 
 /// TT depth offsets.
 /// Depth of qsearch entries. Must be <= -1, as we add 1 for qsearch entries in check.
@@ -26,8 +26,8 @@ pub const TT_AGE_MASK: u8 = TT_AGE_CYCLE - 1;
 pub const TT_AGE_MUL: i32 = 8;
 
 /// Get the partial key stored in each entry.
-pub const fn get_low_16(hash: Hash) -> u16 {
-    (hash.key & 0xFFFF) as u16
+pub const fn get_low_16(k: Key) -> u16 {
+    (k & 0xFFFF) as u16
 }
 
 /// TT Bound.
@@ -108,7 +108,7 @@ impl TTEntry {
     }
 
     pub const fn value(&self, ply: usize) -> Eval {
-        Eval(self.value as i32).from_tb_score(ply)
+        Eval(self.value as i32).from_tt_score(ply)
     }
 
     pub const fn depth(&self) -> Depth {
@@ -127,13 +127,8 @@ impl TTEntry {
         self.depth > 0
     }
 
-    pub const fn key_matches(&self, hash: Hash) -> bool {
-        self.key == get_low_16(hash)
-    }
-
-    /// Check whether this entry is occupied and matches the stored partial key.
-    pub const fn matches(&self, hash: Hash) -> bool {
-        self.is_occupied() && self.key_matches(hash)
+    pub const fn key_matches(&self, k: Key) -> bool {
+        self.key == get_low_16(k)
     }
 
     /// Age distance from the current table generation, modulo the age cycle.
