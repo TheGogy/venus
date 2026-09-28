@@ -20,10 +20,7 @@ use crate::{
         noisyhist::NoisyHist,
         quiethist::QuietHist,
     },
-    threading::{
-        pv::PVLine,
-        stack::{MAX_STACK_ENTRIES, SearchStackEntry},
-    },
+    threading::{pv::PVLine, stack::SearchStackEntry},
     time_management::{timecontrol::TimeControl, timemanager::TimeManager},
     tunables::params::tunables::{hist_corr_other, hist_corr_pawn},
 };
@@ -44,9 +41,7 @@ pub struct Thread {
     pub avg_eval: Eval,
     pub pv: PVLine,
 
-    // + 1 because we need to clear the next node
-    // for killer moves
-    pub stack: [SearchStackEntry; MAX_STACK_ENTRIES],
+    pub stack: [SearchStackEntry; MAX_PLY],
 
     // Histories.
     pub hist_quiet: QuietHist,
@@ -72,7 +67,7 @@ impl Thread {
             eval: Eval::DRAW,
             avg_eval: -Eval::INFINITY,
             pv: PVLine::default(),
-            stack: [SearchStackEntry::default(); MAX_STACK_ENTRIES],
+            stack: [SearchStackEntry::default(); MAX_PLY],
 
             hist_quiet: QuietHist::default(),
             hist_noisy: NoisyHist::default(),
@@ -197,7 +192,6 @@ impl Thread {
         self.hist_noisy.update(board, best, captures, bonus, malus);
 
         if best.flag().is_quiet() {
-            self.ss_mut().killer = Some(best);
             self.hist_quiet.update(board.stm, best, quiets, bonus, malus);
 
             for i in 0..CONT_NUM {
