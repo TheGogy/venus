@@ -3,7 +3,7 @@ use chess::types::{eval::Eval, piece::Piece};
 use super::Position;
 use crate::{
     threading::thread::Thread,
-    tunables::params::tunables::{ms_base, ms_bishop, ms_knight, ms_queen, ms_rook},
+    tunables::params::tunables::{ms_base, value_bishop, value_knight, value_queen, value_rook},
 };
 
 /// Evaluation.
@@ -40,10 +40,10 @@ impl Position {
     #[allow(clippy::cast_possible_wrap)]
     fn material_scale(&self) -> i32 {
         let total_material =
-            self.board.p_bb(Piece::Knight).nbits() as i32 * ms_knight() +
-            self.board.p_bb(Piece::Bishop).nbits() as i32 * ms_bishop() +
-            self.board.p_bb(Piece::Rook).nbits()   as i32 * ms_rook()   +
-            self.board.p_bb(Piece::Queen).nbits()  as i32 * ms_queen();
+            self.board.p_bb(Piece::Knight).nbits() as i32 * value_knight() +
+            self.board.p_bb(Piece::Bishop).nbits() as i32 * value_bishop() +
+            self.board.p_bb(Piece::Rook).nbits()   as i32 * value_rook()   +
+            self.board.p_bb(Piece::Queen).nbits()  as i32 * value_queen();
 
         ms_base() + (total_material / 32)
     }

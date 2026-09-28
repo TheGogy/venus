@@ -1,6 +1,6 @@
 #![warn(clippy::all, clippy::pedantic)]
 
-use chess::{helpers::see::bench_see, types::board::Board};
+use chess::types::board::Board;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -15,9 +15,6 @@ struct Args {
 enum Command {
     /// Runs a perft test up to the given depth
     Perft { depth: usize },
-
-    /// Bench the SEE function this many times
-    See { iters: usize },
 }
 
 fn main() {
@@ -25,6 +22,5 @@ fn main() {
 
     match args.command {
         Command::Perft { depth } => println!("Total: {}", Board::default().perft::<true>(depth)),
-        Command::See { iters } => bench_see(iters),
     }
 }

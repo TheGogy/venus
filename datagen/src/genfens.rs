@@ -1,5 +1,5 @@
 use chess::types::{board::Board, eval::Eval};
-use engine::position::Position;
+use engine::position::{Position, see::see};
 use fastrand::Rng;
 
 /// Try this many times to find a move that passes the SEE threshold.
@@ -30,7 +30,7 @@ pub fn gen_random_position(p: &mut Position, rng: &mut Rng, moves: usize, dfrc: 
             // SAFETY: We just checked if the move list is empty.
             let m = *rng.choice(mvs.iter()).unwrap();
 
-            if p.board.see(m, SEE_THRESHOLD) {
+            if see(&p.board, m, SEE_THRESHOLD) {
                 move_found = true;
                 p.board.make_move(m);
                 break;

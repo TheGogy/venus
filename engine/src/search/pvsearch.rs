@@ -8,7 +8,7 @@ use chess::{
 
 use crate::{
     movepick::{MPStage, MovePicker, SearchType},
-    position::Position,
+    position::{Position, see::see},
     search::{
         NodeType, OffPV,
         pruning::{
@@ -369,7 +369,7 @@ impl Position {
             if depth <= sp_d_max()
                 && !best_value.is_terminal()
                 && mp.stage > MPStage::PvNoisyWin
-                && !self.board.see(m, Eval(-see_margins[usize::from(is_quiet)]))
+                && !see(&self.board, m, Eval(-see_margins[usize::from(is_quiet)]))
             {
                 continue;
             }

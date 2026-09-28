@@ -1,5 +1,7 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::missing_errors_doc, clippy::excessive_precision)]
 
+use chess::types::piece::CPiece;
+
 use crate::init_tunables;
 
 // See [init_tunables].
@@ -24,12 +26,15 @@ use crate::init_tunables;
 // base => The base value (combined with a multiplier).
 // mult => The multiplier (combined with a base value).
 init_tunables! {
-    // Material scaling values.
+    // How much each piece is worth.
+    value_pawn:   i32 = 170, 120, 220, 5;
+    value_knight: i32 = 445, 400, 500, 5;
+    value_bishop: i32 = 465, 400, 500, 5;
+    value_rook:   i32 = 709, 600, 800, 10;
+    value_queen:  i32 = 1321, 1200, 1400, 10;
+
+    // Material scaling.
     ms_base: i32 = 714, 600, 900, 10;
-    ms_knight: i32 = 447, 400, 500, 5;
-    ms_bishop: i32 = 460, 400, 500, 5;
-    ms_rook:   i32 = 703, 600, 800, 10;
-    ms_queen:  i32 = 1312, 1200, 1400, 10;
 
     // Aspiration window.
     asp_window_d_min:     i16 = 4, 2, 7, 1;
@@ -146,7 +151,7 @@ init_tunables! {
     mp_givecheck_see: i32 = -20, -150, 0, 5;
 
     // Bonus for checks in movepicking.
-    mp_gc_bonus: i32 = 10000, 6000, 14000, 300;
+    mp_gc_bonus: i32 = 16384, 6000, 20000, 1000;
 
     // Bonus for escaping threats in movepicking.
     mp_escapes_threat_bonus: i32 = 25, 10, 50, 2;
@@ -154,4 +159,18 @@ init_tunables! {
     // Qsearch beta cutoff lerps.
     qs_stand_pat_beta_lerp: f32 = 0.51089960, 0.2, 0.7, 0.05;
     qs_conservative_beta_lerp: f32 = 0.50773965, 0.2, 0.7, 0.05;
+}
+
+/// How much a piece is worth.
+#[rustfmt::skip]
+pub fn piece_value(p: CPiece) -> i32 {
+
+    match p {
+        CPiece::WPawn   | CPiece::BPawn   => tunables::value_pawn(),
+        CPiece::WKnight | CPiece::BKnight => tunables::value_knight(),
+        CPiece::WBishop | CPiece::BBishop => tunables::value_bishop(),
+        CPiece::WRook   | CPiece::BRook   => tunables::value_rook(),
+        CPiece::WQueen  | CPiece::BQueen  => tunables::value_queen(),
+        _ => 0,
+    }
 }

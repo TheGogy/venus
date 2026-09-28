@@ -4,25 +4,19 @@ use chess::{
         bitboard::Bitboard,
         board::Board,
         eval::Eval,
-        moves::{Move, MoveFlag},
-        piece::Piece,
+        piece::{CPiece, Piece},
     },
 };
 
 use super::{MovePicker, SearchType};
 use crate::{
-    history::noisyhist::CAP_HIST_MAX,
+    position::see::see,
     threading::thread::Thread,
-    tunables::params::tunables::{mp_gc_bonus, mp_givecheck_see},
+    tunables::params::{
+        piece_value,
+        tunables::{mp_gc_bonus, mp_givecheck_see},
+    },
 };
-
-/// The value of the victim we are capturing with this move.
-const MVV: [i32; Piece::NUM] = [0, 2400, 2400, 4800, 9600, 0];
-
-fn capture_value(b: &Board, m: Move) -> i32 {
-    debug_assert!(m.flag().is_cap());
-    MVV[b.captured(m).pt().idx()]
-}
 
 impl MovePicker {
     /// Generate all quiet moves and score them.
@@ -53,6 +47,9 @@ impl MovePicker {
                 return;
             }
 
+            let (src, dst) = (m.src(), m.dst());
+            let pc = b.pc_at(src);
+
             let mut score = t.hist_quiet.get_bonus(b.stm, m);
 
             for (hist_cont, &pt_opt) in t.hist_conts.iter().zip(prev_piecetos.iter()) {
@@ -61,11 +58,11 @@ impl MovePicker {
                 }
             }
 
-            score += i32::from(b.gives_check_fast(m) && b.see(m, Eval(mp_givecheck_see()))) * mp_gc_bonus();
+            score += i32::from(b.gives_check_fast(m) && see(b, m, Eval(mp_givecheck_see()))) * mp_gc_bonus();
 
-            let threat = threat_masks[b.pc_at(m.src()).pt().idx()];
-            let v = i32::from(threat.has(m.src())) - i32::from(threat.has(m.dst()));
-            score += v * MVV[b.pc_at(m.src()).pt().idx()] * 10;
+            let threat = threat_masks[pc.pt().idx()];
+            let v = i32::from(threat.has(src)) - i32::from(threat.has(dst));
+            score += v * piece_value(pc) * 20;
 
             self.move_list.push_good(m, score);
         });
@@ -79,24 +76,17 @@ impl MovePicker {
                 return;
             }
 
-            #[rustfmt::skip]
-            let score = match m.flag() {
-                // Regular queen promotions give us a queen for a pawn: best MVV trade.
-                MoveFlag::PromoQ  => CAP_HIST_MAX + MVV[Piece::Queen.idx()] + 1,
-                MoveFlag::CPromoQ => CAP_HIST_MAX + MVV[Piece::Queen.idx()] + capture_value(b, m),
+            let cap = b.captured(m);
+            let mut score = piece_value(cap) * 20;
 
-                // Underpromotions are usually bad - we should probably promote to a queen.
-                // (though these are captures).
-                f if f.is_underpromo() => 0,
-
-                // All other moves are captures, so this is safe.
-                _ => capture_value(b, m) + t.hist_noisy.get_bonus(b, m)
-            };
+            if cap != CPiece::None {
+                score += t.hist_noisy.get_bonus(b, m);
+            }
 
             // If this move doesn't pass the SEE test (or is an underpromotion),
             // move it back to the start with the other noisy moves.
             let threshold = if self.searchtype == SearchType::Pv { Eval(-score / 32) } else { self.see_threshold };
-            if b.see(m, threshold) && !m.flag().is_underpromo() {
+            if see(b, m, threshold) && !m.flag().is_underpromo() {
                 self.move_list.push_good(m, score);
             } else {
                 self.move_list.push_bad(m, score);
@@ -116,7 +106,7 @@ impl MovePicker {
 
             // Noisy moves should be pushed to the front of evasions.
             let score = if m.flag().is_cap() {
-                NOISY_BASE + capture_value(b, m)
+                NOISY_BASE + piece_value(b.captured(m))
             } else {
                 let ch = t.pieceto_at(1).map_or(0, |pt| t.hist_conts[0].get_bonus(m, pt));
                 t.hist_quiet.get_bonus(b.stm, m) + ch

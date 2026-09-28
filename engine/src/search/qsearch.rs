@@ -5,7 +5,7 @@ use chess::{
 
 use crate::{
     movepick::{MovePicker, SearchType},
-    position::Position,
+    position::{Position, see::see},
     search::NodeType,
     threading::thread::Thread,
     tt::{
@@ -149,7 +149,7 @@ impl Position {
                 // Futility pruning in qsearch.
                 // If our position + bonus can't reach alpha, and the move doesn't
                 // win material according to SEE, skip it.
-                if futility <= alpha && !self.board.gives_check(m) && !self.board.see(m, Eval(1)) {
+                if futility <= alpha && !self.board.gives_check(m) && !see(&self.board, m, Eval(1)) {
                     best_value = best_value.max(futility);
                     continue;
                 }
@@ -157,7 +157,7 @@ impl Position {
                 // SEE pruning.
                 // If a capture loses material, it's usually not worth considering
                 // unless we're in a desperate position.
-                if !self.board.see(m, Eval(-sp_qs_margin())) {
+                if !see(&self.board, m, Eval(-sp_qs_margin())) {
                     continue;
                 }
             }

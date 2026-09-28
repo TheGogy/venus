@@ -1,7 +1,7 @@
 use chess::types::{board::Board, moves::Move};
 
 use super::{MPStage, MovePicker};
-use crate::threading::thread::Thread;
+use crate::{position::see::see, threading::thread::Thread};
 
 impl MovePicker {
     pub fn next(&mut self, b: &Board, t: &Thread) -> Option<Move> {
@@ -15,7 +15,7 @@ impl MovePicker {
             // For probcut, we also want to make sure the TT move has a SEE over the threshold.
             MPStage::PcTT => {
                 self.stage = self.stage.next();
-                if self.tt_move.flag().is_noisy() && b.see(self.tt_move, self.see_threshold) {
+                if self.tt_move.flag().is_noisy() && see(b, self.tt_move, self.see_threshold) {
                     return Some(self.tt_move);
                 }
             }
@@ -75,7 +75,7 @@ impl MovePicker {
             // Return all moves over the given SEE threshold.
             MPStage::PcNoisyAll => {
                 if let Some(m) = self.move_list.next_good()
-                    && b.see(m, self.see_threshold)
+                    && see(b, m, self.see_threshold)
                 {
                     return Some(m);
                 }
