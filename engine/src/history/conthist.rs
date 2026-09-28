@@ -67,8 +67,6 @@ impl PieceTo {
 
     /// Construct a [`PieceTo`] from a piece and a move.
     pub const fn from(b: &Board, m: Move) -> Self {
-        let s = m.src();
-        let p = b.pc_at(s);
-        Self(p.idx() * Square::NUM + s.idx())
+        Self(b.pc_at(m.src()).idx() * Square::NUM + m.dst().idx())
     }
 }
