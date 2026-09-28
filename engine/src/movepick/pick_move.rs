@@ -32,18 +32,6 @@ impl MovePicker {
                 }
             }
 
-            // Return killer move.
-            MPStage::PvKiller => {
-                if let Some(km) = t.ss().killer
-                    && km != self.tt_move
-                    && b.is_legal(km)
-                {
-                    self.stage = self.stage.next();
-                    self.killer = km;
-                    return Some(km);
-                }
-            }
-
             // Generate and score quiets.
             MPStage::PvQuietGen => {
                 if !self.skip_quiets {

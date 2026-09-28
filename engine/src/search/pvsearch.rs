@@ -226,8 +226,6 @@ impl Position {
         let opp_worsening = t.opp_worsening();
         let child_pv = &mut PVLine::default();
 
-        t.prepare_next();
-
         // -----------------------------------
         //              Pruning
         // -----------------------------------
